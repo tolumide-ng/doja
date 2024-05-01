@@ -4,10 +4,16 @@ mod pawn;
 mod color;
 mod constants;
 mod knight;
+mod king;
+mod bishop;
+mod rook;
 
+// use bishop::Bishop;
 pub use bit_board::BitBoard;
-use knight::Knight;
-use pawn::Pawn;
+// use king::King;
+// use knight::Knight;
+// use pawn::Pawn;
+use rook::Rook;
 
 use crate::squares::Square;
 
@@ -20,34 +26,14 @@ fn main() {
     // println!("{:#?}", bit_board.to_string());
     // let e2: u64 = Square::E2.into();
 
-    let mut bit_board = BitBoard::new();
+    // let rookie = Rook::mask_rook_attacks(Square::F3 as u64);
 
-    // for rank in 0..8 {
-    //     for file in 0..8 {
-    //         if file < 6{
-    //             bit_board.set_bit((rank * 8) + file);
-    //         }
-                
-    //     }
-    // }
-
-    // println!(":::::::::::::::::::::::::: {:#?}", bit_board.to_string());
-
-    // let pawn = Pawn::mask_pawn_attacks(color::Color::Black, Square::E4.into());
-
-    // let knight = Knight::mask_knight_attacks(Square::A1 as u64);
-    let knights = Knight::init_leapers_attack();
-
-    for i in knights {
-        println!("{:#?} \n the board after ", i.to_string());
-    }
-
+    // println!(":::: this is the rookie :::: {:#?}", rookie.to_string());
+    let rooks = Rook::init_leapers_attack();
     // let pawn_attacks = Pawn::init_leapers_attack();
-    // for i in pawn_attacks {
-    //     for j in i {
-    //         println!("the board {:#}", j.to_string());
-    //     }
-    // }
+    for i in rooks {
+        println!("the board {:#}", i.to_string());
+    }
 
     
     // bit_board.set_bit(Square::C7); 

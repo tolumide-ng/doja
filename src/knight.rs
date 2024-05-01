@@ -1,4 +1,4 @@
-use crate::{bit_board, constants::{NOT_AB_FILE, NOT_A_FILE, NOT_GH_FILE, NOT_H_FILE}, BitBoard};
+use crate::{constants::{NOT_AB_FILE, NOT_A_FILE, NOT_GH_FILE, NOT_H_FILE}, BitBoard};
 
 pub struct Knight;
 

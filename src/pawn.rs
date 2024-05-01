@@ -11,11 +11,7 @@ impl Pawn {
         // piece board
         let mut bit_board = BitBoard::new();
         bit_board.set_bit(square);
-        println!("{:#?} 1-1-1-1-1-11-1-1-1-1-11-1-1-1-1-1 \n\n\n\n", bit_board.to_string());
-        
-        
-
-    
+         
         match color {
             Color::Black => {
                 if ((bit_board.0 << 7) & NOT_H_FILE) != 0 {
@@ -36,8 +32,6 @@ impl Pawn {
                 }
             }
         }
-
-        // println!("{:#?} 2-2-2-2-2-2-2 \n\n\n ******** \n", attacks.to_string());
         attacks
     }
 
