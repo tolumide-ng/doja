@@ -7,7 +7,9 @@ mod knight;
 mod king;
 mod bishop;
 mod rook;
+mod attacks;
 
+use attacks::DynamicAttacks;
 // use bishop::Bishop;
 pub use bit_board::BitBoard;
 // use king::King;
@@ -26,14 +28,21 @@ fn main() {
     // println!("{:#?}", bit_board.to_string());
     // let e2: u64 = Square::E2.into();
 
-    // let rookie = Rook::mask_rook_attacks(Square::F3 as u64);
+    let mut block = BitBoard::new();
+    block.set_bit(Square::B6.into());
+    block.set_bit(Square::G7.into());
+    block.set_bit(Square::E3.into());
+    block.set_bit(Square::B2.into());
+    println!("{:#?} :::: XOVVVVTY :::: \n\n ", block.to_string());
 
-    // println!(":::: this is the rookie :::: {:#?}", rookie.to_string());
-    let rooks = Rook::init_leapers_attack();
-    // let pawn_attacks = Pawn::init_leapers_attack();
-    for i in rooks {
-        println!("the board {:#}", i.to_string());
-    }
+    let rookie = DynamicAttacks::dynamic_bishpp_attacks(Square::D4 as u64, block.0);
+    println!(":::: this is the rookie :::: {:#?}", rookie.to_string());
+
+    // let rooks = Rook::init_leapers_attack();
+    // // let pawn_attacks = Pawn::init_leapers_attack();
+    // for i in rooks {
+    //     println!("the board {:#}", i.to_string());
+    // }
 
     
     // bit_board.set_bit(Square::C7); 
