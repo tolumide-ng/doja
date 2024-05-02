@@ -31,11 +31,13 @@ fn main() {
     let mut block = BitBoard::new();
     block.set_bit(Square::B6.into());
     block.set_bit(Square::G7.into());
-    block.set_bit(Square::E3.into());
+    block.set_bit(Square::F4.into());
     block.set_bit(Square::B2.into());
+    block.set_bit(Square::D5.into());
     println!("{:#?} :::: XOVVVVTY :::: \n\n ", block.to_string());
 
-    let rookie = DynamicAttacks::dynamic_bishpp_attacks(Square::D4 as u64, block.0);
+    // let rookie = DynamicAttacks::bishop(Square::D4 as u64, block.0);
+    let rookie = DynamicAttacks::rookie(Square::D4 as u64, block.0);
     println!(":::: this is the rookie :::: {:#?}", rookie.to_string());
 
     // let rooks = Rook::init_leapers_attack();

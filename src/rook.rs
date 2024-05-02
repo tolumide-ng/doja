@@ -45,9 +45,6 @@ impl Rook {
 
         }
 
-        println!("{:#?}", attack.to_string());
-
-
         attack
     }
 
