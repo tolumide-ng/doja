@@ -15,9 +15,9 @@ pub use bit_board::BitBoard;
 // use king::King;
 // use knight::Knight;
 // use pawn::Pawn;
-use rook::Rook;
+// use rook::Rook;
 
-use crate::squares::Square;
+use crate::squares::{Square, SQUARE_NAMES};
 
 
 
@@ -29,16 +29,30 @@ fn main() {
     // let e2: u64 = Square::E2.into();
 
     let mut block = BitBoard::new();
-    block.set_bit(Square::B6.into());
-    block.set_bit(Square::G7.into());
-    block.set_bit(Square::F4.into());
-    block.set_bit(Square::B2.into());
-    block.set_bit(Square::D5.into());
-    println!("{:#?} :::: XOVVVVTY :::: \n\n ", block.to_string());
+    // block.set_bit(Square::B6.into());
+    // block.set_bit(Square::G7.into());
+    // block.set_bit(Square::F4.into());
+    // block.set_bit(Square::B2.into());
+    // block.set_bit(Square::D5.into());
+    // println!("{:#?} :::: XOVVVVTY :::: \n\n ", block.to_string());
+
+    block.set_bit(Square::D7.into());
+    block.set_bit(Square::D2.into());
+    block.set_bit(Square::D1.into());
+    block.set_bit(Square::B4.into());
+    block.set_bit(Square::G4.into());
+
+    // println!("counting the bits {:#?}", block.count_bits());
+    println!("counting the bits {:#?}", block.count_bits());
+    println!(">>>>>>>>>> {:#?}", SQUARE_NAMES[block.get_lsb1() as usize]);
+    let x = (block.0 as i64 & -(block.0 as i64)) -1;
+    let mut oo = BitBoard::new();
+    oo.0 = x as u64;
+    println!(">>>>>>>>>> {:#?}", oo.to_string());
 
     // let rookie = DynamicAttacks::bishop(Square::D4 as u64, block.0);
-    let rookie = DynamicAttacks::rookie(Square::D4 as u64, block.0);
-    println!(":::: this is the rookie :::: {:#?}", rookie.to_string());
+    // let rookie = DynamicAttacks::rookie(Square::D4 as u64, block.0);
+    // println!(":::: this is the rookie :::: {:#?}", rookie.to_string());
 
     // let rooks = Rook::init_leapers_attack();
     // // let pawn_attacks = Pawn::init_leapers_attack();

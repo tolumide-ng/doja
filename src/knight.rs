@@ -13,36 +13,36 @@ impl Knight {
         println!("the board before \n {:#?}", bitboard.to_string());
 
 
-        if ((bitboard.0 >> 17) & NOT_H_FILE) != 0 {
-            attack.0 |= bitboard.0 >> 17;
+        if ((*bitboard >> 17) & NOT_H_FILE) != 0 {
+            attack.0 |= *bitboard >> 17;
         }
 
-        if((bitboard.0 >> 15) & NOT_A_FILE) !=0 {
-            attack.0 |= bitboard.0 >> 15;
+        if((*bitboard >> 15) & NOT_A_FILE) !=0 {
+            attack.0 |= *bitboard >> 15;
         }
 
-        if((bitboard.0 >> 10) & NOT_GH_FILE) != 0 { 
-            attack.0 |= bitboard.0 >> 10;
+        if((*bitboard >> 10) & NOT_GH_FILE) != 0 { 
+            attack.0 |= *bitboard >> 10;
         }
 
-        if((bitboard.0 >> 6) & NOT_AB_FILE) != 0 {
-            attack.0 |= bitboard.0 >> 6;
+        if((*bitboard >> 6) & NOT_AB_FILE) != 0 {
+            attack.0 |= *bitboard >> 6;
         }
 
-        if((bitboard.0 << 6) & NOT_GH_FILE) != 0 {
-            attack.0 |= bitboard.0 << 6;
+        if((*bitboard << 6) & NOT_GH_FILE) != 0 {
+            attack.0 |= *bitboard << 6;
         }
         
-        if((bitboard.0 << 10) & NOT_AB_FILE) != 0 { 
-            attack.0 |= bitboard.0 << 10;
+        if((*bitboard << 10) & NOT_AB_FILE) != 0 { 
+            attack.0 |= *bitboard << 10;
         }
 
-        if((bitboard.0 << 15) & NOT_H_FILE) !=0 {
-            attack.0 |= bitboard.0 << 15;
+        if((*bitboard << 15) & NOT_H_FILE) !=0 {
+            attack.0 |= *bitboard << 15;
         }
 
-        if ((bitboard.0 << 17) & NOT_A_FILE) != 0 {
-            attack.0 |= bitboard.0 << 17;
+        if ((*bitboard << 17) & NOT_A_FILE) != 0 {
+            attack.0 |= *bitboard << 17;
         }
 
         

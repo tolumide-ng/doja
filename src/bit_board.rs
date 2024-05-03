@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::Deref};
 
 use crate::squares::Square;
 
@@ -60,6 +60,38 @@ impl BitBoard {
         self.0 |= 1 << square;
     }
 
+
+    /// Counts the number of bits(1's) in a bitboard \
+    /// e.g given 0b00011100 \
+    /// this would return 3
+    #[inline]
+    pub(crate) fn count_bits(&self) -> u32 {
+        // let mut count = 0;
+        // let mut counter = *self;
+
+        // while counter.0 != 0 {
+        //     counter.0 &= counter.0 - 1;
+        //     count +=1;
+        // }
+        // count
+        self.count_ones()
+    }
+
+    /// Returns the Least Significant first Bit
+    /// e.g given 0b00010000
+    /// the LSB would be 5
+    #[inline]
+    pub(crate) fn get_lsb1(&self) -> i32 {
+        if self.0 == 0 {
+            return -1
+        }
+
+        // let lsb = (block.0 as i64 & -(block.0 as i64)) -1
+        // asset_eq(self.get_lsb1(), lsb);
+        
+        self.trailing_zeros() as i32
+    }
+
 }
 
 impl Display for BitBoard {
@@ -79,5 +111,13 @@ impl Display for BitBoard {
         }
         println!("    a  b  c  d  e  f  g  h\n");
         write!(f, "Bitboard: {}", self.0)
+    }
+}
+
+impl Deref for BitBoard {
+    type Target = u64;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
