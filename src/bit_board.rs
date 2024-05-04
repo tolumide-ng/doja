@@ -143,3 +143,10 @@ impl Deref for BitBoard {
         &self.0
     }
 }
+
+
+impl From<u64> for BitBoard {
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
+}
