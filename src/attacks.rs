@@ -1,4 +1,4 @@
-use crate::BitBoard;
+use crate::{bishop::Bishop, knight::Knight, pawn::Pawn, BitBoard};
 
 pub struct DynamicAttacks;
 
@@ -72,6 +72,7 @@ impl DynamicAttacks {
         if target_rank > 0 {
             let mut rank = target_rank - 1;
             while rank >= 0 {
+                println!("top times is now>>>>>> {target_file}");
                 attack.0 |= 1 << ((rank * 8) + target_file);
                 if 1 << ((rank * 8) + target_file) & block != 0 {break}
                 if rank == 0 {break}
@@ -92,6 +93,7 @@ impl DynamicAttacks {
         //right
         let mut file = target_file +1;
         while file <= 7 {
+            println!("<<<<<<<<<< and the right time is now {file}");
             attack.0 |= 1 << ((target_rank * 8) + file);
             if 1 << ((target_rank * 8) + file) & block != 0 {break}
             file +=1;
@@ -109,6 +111,12 @@ impl DynamicAttacks {
 
         }
         attack
+    }
+
+    fn init_leapers() {
+        let bishop = Bishop::init_leapers_attack();
+        let knight = Knight::init_leapers_attack();
+        let pawn = Pawn::init_leapers_attack();
     }
 
 }

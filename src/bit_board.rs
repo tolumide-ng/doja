@@ -40,11 +40,9 @@ impl BitBoard {
     /// comparing 1 and 0 returns 1, comparing 0 and 1 returns 1 \
     /// Checks if the bit at the target position is 1, if the value
     /// is 1, then it uses the BitXorAssign operator described above
-    pub fn pop_bit(&mut self, square: Square) {
-        let value: u64 = square.into();
-
+    pub fn pop_bit(&mut self, square: u64) {
         if self.get_bit(square.into()) == 1 {
-            self.0 ^= 1 << value;
+            self.0 ^= 1 << square;
         }
     }
 
@@ -81,15 +79,39 @@ impl BitBoard {
     /// e.g given 0b00010000
     /// the LSB would be 5
     #[inline]
-    pub(crate) fn get_lsb1(&self) -> i32 {
+    pub(crate) fn get_lsb1(&self) -> Option<u64> {
         if self.0 == 0 {
-            return -1
+            // return -1
+            return None
         }
 
-        // let lsb = (block.0 as i64 & -(block.0 as i64)) -1
+        // let x = self.0 & -self.0;
+        // let lsb = (self.0 as i64 & -(self.0 as i64)) -1
+
         // asset_eq(self.get_lsb1(), lsb);
         
-        self.trailing_zeros() as i32
+        Some(self.trailing_zeros() as u64)
+    }
+
+
+    pub(crate) fn set_occupancy(&mut self, index: u64, bits_in_mask: u32) -> BitBoard {
+        let mut occupancy_mask = BitBoard::new();
+
+
+        // loop over the range of bits within attack mask
+        for count in 0..bits_in_mask {
+            // get the index of the least significant first bit(LS1B) in the attack mask
+            let square = self.get_lsb1().unwrap();
+            // then pop the it
+            self.pop_bit(square.into());
+            // make sure the occupancy is on the board
+            if (index & 1<<count) != 0 {
+                occupancy_mask.0 |= 1 << square;
+            }
+        }
+
+        // return occupancy mask
+        occupancy_mask
     }
 
 }
@@ -105,11 +127,11 @@ impl Display for BitBoard {
                     print!("{}  ", 8-rank);
                 }
                 
-                print!(" {} ", self.get_bit(square));
+                print!(" {} ", self. get_bit(square));
             }
             println!("");
         }
-        println!("    a  b  c  d  e  f  g  h\n");
+        println!("    \n    a  b  c  d  e  f  g  h\n");
         write!(f, "Bitboard: {}", self.0)
     }
 }

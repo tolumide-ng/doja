@@ -17,7 +17,7 @@ pub use bit_board::BitBoard;
 // use pawn::Pawn;
 // use rook::Rook;
 
-use crate::squares::{Square, SQUARE_NAMES};
+use crate::{bishop::Bishop, rook::Rook, squares::{Square, SQUARE_NAMES}};
 
 
 
@@ -36,42 +36,32 @@ fn main() {
     // block.set_bit(Square::D5.into());
     // println!("{:#?} :::: XOVVVVTY :::: \n\n ", block.to_string());
 
-    block.set_bit(Square::D7.into());
-    block.set_bit(Square::D2.into());
-    block.set_bit(Square::D1.into());
-    block.set_bit(Square::B4.into());
-    block.set_bit(Square::G4.into());
+    // block.set_bit(Square::D7.into());
+    // block.set_bit(Square::D2.into());
+    // block.set_bit(Square::D1.into());
+    // block.set_bit(Square::B4.into());
+    // block.set_bit(Square::G4.into());
 
+    // // println!("counting the bits {:#?}", block.count_bits());
     // println!("counting the bits {:#?}", block.count_bits());
-    println!("counting the bits {:#?}", block.count_bits());
-    println!(">>>>>>>>>> {:#?}", SQUARE_NAMES[block.get_lsb1() as usize]);
-    let x = (block.0 as i64 & -(block.0 as i64)) -1;
-    let mut oo = BitBoard::new();
-    oo.0 = x as u64;
-    println!(">>>>>>>>>> {:#?}", oo.to_string());
+    // println!(">>>>>>>>>> {:#?}", SQUARE_NAMES[block.get_lsb1().unwrap() as usize]);
+    // let x = (block.0 as i64 & -(block.0 as i64)) -1;
+    // let mut oo = BitBoard::new();
+    // oo.0 = x as u64;
+    // println!(">>>>>>>>>> {:#?}", oo.to_string());
 
-    // let rookie = DynamicAttacks::bishop(Square::D4 as u64, block.0);
-    // let rookie = DynamicAttacks::rookie(Square::D4 as u64, block.0);
-    // println!(":::: this is the rookie :::: {:#?}", rookie.to_string());
 
-    // let rooks = Rook::init_leapers_attack();
-    // // let pawn_attacks = Pawn::init_leapers_attack();
-    // for i in rooks {
-    //     println!("the board {:#}", i.to_string());
-    // }
-
+    // mask piece at given square
     
-    // bit_board.set_bit(Square::C7); 
-    // bit_board.set_bit(Square::C6);
+    
+    // init occupancy
+    for rank in 0..8 {
+        for file in 0..8 {
+            let square = (rank * 8) + file;
+            let data = Rook::mask_rook_attacks(square).count_bits();
+            print!(" {data},");
+        }
+        println!("\n")
+    }
 
-    // println!("{:#?}", bit_board.to_string());
-
-
-    // bit_board.pop_bit(Square::C7);
-    // println!("{:#?}", bit_board.to_string());
-
-
-    // for i in (1..=8).rev() {
-    //     println!("\"A{i}\", \"B{i}\", \"C{i}\", \"D{i}\", \"E{i}\", \"F{i}\", \"G{i}\", \"H{i}\",");
-    // }
 }

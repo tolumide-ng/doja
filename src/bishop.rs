@@ -11,8 +11,6 @@ impl Bishop {
         let target_file = square % 8;
 
 
-        println!("target_rank is {target_rank}, and target_file is {target_file}");
-
         // mask relevant bishop occupancy bits
         let (mut rank, mut file) = (target_rank+1, target_file+1);
         while rank <= 6 && file <=6 {
