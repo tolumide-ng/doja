@@ -25,13 +25,13 @@ fn main() {
 
     // // init all// init all// init all// init all// init all
     let mut occupancy = BitBoard::new();
-    occupancy.set_bit(Square::C5.into());
-    occupancy.set_bit(Square::F2.into());
-    occupancy.set_bit(Square::G7.into());
-    occupancy.set_bit(Square::B2.into());
-    occupancy.set_bit(Square::G5.into());
-    occupancy.set_bit(Square::E2.into());
-    occupancy.set_bit(Square::E7.into());
+    // occupancy.set_bit(Square::C5.into());
+    // occupancy.set_bit(Square::F2.into());
+    // occupancy.set_bit(Square::G7.into());
+    // occupancy.set_bit(Square::B2.into());
+    // occupancy.set_bit(Square::G5.into());
+    // occupancy.set_bit(Square::E2.into());
+    // occupancy.set_bit(Square::E7.into());
 
 
     println!("{:#?}", occupancy.to_string());

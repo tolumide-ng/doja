@@ -14,11 +14,11 @@ impl DynamicAttacks {
 
         // Generate bishop attacks
         // mask relevant bishop occupancy bits
-        let (mut rank, mut file) = (target_rank+1, target_file+1);
-        while rank <= 7 && file <=7 { // bottom right            
+        let (mut rank, mut file) = (target_rank, target_file);
+        while rank < 7 && file <7 { // bottom right            
+            rank+=1; file+=1;
             attack.0 |= 1 << (rank * 8 + file);
             if (1 << ((rank * 8) + file)) & block != 0 {break} //  AND_RESULT
-            rank+=1; file+=1;
             // println!("|||||||| {}", rank * 8 + file);
         }
 
@@ -67,41 +67,41 @@ impl DynamicAttacks {
 
         // top
         if target_rank > 0 {
-            let mut rank = target_rank - 1;
-            while rank >= 0 {
+            let mut rank = target_rank;
+            while rank > 0 {
+                rank -=1;
                 attack.0 |= 1 << ((rank * 8) + target_file);
                 if 1 << ((rank * 8) + target_file) & block != 0 {break}
                 if rank == 0 {break}
-                rank -=1;
             }
         }
 
 
         // bottom
-        let mut rank = target_rank + 1;
-        while rank <= 7 {
+        let mut rank = target_rank;
+        while rank < 7 {
+            rank +=1;
             attack.0 |= 1 << ((8 * rank) + target_file);
             if 1 << ((8 * rank) + target_file) & block != 0 {break}
-            rank +=1;
         }
 
 
         //right
-        let mut file = target_file +1;
-        while file <= 7 {
+        let mut file = target_file;
+        while file < 7 {
+            file +=1;
             attack.0 |= 1 << ((target_rank * 8) + file);
             if 1 << ((target_rank * 8) + file) & block != 0 {break}
-            file +=1;
         }
 
         // left
         if target_file > 0 {
-            let mut file = target_file - 1;
-            while file >= 0 {
+            let mut file = target_file;
+            while file > 0 {
+                file-=1;
                 attack.0 |= 1<<((target_rank *8) + file);
                 if 1<<((target_rank *8) + file) & block != 0 {break}
                 if file == 0 {break}
-                file-=1;
             }
 
         }
