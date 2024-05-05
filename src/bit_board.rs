@@ -110,46 +110,6 @@ impl BitBoard {
 
 
 
-    // pub(crate) fn xcount_bits(&self) -> u32 {
-    //     let mut bb = *self.clone();
-
-    //     let mut count =0;
-    //     while bb !=0 {
-    //         count+=1;
-    //         bb &= bb -1;
-    //     }
-    //     count
-    // }
-
-    // pub(crate) fn xget_ls1b(&self) -> i32 {
-    //     let bb = self.clone();
-    //     if *bb == 0 {
-    //         return -1;
-    //     }
-
-    //     let xx = (bb.0 & bb.wrapping_neg())-1;
-    //     return BitBoard::from(xx).xcount_bits() as i32;
-    // }
-
-    // pub(crate) fn xset_occupancy(&self, index: u64, bits_in_mask: u32) -> u64 {
-    //     let mut attack_mask = self.clone();
-    //     let mut occupancy = 0u64;
-
-    //     for count in 0..bits_in_mask {
-    //         let square = attack_mask.xget_ls1b();
-    //         attack_mask.pop_bit(square as u64);
-
-    //         if index & (1<< count) !=0 {
-    //             println!("::::::::::::: {count}");
-    //             println!("the obtained square is {square}");
-    //             occupancy |= 1u64 << square as u64;
-    //         }
-    //     }
-
-    //     return occupancy
-    // }
-
-
     pub(crate) fn set_occupancy(&self, index: u64, bits_in_mask: u32) -> BitBoard {
         let mut attack_mask: BitBoard = self.clone();
         let mut occupancy = 0u64;
