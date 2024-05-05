@@ -4,6 +4,7 @@ pub struct Bishop;
 
 
 impl Bishop {
+    /// The bishop's LOGICAL_AND
     pub fn mask_bishop_attack(square: u64) -> BitBoard {
         let mut attack = BitBoard::new();
 
@@ -13,8 +14,7 @@ impl Bishop {
 
         // mask relevant bishop occupancy bits
         let (mut rank, mut file) = (target_rank+1, target_file+1);
-        while rank <= 6 && file <=6 {
-            // bottom right
+        while rank <= 6 && file <=6 { // bottom right
             attack.0 |= 1 << (rank * 8 + file);
             rank+=1; file+=1;
         }
@@ -23,8 +23,7 @@ impl Bishop {
         if target_rank > 0 && target_file > 0 { // this helps us avoid overflow (subtracting from 0)
              // mask relevant bishop occupancy bits
              let (mut rank, mut file) = (target_rank-1, target_file-1);
-             while rank >= 1 && file >= 1 {
-                 // top left
+             while rank >= 1 && file >= 1 { // top left
                  attack.0 |= 1 << (rank * 8 + file);
                  rank-=1; file-=1;
              }
@@ -33,8 +32,7 @@ impl Bishop {
 
          if target_file > 0 {
              let (mut rank, mut file) = (target_rank+1, target_file-1);
-             while rank <= 6 && file >= 1 {
-                 // bottom left
+             while rank <= 6 && file >= 1 { // bottom left
                  attack.0 |= 1 << (rank * 8 + file);
                  rank+=1; file-=1;
              }
@@ -43,8 +41,7 @@ impl Bishop {
 
          if target_rank > 0 {
              let (mut rank, mut file) = (target_rank-1, target_file+1);
-             while rank >= 1 && file <= 6 {
-                 // top right
+             while rank >= 1 && file <= 6 { // top right
                  attack.0 |= 1 << (rank * 8 + file);
      
                  rank-=1; file+=1;

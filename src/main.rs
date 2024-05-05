@@ -7,104 +7,39 @@ mod knight;
 mod king;
 mod bishop;
 mod rook;
-mod attacks;
 mod magic;
+// mod attacks;
+// mod magic;
 
-use attacks::DynamicAttacks;
+// use attacks::DynamicAttacks;
 // use bishop::Bishop;
 pub use bit_board::BitBoard;
-use magic::Magic;
-// use king::King;
-// use knight::Knight;
-// use pawn::Pawn;
-// use rook::Rook;
+use magic::{plain::PlainAttacks};
 
-use crate::{bishop::Bishop, rook::Rook, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
+use crate::{bishop::Bishop, magic::attacks::DynamicAttacks, rook::Rook, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
 
 
 
 
 fn main() {
-    // println!("Hello, world!");
-    // let mut bit_board = BitBoard::new();
-    // println!("{:#?}", bit_board.to_string());
-    // let e2: u64 = Square::E2.into();
 
-    let mut block = BitBoard::new();
-    // block.set_bit(Square::B6.into());
-    // block.set_bit(Square::G7.into());
-    // block.set_bit(Square::F4.into());
-    // block.set_bit(Square::B2.into());
-    // block.set_bit(Square::D5.into());
-    // println!("{:#?} :::: XOVVVVTY :::: \n\n ", block.to_string());
-
-    // block.set_bit(Square::D7.into());
-    // block.set_bit(Square::D2.into());
-    // block.set_bit(Square::D1.into());
-    // block.set_bit(Square::B4.into());
-    // block.set_bit(Square::G4.into());
-
-    // // println!("counting the bits {:#?}", block.count_bits());
-    // println!("counting the bits {:#?}", block.count_bits());
-    // println!(">>>>>>>>>> {:#?}", SQUARE_NAMES[block.get_lsb1().unwrap() as usize]);
-    // let x = (block.0 as i64 & -(block.0 as i64)) -1;
-    // let mut oo = BitBoard::new();
-    // oo.0 = x as u64;
-    // println!(">>>>>>>>>> {:#?}", oo.to_string());
+    // // init all// init all// init all// init all// init all
+    // let bishop = PlainAttacks::init_sliders_attacks(true);
+    // // let occupancy = BitBoard::from(0).set_occupancy(0, bits_in_mask);
+    // let mut occupancy = BitBoard::new();
+    // occupancy.set_bit(Square::C5.into());
 
 
-    // mask piece at given square
-    
-    
-    // // init occupancy
-    // for rank in 0..8 {
-    //     for file in 0..8 {
-    //         let square = (rank * 8) + file;
-    //         let data = Rook::mask_rook_attacks(square).count_bits();
-    //         print!(" {data},");
-    //     }
-    //     println!("\n")
-    // }
+    // // println!()
+    // println!("{:#?}", BitBoard::from(bishop.get_bishop_attacks(Square::D4, 0)).to_string());
+    // // // let rook = PlainAttacks::init_sliders_attacks(false);
+    // // init all// init all// init all// init all// init all// init all
 
 
+    let mvt = DynamicAttacks::rookie(Square::C4.into(), 0);
+    println!("{:#?}", mvt.to_string());
+    println!("************************************************************");
+    let m0 = DynamicAttacks::bishop(Square::E7.into(), 0);
+    println!("{:#?}", m0.to_string());
 
-
-    let mut magic = Magic::new();
-    // let x = magic.random_u32() as u64;
-    // let ox = x & 0xFFFF;
-
-    // let sx = BitBoard::from(magic.random_u32() as u64);
-    // let sox = BitBoard::from(*sx & 0xFFFF);
-
-    // println!("magic number >>>> {:064b}", x);
-    // println!("magic number >>>> {:064b}", ox);
-
-    // println!("-------------xxx-----------–-------------xxx-----------–-------------xxx-----------–");
-
-    // println!("magic number >>>> {} \n\n\n\n", sx.to_string());
-    // println!("magic number >>>> {} \n\n", sox.to_string());
-
-    // println!("------|||||||||:::::::::::::: {:#?}", BitBoard::from(Magic::new().random_u64()).to_string());
-
-    // println!("magic number >>>> {}", BitBoard::from(magic.random_u32() as u64).to_string());
-    // println!("magic number >>>> {}", BitBoard::from(magic.random_u32() as u64 & 0xFFFF).to_string()); // slice upprt (from MS1B side) 16bits
-    // println!("magic number >>>> {}", BitBoard::from(magic.random_u64() as u64).to_string());
-    // println!("magic number >>>> {}", BitBoard::from(magic.random_u64_fewbits() as u64).to_string());
-
-
-
-    // println!("magic number >>>> {}", BitBoard::from(magic.random_u32() as u64).to_string());
-
-    
-
-    Magic::new().init_magic_numbers();
-    // let nn = Magic::new();
-    // for square in 0..64 {
-    //         // init rook magic numbers
-    //         let mut nnn = Magic::from(nn.clone());
-    //         println!("================ nnn {:#?}", nnn);
-    //     let bishop = nnn.find_magic_number(square, BISHOP_RELEVANT_BITS[square as usize] as u32, true);
-    //     println!("{:0x}", bishop);
-
-    // }
 }

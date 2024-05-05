@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Deref};
 
-use crate::squares::Square;
+use crate::squares::{Square, BIT_TABLE};
 
 
 
@@ -41,7 +41,7 @@ impl BitBoard {
     /// Checks if the bit at the target position is 1, if the value
     /// is 1, then it uses the BitXorAssign operator described above
     pub fn pop_bit(&mut self, square: u64) {
-        if self.get_bit(square.into()) == 1 {
+        if self.get_bit(square.into()) != 0 {
             self.0 ^= 1 << square;
         }
     }
@@ -64,14 +64,6 @@ impl BitBoard {
     /// this would return 3
     #[inline]
     pub(crate) fn count_bits(&self) -> u32 {
-        // let mut count = 0;
-        // let mut counter = *self;
-
-        // while counter.0 != 0 {
-        //     counter.0 &= counter.0 - 1;
-        //     count +=1;
-        // }
-        // count
         self.count_ones()
     }
 
@@ -93,23 +85,88 @@ impl BitBoard {
         Some(self.trailing_zeros() as u64)
     }
 
+    /// https://www.chessprogramming.org/Looking_for_Magics
+    pub(crate) fn pop_first_bit(&mut self) -> u64 {
+        let b = self.0 ^ (self.0 - 1);
+        let fold = (b as u32) ^ (b >> 32) as u32;
+        self.0 &= self.0 - 1;
+        // println!("::::::xxxxx::::: {}", fold.wrapping_mul(0x783a9b23) >> 26);
+        BIT_TABLE[(fold.wrapping_mul(0x783a9b23) >> 26) as usize]
+    }
+
+    /// https://www.chessprogramming.org/Looking_for_Magics
+    /// Does exactly the same as set_occupancy, but this uses Tord Romstad's approach
+    pub(crate) fn index_to_u64(&self, index: usize, bits: u32) -> u64 {
+        let mut mask = self.clone();
+        let mut result = 0_u64;
+
+        for i in 0..bits {
+            // println!("the mask >>>>>>>> {:#?}", mask.to_string());
+            let j = mask.pop_first_bit();
+            if index & (1<<i) !=0 {result |= 1 << j}
+        }
+        result
+    }
+
+
+
+    // pub(crate) fn xcount_bits(&self) -> u32 {
+    //     let mut bb = *self.clone();
+
+    //     let mut count =0;
+    //     while bb !=0 {
+    //         count+=1;
+    //         bb &= bb -1;
+    //     }
+    //     count
+    // }
+
+    // pub(crate) fn xget_ls1b(&self) -> i32 {
+    //     let bb = self.clone();
+    //     if *bb == 0 {
+    //         return -1;
+    //     }
+
+    //     let xx = (bb.0 & bb.wrapping_neg())-1;
+    //     return BitBoard::from(xx).xcount_bits() as i32;
+    // }
+
+    // pub(crate) fn xset_occupancy(&self, index: u64, bits_in_mask: u32) -> u64 {
+    //     let mut attack_mask = self.clone();
+    //     let mut occupancy = 0u64;
+
+    //     for count in 0..bits_in_mask {
+    //         let square = attack_mask.xget_ls1b();
+    //         attack_mask.pop_bit(square as u64);
+
+    //         if index & (1<< count) !=0 {
+    //             println!("::::::::::::: {count}");
+    //             println!("the obtained square is {square}");
+    //             occupancy |= 1u64 << square as u64;
+    //         }
+    //     }
+
+    //     return occupancy
+    // }
+
 
     pub(crate) fn set_occupancy(&self, index: u64, bits_in_mask: u32) -> BitBoard {
-        let mut self_clone: BitBoard = self.clone();
-        let mut occupancy_mask = BitBoard::new();
-
+        let mut attack_mask: BitBoard = self.clone();
+        let mut occupancy = 0u64;
+        
         // loop over the range of bits within attack mask
         for count in 0..bits_in_mask {
             // get the index of the least significant first bit(LS1B) in the attack mask
-            let square = self_clone.get_lsb1().unwrap();
+            let square = attack_mask.get_lsb1().unwrap();
             // then pop the it
-            self_clone.pop_bit(square.into());
+            attack_mask.pop_bit(square.into());
             // make sure the occupancy is on the board
-            if (index & 1<<count) != 0 {
-                occupancy_mask.0 |= 1 << square;
+            if (index & (1<<count)) != 0 {
+                occupancy |= 1u64 << square;
             }
         }
-        occupancy_mask
+        
+        occupancy.into()
     }
 
 }

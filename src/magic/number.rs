@@ -1,6 +1,6 @@
-use std::{collections::HashSet, ops::Deref, ptr};
+use std::ops::Deref;
 
-use crate::{attacks::DynamicAttacks, bishop::Bishop, rook::Rook, squares::{self, Square, BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, BitBoard};
+use crate::{bishop::Bishop, rook::Rook, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, BitBoard, magic::attacks::DynamicAttacks};
 
 
 #[derive(Debug)]
@@ -23,7 +23,7 @@ impl Magic {
 
 
     //// https://www.chessprogramming.org/Looking_for_Magics
-    pub fn random_u64(&mut self) -> u64 {
+    fn get_random_u64(&mut self) -> u64 {
         let u1 = (self.random_u32() as u64) & 0xFFFF;
         let u2 = (self.random_u32() as u64) & 0xFFFF;
         let u3 = (self.random_u32() as u64) & 0xFFFF;
@@ -32,11 +32,92 @@ impl Magic {
         u1 | u2 << 16 | u3 << 32 | u4 << 48
     }
 
+
+    fn random_u64(&self) -> u64 {
+        let u1 = rand::random::<u64>() & 0xFFFF;
+        let u2 = rand::random::<u64>() & 0xFFFF;
+        let u3 = rand::random::<u64>() & 0xFFFF;
+        let u4 = rand::random::<u64>() & 0xFFFF;
+
+        u1 | (u2 << 16) | (u3 << 32) | (u4 << 48)
+    }
+
     /// Generate magic number
     /// https://www.chessprogramming.org/Looking_for_Magics
-    pub(crate) fn random_u64_fewbits(&mut self) -> u64 {
+    fn random_u64_fewbits(&mut self) -> u64 {
         self.random_u64() & self.random_u64() & self.random_u64()
     }
+
+    fn generate_magic_number(&mut self) -> u64 {
+        self.get_random_u64() & self.get_random_u64() & self.get_random_u64()
+    }
+
+
+    pub(crate) fn find_magic(&mut self, sq: u64, relevant_bits: u32, bishop: bool) -> u64 {
+        let mut b: Vec<u64> = vec![0; 4096]; // occupancies
+        let mut attacks: Vec<u64> = vec![0; 4096];
+        let mut used_attacks: Vec<u64> = Vec::with_capacity(4096);
+
+        let mask = match bishop {
+            true => Bishop::mask_bishop_attack(sq),
+            false => Rook::mask_rook_attacks(sq)
+        };
+        let n = mask.count_ones();
+
+        for i in 0..(1<<n) {
+            // println!("the i is {} and the n is {}", i, n);
+            let i = i as usize;
+            b[i] = mask.index_to_u64(i, n);
+            attacks[i] = match bishop {
+                true => DynamicAttacks::bishop(sq, b[i]).into(),
+                false => DynamicAttacks::rookie(sq, b[i]).into(),
+            };
+        }
+
+        for _ in 0..100000000 {
+            let magic = self.random_u64_fewbits();
+            let magic_mask = mask.wrapping_mul(magic) & 0xFF00000000000000;
+            if BitBoard::from(magic_mask).count_ones() < 6 {continue};
+            // unsafe { ptr::write_bytes(used_attacks.as_mut_ptr(), 0, 4096) };
+            used_attacks = vec![0; 4096];
+            let mut i =0; let mut fail = false;
+            while !fail && i < (1 << n) {
+                // println!("xov2 {}", b[i]);
+                let j = ((b[i].wrapping_mul(magic)) >> (64-relevant_bits)) as usize;
+                if used_attacks[j]== 0 {used_attacks[j] = attacks[i]}
+                else if used_attacks[j] != attacks[i] {fail=true};
+                i+=1;
+            }
+            if !fail {return magic}
+        }
+        return 0
+    }
+
+
+    pub(crate) fn finding_finder(&mut self) {
+        let mut rook = Vec::with_capacity(64);
+        let mut bishop = Vec::with_capacity(64);
+
+        for sq in 0..64 {
+            // println!("rookie == {:#?}", self.find_magic(sq, ROOK_RELEVANT_BITS[sq as usize], false))
+            rook.push(self.find_magic(sq, ROOK_RELEVANT_BITS[sq as usize], false));
+        }
+
+
+        println!("{:#?}", rook);
+
+        println!("length is {}", rook.len());
+
+        println!(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::");
+
+        for sq in 0..64 {
+            // println!("bishop = {:#?}", self.find_magic(sq, BISHOP_RELEVANT_BITS[sq as usize], true))
+            bishop.push(self.find_magic(sq, BISHOP_RELEVANT_BITS[sq as usize], true));
+        }
+
+        println!("<><> \n {:#?}", bishop);
+    }
+
 
 
     /// Find appropriate magic number
@@ -71,9 +152,9 @@ impl Magic {
         // test magic number
         for _ in 0..100000000 {
             // generate magic number candidate
-            let magic_number = self.random_u64_fewbits();
+            let magic_number = self.generate_magic_number();
             // skip inappropriate magic numbers
-            let magic_attack = (*attack_mask).wrapping_mul(magic_number) & 0xFF00000000000000;
+            let magic_attack = (*attack_mask).wrapping_mul(magic_number) & 0xFF00000000000000u64;
             if BitBoard::from(magic_attack).count_bits() < 6 {continue};
             // unsafe { ptr::write_bytes(used_attacks.as_mut_ptr(), 0, 4096) };
             used_attacks.drain(..);
@@ -110,21 +191,23 @@ impl Magic {
 
 
     pub(crate) fn init_magic_numbers(&mut self) {
+        let mut rook = Vec::with_capacity(64);
+        let mut bishop = Vec::with_capacity(64);
+
         // loop over 64 board squares
         for square in 0..64 {
             // init rook magic numbers
             // println!("self is {:?}", self);
-            let rook = self.find_magic_number(square, ROOK_RELEVANT_BITS[square as usize] as u32, false);
-            println!("{:0x}", rook);
-
+            rook.push(self.find_magic_number(square, ROOK_RELEVANT_BITS[square as usize], false));
         }
+        // println!("{:#?}", rook);
         println!("________________________________________________________ \n");
 
         for square in 0..64 {
-                let bishop = self.find_magic_number(square, BISHOP_RELEVANT_BITS[square as usize] as u32, true);
-                println!("{:0x}", bishop);
+                bishop.push(self.find_magic_number(square, BISHOP_RELEVANT_BITS[square as usize], true));
+            }
         }
-    }
+        // println!("{:#?}", bishop);
 }
 
 
