@@ -15,7 +15,7 @@ pub(crate) struct PlainAttacks {
 impl PlainAttacks {
     pub(crate) fn init_sliders_attacks(bishop: bool) -> Self {
         let mut bishop_attacks: Vec<Vec<u64>> = vec![vec![0; 512]; 64];
-        let mut rook_attacks: Vec<Vec<u64>> = vec![vec![0; 512]; 64];
+        let mut rook_attacks: Vec<Vec<u64>> = vec![vec![0; 4096]; 64];
         let mut bishop_masks: Vec<u64> = vec![0; 64];
         let mut rook_masks: Vec<u64> = vec![0; 64];
 
@@ -47,15 +47,16 @@ impl PlainAttacks {
                         let occupancy = BitBoard::from(attack_mask).set_occupancy(index, relevant_bits_count);
                         let magic_index = (*occupancy).wrapping_mul(BISHOP_MAGIC_NUMBERS[sq]) >> (64 - BISHOP_RELEVANT_BITS[sq]);
                         bishop_attacks[sq][magic_index as usize] = DynamicAttacks::bishop(sq as u64, *occupancy).into();
-                        if sq == 35 {
-                            // println!("magic index is {}", BitBoard::from(bishop_attacks[sq][magic_index as usize]).to_string());
-                            // println!("the occupancy is {}", occupancy.to_string());
 
-                        }
                     }
                     false => {
                         let occupancy = BitBoard::from(attack_mask).set_occupancy(index, relevant_bits_count);
-                        let magic_index = (*occupancy).wrapping_mul(ROOK_MAGIC_NUMBERS[sq]) >> (64-ROOK_RELEVANT_BITS[sq as usize]);
+                        // println!("the rookie mask index {index} {:#?}", occupancy.to_string());
+                        // println!(":::XXXXXX:::: {:#?}", ROOK_RELEVANT_BITS[sq]);
+                        // println!("::::::::::::: {}", *occupancy);
+                        // println!("--------------------- {:0b}", ROOK_MAGIC_NUMBERS[sq]);
+                        // println!("LLLLLLLLLLLLL {}", (64 - ROOK_RELEVANT_BITS[sq]));
+                        let magic_index = (*occupancy).wrapping_mul(ROOK_MAGIC_NUMBERS[sq]) >> (64 - ROOK_RELEVANT_BITS[sq]);
                         rook_attacks[sq][magic_index as usize] = DynamicAttacks::rookie(sq as u64, *occupancy).into();
                     }
                 }
@@ -79,14 +80,14 @@ impl PlainAttacks {
         return self.bishop_attacks[sq][occ as usize]
     }
 
-    pub(crate) fn get_rook_attacks(&self, sq: usize, occupancy: u64) -> u64 {
-        let mut occupancy = occupancy;
+    pub(crate) fn get_rook_attacks(&self, sq: Square, occupancy: u64) -> u64 {
+        let mut occ = occupancy;
         let sq = sq as usize;
         // get bishop attacks assuming current board occupancy
-        occupancy &= self.rook_masks[sq];
-        occupancy *= ROOK_MAGIC_NUMBERS[sq];
-        occupancy >>= 64 - ROOK_RELEVANT_BITS[sq];
+        occ &= self.rook_masks[sq];
+        occ = occ.wrapping_mul(ROOK_MAGIC_NUMBERS[sq]);
+        occ >>= 64 - ROOK_RELEVANT_BITS[sq];
 
-        self.rook_attacks[sq][occupancy as usize]
+        self.rook_attacks[sq][occ as usize]
     }
 }
