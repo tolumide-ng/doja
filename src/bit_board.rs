@@ -94,23 +94,21 @@ impl BitBoard {
     }
 
 
-    pub(crate) fn set_occupancy(&mut self, index: u64, bits_in_mask: u32) -> BitBoard {
+    pub(crate) fn set_occupancy(&self, index: u64, bits_in_mask: u32) -> BitBoard {
+        let mut self_clone: BitBoard = self.clone();
         let mut occupancy_mask = BitBoard::new();
-
 
         // loop over the range of bits within attack mask
         for count in 0..bits_in_mask {
             // get the index of the least significant first bit(LS1B) in the attack mask
-            let square = self.get_lsb1().unwrap();
+            let square = self_clone.get_lsb1().unwrap();
             // then pop the it
-            self.pop_bit(square.into());
+            self_clone.pop_bit(square.into());
             // make sure the occupancy is on the board
             if (index & 1<<count) != 0 {
                 occupancy_mask.0 |= 1 << square;
             }
         }
-
-        // return occupancy mask
         occupancy_mask
     }
 
@@ -148,5 +146,12 @@ impl Deref for BitBoard {
 impl From<u64> for BitBoard {
     fn from(value: u64) -> Self {
         Self(value)
+    }
+}
+
+
+impl From<BitBoard> for u64 {
+    fn from(value: BitBoard) -> Self {
+        value.0
     }
 }

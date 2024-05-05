@@ -20,7 +20,7 @@ impl DynamicAttacks {
             attack.0 |= 1 << (rank * 8 + file);
             if 1 << ((rank * 8) + file) & block != 0 {break}
             rank+=1; file+=1;
-            println!("|||||||| {}", rank * 8 + file);
+            // println!("|||||||| {}", rank * 8 + file);
         }
 
 
@@ -72,7 +72,6 @@ impl DynamicAttacks {
         if target_rank > 0 {
             let mut rank = target_rank - 1;
             while rank >= 0 {
-                println!("top times is now>>>>>> {target_file}");
                 attack.0 |= 1 << ((rank * 8) + target_file);
                 if 1 << ((rank * 8) + target_file) & block != 0 {break}
                 if rank == 0 {break}
@@ -93,7 +92,6 @@ impl DynamicAttacks {
         //right
         let mut file = target_file +1;
         while file <= 7 {
-            println!("<<<<<<<<<< and the right time is now {file}");
             attack.0 |= 1 << ((target_rank * 8) + file);
             if 1 << ((target_rank * 8) + file) & block != 0 {break}
             file +=1;

@@ -19,7 +19,7 @@ use magic::Magic;
 // use pawn::Pawn;
 // use rook::Rook;
 
-use crate::{bishop::Bishop, rook::Rook, squares::{Square, SQUARE_NAMES}};
+use crate::{bishop::Bishop, rook::Rook, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
 
 
 
@@ -66,24 +66,45 @@ fn main() {
     //     println!("\n")
     // }
 
+
+
+
     let mut magic = Magic::new();
-    let x = magic.random_u32() as u64;
-    let ox = x & 0xFFFF;
+    // let x = magic.random_u32() as u64;
+    // let ox = x & 0xFFFF;
 
-    let sx = BitBoard::from(magic.random_u32() as u64);
-    let sox = BitBoard::from(*sx & 0xFFFF);
+    // let sx = BitBoard::from(magic.random_u32() as u64);
+    // let sox = BitBoard::from(*sx & 0xFFFF);
 
-    println!("magic number >>>> {:064b}", x);
-    println!("magic number >>>> {:064b}", ox);
+    // println!("magic number >>>> {:064b}", x);
+    // println!("magic number >>>> {:064b}", ox);
 
-    println!("-------------xxx-----------–-------------xxx-----------–-------------xxx-----------–");
+    // println!("-------------xxx-----------–-------------xxx-----------–-------------xxx-----------–");
 
     // println!("magic number >>>> {} \n\n\n\n", sx.to_string());
     // println!("magic number >>>> {} \n\n", sox.to_string());
 
-    println!("------|||||||||:::::::::::::: {:#?}", BitBoard::from(Magic::new().random_u64()).to_string());
+    // println!("------|||||||||:::::::::::::: {:#?}", BitBoard::from(Magic::new().random_u64()).to_string());
 
-    // println!("magic number >>>> {}", BitBoard::from(magic.get_random_u32_number() as u64 & 0xFFFF).to_string()); // slice upprt (from MS1B side) 16bits
-    // println!("magic number >>>> {}", BitBoard::from(magic.get_random_u32_number() as u64).to_string());
+    // println!("magic number >>>> {}", BitBoard::from(magic.random_u32() as u64).to_string());
+    // println!("magic number >>>> {}", BitBoard::from(magic.random_u32() as u64 & 0xFFFF).to_string()); // slice upprt (from MS1B side) 16bits
+    // println!("magic number >>>> {}", BitBoard::from(magic.random_u64() as u64).to_string());
+    // println!("magic number >>>> {}", BitBoard::from(magic.random_u64_fewbits() as u64).to_string());
 
+
+
+    // println!("magic number >>>> {}", BitBoard::from(magic.random_u32() as u64).to_string());
+
+    
+
+    Magic::new().init_magic_numbers();
+    // let nn = Magic::new();
+    // for square in 0..64 {
+    //         // init rook magic numbers
+    //         let mut nnn = Magic::from(nn.clone());
+    //         println!("================ nnn {:#?}", nnn);
+    //     let bishop = nnn.find_magic_number(square, BISHOP_RELEVANT_BITS[square as usize] as u32, true);
+    //     println!("{:0x}", bishop);
+
+    // }
 }
