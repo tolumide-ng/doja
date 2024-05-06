@@ -2,6 +2,7 @@ mod bit_board;
 mod squares;
 mod pawn;
 mod color;
+mod board;
 mod constants;
 mod knight;
 mod king;
@@ -14,7 +15,7 @@ mod magic;
 // use attacks::DynamicAttacks;
 // use bishop::Bishop;
 pub use bit_board::BitBoard;
-use magic::{plain::PlainAttacks};
+use magic::plain::PlainAttacks;
 
 use crate::{bishop::Bishop, magic::attacks::DynamicAttacks, rook::Rook, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
 

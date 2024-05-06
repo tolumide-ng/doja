@@ -1,0 +1,1 @@
+// occupancy bitboards

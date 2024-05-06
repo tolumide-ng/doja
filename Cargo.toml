@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 rand = "0.8.5"
+bitflags = "2.5.0"
+derive_more = "0.99.17"

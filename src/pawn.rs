@@ -31,6 +31,7 @@ impl Pawn {
                     attacks.0 |= bit_board.0 >> 9;
                 }
             }
+            Color::Both => {}
         }
         attacks
     }

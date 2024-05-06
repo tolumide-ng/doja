@@ -42,7 +42,7 @@ impl BitBoard {
     /// is 1, then it uses the BitXorAssign operator described above
     pub fn pop_bit(&mut self, square: u64) {
         if self.get_bit(square.into()) != 0 {
-            self.0 ^= 1 << square;
+            self.0 ^= (1 << square);
         }
     }
 
@@ -101,7 +101,6 @@ impl BitBoard {
         let mut result = 0_u64;
 
         for i in 0..bits {
-            // println!("the mask >>>>>>>> {:#?}", mask.to_string());
             let j = mask.pop_first_bit();
             if index & (1<<i) !=0 {result |= 1 << j}
         }
