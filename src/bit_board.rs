@@ -15,10 +15,10 @@ impl Mask {
 
     /// First shifts the binary representation of 1 to the left by value (u64),
     /// generating a mask with the `square-th` bit set.
-    /// It then compares the mask with the mask using the `&` operator, effectively
+    /// It then compares the mask with self using the `&` operator, effectively
     /// comparing the value at the `square-th` position on both.
     /// we then finally shift the result to the right by `square`, so we can get a 1 or 0 \
-    /// NB: this is same as (self.0 >> square) & 1 meaning shift the mask to the right
+    /// NB: this is same as (self.0 >> square) & 1 meaning shift self to the right
     /// by `square` compare with 1 using the `&` operator, then return the result
     pub fn get_bit_by_square(&self, square: Square) -> u64 {
         // let value = (self.0 >> square) & 1;
@@ -26,7 +26,7 @@ impl Mask {
         (self.0 & (1 << value)) >> value
     }
 
-    /// shifts the bit_board to the right by square_value (u64) 
+    /// shifts self to the right by square_value (u64) 
     /// and compares the value at the LSB (Least Significant Byte)
     /// with 1 ---->> if the value at LSB is 1, then return 1 else
     /// it returns 0
@@ -49,7 +49,7 @@ impl Mask {
     /// shifts the binary representation of 1 to the right by square (u64)
     /// this creates a mask with only the `square-th` bit set i.e. if value
     /// of the square is 6, then this (1) would become (10 0000)
-    /// and then assigns this mask to the mask
+    /// and then assigns the new mask to self.0
     /// |= means Bitwise OR and assignment
     /// this means that if the other positions in the target mask are 1,
     /// the zeros on this new mask cannot override them 
