@@ -1,12 +1,12 @@
-use crate::BitBoard;
+use crate::Mask;
 
 pub struct Bishop;
 
 
 impl Bishop {
     /// The bishop's LOGICAL_AND
-    pub fn mask_bishop_attack(square: u64) -> BitBoard {
-        let mut attack = BitBoard::new();
+    pub fn mask_bishop_attack(square: u64) -> Mask {
+        let mut attack = Mask::new();
 
         let target_rank = square / 8;
         let target_file = square % 8;
@@ -54,7 +54,7 @@ impl Bishop {
     }
 
 
-    pub fn init_leapers_attack() -> Vec<BitBoard> {
+    pub fn init_leapers_attack() -> Vec<Mask> {
         let mut attacks = Vec::with_capacity(64);
 
 

@@ -1,10 +1,10 @@
-use crate::{squares::Square, BitBoard};
+use crate::{squares::Square, Mask};
 
 pub struct Rook;
 
 impl Rook {
-    pub fn mask_rook_attacks(square: u64) -> BitBoard {
-        let mut attack = BitBoard::new();
+    pub fn mask_rook_attacks(square: u64) -> Mask {
+        let mut attack = Mask::new();
 
         let target_rank = square / 8;
         let target_file  = square %8;
@@ -49,7 +49,7 @@ impl Rook {
     }
 
 
-    pub fn init_leapers_attack() -> Vec<BitBoard> {
+    pub fn init_leapers_attack() -> Vec<Mask> {
         let mut attacks = Vec::with_capacity(64);
         for i in 0..64_u64 {
             attacks.push(Self::mask_rook_attacks(i));

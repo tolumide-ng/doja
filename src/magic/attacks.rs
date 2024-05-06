@@ -1,12 +1,12 @@
-use crate::{bishop::Bishop, knight::Knight, pawn::Pawn, BitBoard};
+use crate::{bishop::Bishop, knight::Knight, pawn::Pawn, Mask};
 
 pub struct DynamicAttacks;
 
 // https://www.chessprogramming.net/generating-magic-multipliers/
 impl DynamicAttacks {
     /// AND_RESULT
-    pub fn bishop(square: u64, block: u64) -> BitBoard {
-          let mut attack = BitBoard::new();
+    pub fn bishop(square: u64, block: u64) -> Mask {
+          let mut attack = Mask::new();
 
         let target_rank = square / 8;
         let target_file = square % 8;
@@ -58,8 +58,8 @@ impl DynamicAttacks {
     }
 
 
-    pub fn rookie(square: u64, block: u64) -> BitBoard {
-        let mut attack = BitBoard::new();
+    pub fn rookie(square: u64, block: u64) -> Mask {
+        let mut attack = Mask::new();
 
         let target_rank = square / 8;
         let target_file  = square %8;

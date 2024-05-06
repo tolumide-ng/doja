@@ -1,15 +1,15 @@
-use crate::{color::Color, constants::{NOT_A_FILE, NOT_H_FILE}, BitBoard};
+use crate::{color::Color, constants::{NOT_A_FILE, NOT_H_FILE}, Mask};
 
 
 pub struct Pawn;
 
 impl Pawn {
-    /// result attacks bitboard
-    pub fn mask_pawn_attacks(color: Color, square: u64) -> BitBoard {
-        let mut attacks = BitBoard::new();
+    /// result attacks mask
+    pub fn mask_pawn_attacks(color: Color, square: u64) -> Mask {
+        let mut attacks = Mask::new();
 
         // piece board
-        let mut bit_board = BitBoard::new();
+        let mut bit_board = Mask::new();
         bit_board.set_bit(square);
          
         match color {
@@ -36,8 +36,8 @@ impl Pawn {
         attacks
     }
 
-    pub fn init_leapers_attack() -> Vec<Vec<BitBoard>> {
-        let mut attacks: Vec<Vec<BitBoard>> = vec![vec![BitBoard::new(); 8*8]; 2];
+    pub fn init_leapers_attack() -> Vec<Vec<Mask>> {
+        let mut attacks: Vec<Vec<Mask>> = vec![vec![Mask::new(); 8*8]; 2];
 
         for i in 0..64 {
             attacks[Into::<usize>::into(Color::White)][i] = Pawn::mask_pawn_attacks(Color::White, i as u64);

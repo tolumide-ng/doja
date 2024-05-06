@@ -6,19 +6,19 @@ use crate::squares::{Square, BIT_TABLE};
 
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy)]
-pub struct BitBoard(pub u64);
+pub struct Mask(pub u64);
 
-impl BitBoard {
+impl Mask {
     pub fn new() -> Self {
         Self(0)
     }
 
     /// First shifts the binary representation of 1 to the left by value (u64),
     /// generating a mask with the `square-th` bit set.
-    /// It then compares the mask with the bitboard using the `&` operator, effectively
+    /// It then compares the mask with the mask using the `&` operator, effectively
     /// comparing the value at the `square-th` position on both.
     /// we then finally shift the result to the right by `square`, so we can get a 1 or 0 \
-    /// NB: this is same as (self.0 >> square) & 1 meaning shift the bitboard to the right
+    /// NB: this is same as (self.0 >> square) & 1 meaning shift the mask to the right
     /// by `square` compare with 1 using the `&` operator, then return the result
     pub fn get_bit_by_square(&self, square: Square) -> u64 {
         // let value = (self.0 >> square) & 1;
@@ -49,9 +49,9 @@ impl BitBoard {
     /// shifts the binary representation of 1 to the right by square (u64)
     /// this creates a mask with only the `square-th` bit set i.e. if value
     /// of the square is 6, then this (1) would become (10 0000)
-    /// and then assigns this mask to the bitboard
+    /// and then assigns this mask to the mask
     /// |= means Bitwise OR and assignment
-    /// this means that if the other positions in the target bitboard are 1,
+    /// this means that if the other positions in the target mask are 1,
     /// the zeros on this new mask cannot override them 
     /// since 0 | 1 is 1 and 1 | 0 is also 0
     pub fn set_bit(&mut self, square: u64) {
@@ -59,7 +59,7 @@ impl BitBoard {
     }
 
 
-    /// Counts the number of bits(1's) in a bitboard \
+    /// Counts the number of bits(1's) in a mask \
     /// e.g given 0b00011100 \
     /// this would return 3
     #[inline]
@@ -109,8 +109,8 @@ impl BitBoard {
 
 
 
-    pub(crate) fn set_occupancy(&self, index: u64, bits_in_mask: u32) -> BitBoard {
-        let mut attack_mask: BitBoard = self.clone();
+    pub(crate) fn set_occupancy(&self, index: u64, bits_in_mask: u32) -> Mask {
+        let mut attack_mask: Mask = self.clone();
         let mut occupancy = 0u64;
         
         // loop over the range of bits within attack mask
@@ -130,7 +130,7 @@ impl BitBoard {
 
 }
 
-impl Display for BitBoard {
+impl Display for Mask {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for rank in 0..8 {
             for file in 0..8 {
@@ -150,7 +150,7 @@ impl Display for BitBoard {
     }
 }
 
-impl Deref for BitBoard {
+impl Deref for Mask {
     type Target = u64;
 
     fn deref(&self) -> &Self::Target {
@@ -159,15 +159,15 @@ impl Deref for BitBoard {
 }
 
 
-impl From<u64> for BitBoard {
+impl From<u64> for Mask {
     fn from(value: u64) -> Self {
         Self(value)
     }
 }
 
 
-impl From<BitBoard> for u64 {
-    fn from(value: BitBoard) -> Self {
+impl From<Mask> for u64 {
+    fn from(value: Mask) -> Self {
         value.0
     }
 }

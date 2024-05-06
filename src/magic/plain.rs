@@ -1,6 +1,6 @@
 use std::ops::MulAssign;
 
-use crate::{bishop::Bishop, rook::Rook, squares::{Square, BISHOP_MAGIC_NUMBERS, BISHOP_RELEVANT_BITS, ROOK_MAGIC_NUMBERS, ROOK_RELEVANT_BITS}, BitBoard};
+use crate::{bishop::Bishop, rook::Rook, squares::{Square, BISHOP_MAGIC_NUMBERS, BISHOP_RELEVANT_BITS, ROOK_MAGIC_NUMBERS, ROOK_RELEVANT_BITS}, Mask};
 
 use super::attacks::DynamicAttacks;
 
@@ -25,7 +25,7 @@ impl PlainAttacks {
             rook_masks[sq] = Rook::mask_rook_attacks(sq as u64).into();
 
             // println!("for sq {}", sq.to_string());
-            // println!("the bishop mask here is {}", BitBoard::from(bishop_masks[sq]).to_string());
+            // println!("the bishop mask here is {}", Mask::from(bishop_masks[sq]).to_string());
             // println!("\n\n\n");
 
             // init current mask
@@ -35,7 +35,7 @@ impl PlainAttacks {
             };
 
             // init relevant occupancy bit count
-            let relevant_bits_count = BitBoard::from(attack_mask).count_bits();
+            let relevant_bits_count = Mask::from(attack_mask).count_bits();
             
             let occupany_indices = 1 << relevant_bits_count;
             
@@ -44,13 +44,13 @@ impl PlainAttacks {
             for index in 0..occupany_indices {
                 match bishop {
                     true => {
-                        let occupancy = BitBoard::from(attack_mask).set_occupancy(index, relevant_bits_count);
+                        let occupancy = Mask::from(attack_mask).set_occupancy(index, relevant_bits_count);
                         let magic_index = (*occupancy).wrapping_mul(BISHOP_MAGIC_NUMBERS[sq]) >> (64 - BISHOP_RELEVANT_BITS[sq]);
                         bishop_attacks[sq][magic_index as usize] = DynamicAttacks::bishop(sq as u64, *occupancy).into();
 
                     }
                     false => {
-                        let occupancy = BitBoard::from(attack_mask).set_occupancy(index, relevant_bits_count);
+                        let occupancy = Mask::from(attack_mask).set_occupancy(index, relevant_bits_count);
                         // println!("the rookie mask index {index} {:#?}", occupancy.to_string());
                         // println!(":::XXXXXX:::: {:#?}", ROOK_RELEVANT_BITS[sq]);
                         // println!("::::::::::::: {}", *occupancy);

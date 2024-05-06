@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::{bishop::Bishop, rook::Rook, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, BitBoard, magic::attacks::DynamicAttacks};
+use crate::{bishop::Bishop, rook::Rook, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, Mask, magic::attacks::DynamicAttacks};
 
 
 #[derive(Debug)]
@@ -77,7 +77,7 @@ impl Magic {
         for _ in 0..100000000 {
             let magic = self.random_u64_fewbits();
             let magic_mask = mask.wrapping_mul(magic) & 0xFF00000000000000;
-            if BitBoard::from(magic_mask).count_ones() < 6 {continue};
+            if Mask::from(magic_mask).count_ones() < 6 {continue};
             // unsafe { ptr::write_bytes(used_attacks.as_mut_ptr(), 0, 4096) };
             used_attacks = vec![0; 4096];
             let mut i =0; let mut fail = false;
@@ -155,7 +155,7 @@ impl Magic {
             let magic_number = self.generate_magic_number();
             // skip inappropriate magic numbers
             let magic_attack = (*attack_mask).wrapping_mul(magic_number) & 0xFF00000000000000u64;
-            if BitBoard::from(magic_attack).count_bits() < 6 {continue};
+            if Mask::from(magic_attack).count_bits() < 6 {continue};
             // unsafe { ptr::write_bytes(used_attacks.as_mut_ptr(), 0, 4096) };
             used_attacks.drain(..);
             for _ in 0..4096 {used_attacks.push(0)};
