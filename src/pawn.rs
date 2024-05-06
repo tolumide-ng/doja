@@ -9,26 +9,26 @@ impl Pawn {
         let mut attacks = Mask::new();
 
         // piece board
-        let mut bit_board = Mask::new();
-        bit_board.set_bit(square);
+        let mut mask = Mask::new();
+        mask.set_bit(square);
          
         match color {
             Color::Black => {
-                if ((bit_board.0 << 7) & NOT_H_FILE) != 0 {
-                    attacks.0 |= bit_board.0 << 7;
+                if ((mask.0 << 7) & NOT_H_FILE) != 0 {
+                    attacks.0 |= mask.0 << 7;
                 }
 
-                if ((bit_board.0 << 9) & NOT_A_FILE) != 0 {
-                    attacks.0 |= bit_board.0 << 9;
+                if ((mask.0 << 9) & NOT_A_FILE) != 0 {
+                    attacks.0 |= mask.0 << 9;
                 }
             }
             Color::White => {
-                if ((bit_board.0 >> 7) & NOT_A_FILE) != 0 {
-                    attacks.0 |= bit_board.0 >> 7;
+                if ((mask.0 >> 7) & NOT_A_FILE) != 0 {
+                    attacks.0 |= mask.0 >> 7;
                 }
 
-                if ((bit_board.0 >> 9) & NOT_H_FILE) != 0{
-                    attacks.0 |= bit_board.0 >> 9;
+                if ((mask.0 >> 9) & NOT_H_FILE) != 0{
+                    attacks.0 |= mask.0 >> 9;
                 }
             }
             Color::Both => {}
