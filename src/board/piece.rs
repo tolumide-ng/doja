@@ -1,23 +1,5 @@
 #[derive(Debug, Clone, Copy, derive_more::Display)]
 pub enum Piece {
-    /// black pawn
-    #[display(fmt="p")]
-    BP, 
-    /// black knight
-    #[display(fmt="n")]
-    BN, 
-    /// black bishop
-    #[display(fmt="b")]
-    BB, 
-    /// black rook
-    #[display(fmt="r")]
-    BR,
-    /// black queen
-    #[display(fmt="q")]
-    BQ,
-    /// black king
-    #[display(fmt="k")]
-    BK,
     /// white pawn
     #[display(fmt="P")]
     WP, 
@@ -36,23 +18,60 @@ pub enum Piece {
     /// white king
     #[display(fmt="K")]
     WK,
+    /// black pawn
+    #[display(fmt="p")]
+    BP, 
+    /// black knight
+    #[display(fmt="n")]
+    BN, 
+    /// black bishop
+    #[display(fmt="b")]
+    BB, 
+    /// black rook
+    #[display(fmt="r")]
+    BR,
+    /// black queen
+    #[display(fmt="q")]
+    BQ,
+    /// black king
+    #[display(fmt="k")]
+    BK,
+}
+
+impl From<Piece> for usize {
+    fn from(value: Piece) -> Self {
+        match value {
+            Piece::WP => 0,
+            Piece::WN => 1,
+            Piece::WB => 2,
+            Piece::WR => 3,
+            Piece::WQ => 4,
+            Piece::WK => 5,
+            Piece::BP => 6,
+            Piece::BN => 7,
+            Piece::BB => 8,
+            Piece::BR => 9,
+            Piece::BQ => 10,
+            Piece::BK => 11,
+        }
+    }
 }
 
 impl From<&str> for Piece {
     fn from(value: &str) -> Self {
         match value {
-            "p" => Piece::BP,
-            "n" => Piece::BN,
-            "b" => Piece::BB,
-            "r" => Piece::BR,
-            "q" => Piece::BQ,
-            "k" => Piece::BK,
             "P" => Piece::WP,
             "N" => Piece::WN,
             "B" => Piece::WB,
             "R" => Piece::WR,
             "Q" => Piece::WQ,
             "K" => Piece::WK,
+            "p" => Piece::BP,
+            "n" => Piece::BN,
+            "b" => Piece::BB,
+            "r" => Piece::BR,
+            "q" => Piece::BQ,
+            "k" => Piece::BK,
             _ => unimplemented!()
         }
     }
@@ -68,18 +87,18 @@ impl Piece {
 
     pub fn unicode_pieces() -> [char; 12] {
         [
-            '\u{265A}',
-            '\u{265B}',
-            '\u{265C}',
-            '\u{265D}',
-            '\u{265E}',
-            '\u{265F}',
             '\u{2654}',
             '\u{2655}',
             '\u{2656}',
             '\u{2657}',
             '\u{2658}',
             '\u{2659}',
+            '\u{265A}',
+            '\u{265B}',
+            '\u{265C}',
+            '\u{265D}',
+            '\u{265E}',
+            '\u{265F}',
         ]
     }
 }

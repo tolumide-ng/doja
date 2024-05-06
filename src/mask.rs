@@ -90,7 +90,6 @@ impl Mask {
         let b = self.0 ^ (self.0 - 1);
         let fold = (b as u32) ^ (b >> 32) as u32;
         self.0 &= self.0 - 1;
-        // println!("::::::xxxxx::::: {}", fold.wrapping_mul(0x783a9b23) >> 26);
         BIT_TABLE[(fold.wrapping_mul(0x783a9b23) >> 26) as usize]
     }
 
