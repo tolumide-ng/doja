@@ -26,7 +26,7 @@ use crate::{bishop::Bishop, magic::attacks::DynamicAttacks, rook::Rook, squares:
 fn main() {
 
     // // // init all// init all// init all// init all// init all
-    let mut occupancy = Bitboard::new();
+    // let mut occupancy = Bitboard::new();
     // occupancy.set_bit(Square::C5.into());
     // occupancy.set_bit(Square::F2.into());
     // occupancy.set_bit(Square::G7.into());
@@ -37,16 +37,17 @@ fn main() {
     // println!("{:#?}", occupancy.to_string());
 
 
-    let bishop = PlainAttacks::init_sliders_attacks(true).get_bishop_attacks(Square::E5, occupancy.into());
-    println!("{:#?}", Bitboard::from(bishop).to_string());
-    // let rook = PlainAttacks::init_sliders_attacks(false);
+    // let bishop = PlainAttacks::init_sliders_attacks(true).get_bishop_attacks(Square::E5, occupancy.into());
+    // println!("{:#?}", Bitboard::from(bishop).to_string());
+    // // let rook = PlainAttacks::init_sliders_attacks(false);
 
-    let rookie = PlainAttacks::init_sliders_attacks(false).get_rook_attacks(Square::D4, occupancy.into());
-    println!("{:#?}", Bitboard::from(rookie).to_string());
+    // let rookie = PlainAttacks::init_sliders_attacks(false).get_rook_attacks(Square::D4, occupancy.into());
+    // println!("{:#?}", Bitboard::from(rookie).to_string());
 
 
-    let mut bitboard = Board::new();
-    bitboard[Piece::WP as usize].set_bit(Square::E2.into());
+    let mut chess_board = Board::new();
+    chess_board[Piece::WP as usize].set_bit(Square::E2.into());
 
-    println!("the bitboard is {}", bitboard[Piece::WP as usize].to_string());
+    println!("the bitboard is {}", chess_board[Piece::WP as usize].to_string());
+    println!("{}", chess_board.to_string());
 }
