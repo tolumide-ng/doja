@@ -5,6 +5,8 @@ pub mod major; // major pieces
 pub mod occupancies;
 pub mod castling;
 pub mod board;
+pub mod board_state;
+
 
 
             // WHITE PIECES

@@ -145,7 +145,8 @@ impl Display for Bitboard {
             println!("");
         }
         println!("    \n    a  b  c  d  e  f  g  h\n");
-        write!(f, "Bitboard: {}", self.0)
+        println!("Bitboard: {}", self.0);
+        Ok(())
     }
 }
 

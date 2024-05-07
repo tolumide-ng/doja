@@ -33,25 +33,38 @@ impl Board {
 
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let pieces = Piece::unicode_pieces();
-        
+        // let pieces = Piece::unicode_pieces();
+        let pieces = Piece::ascii_pieces();
+
+
+        println!("");
         for rank in 0..8 {
             for file in 0..8 {
                 if file == 0 {
                     print!("{}  ", 8-rank)
                 }
                 // square
-                let square = (rank * 8 + file) as usize;
-                let piece = -1;
-
-                let char = if piece == -1 {'\u{002E}'} else {pieces[square]};
-
-                print!(" {} ", char)
+                let square = rank * 8 + file;
+                
+                let mut piece = '\u{002E}';
+                
+                // loop over all piece bitboards
+                for bitboard_piece in pieces {
+                    // bitboard belonging to the current piece
+                    let bitboard =  self[bitboard_piece as usize];
+                    if bitboard.get_bit(square) != 0 {
+                        piece = bitboard_piece.into();
+                    }
+                }
+                
+                print!(" {} ", piece)
             }
             println!("");
         }
         println!("    \n    a  b  c  d  e  f  g  h\n");
-        write!(f, "")
+
+        // println!("\n {}", self.0);
+        Ok(())
     }
 }
 

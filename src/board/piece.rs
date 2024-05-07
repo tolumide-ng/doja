@@ -77,28 +77,47 @@ impl From<&str> for Piece {
     }
 }
 
+impl From<Piece> for char {
+    fn from(value: Piece) -> Self {
+        match value {
+            Piece::WP => '\u{2659}',
+            Piece::WN => '\u{2658}',
+            Piece::WB => '\u{2657}',
+            Piece::WR => '\u{2656}',
+            Piece::WQ => '\u{2655}',
+            Piece::WK => '\u{2654}',
+            Piece::BP => '\u{265F}',
+            Piece::BN => '\u{265E}',
+            Piece::BB => '\u{265D}',
+            Piece::BR => '\u{265C}',
+            Piece::BQ => '\u{265B}',
+            Piece::BK => '\u{265A}',
+        }
+    }
+}
+
 
 impl Piece {
     pub fn ascii_pieces() -> [Piece; 12] {
         [
-            Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK, Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK,
+            Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK, Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK, 
         ]
     }
 
     pub fn unicode_pieces() -> [char; 12] {
         [
-            '\u{2654}',
-            '\u{2655}',
-            '\u{2656}',
-            '\u{2657}',
-            '\u{2658}',
             '\u{2659}',
-            '\u{265A}',
-            '\u{265B}',
-            '\u{265C}',
-            '\u{265D}',
-            '\u{265E}',
+            '\u{2658}',
+            '\u{2657}',
+            '\u{2656}',
+            '\u{2655}',
+            '\u{2654}',
             '\u{265F}',
+            '\u{265E}',
+            '\u{265D}',
+            '\u{265C}',
+            '\u{265B}',
+            '\u{265A}',
         ]
     }
 }
