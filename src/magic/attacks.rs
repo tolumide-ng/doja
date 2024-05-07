@@ -1,19 +1,19 @@
-use crate::{bishop::Bishop, knight::Knight, pawn::Pawn, Mask};
+use crate::{bishop::Bishop, knight::Knight, pawn::Pawn, Bitboard};
 
 pub struct DynamicAttacks;
 
 // https://www.chessprogramming.net/generating-magic-multipliers/
 impl DynamicAttacks {
     /// AND_RESULT
-    pub fn bishop(square: u64, block: u64) -> Mask {
-          let mut attack = Mask::new();
+    pub fn bishop(square: u64, block: u64) -> Bitboard {
+          let mut attack = Bitboard::new();
 
         let target_rank = square / 8;
         let target_file = square % 8;
 
 
         // Generate bishop attacks
-        // mask relevant bishop occupancy bits
+        // bitboard relevant bishop occupancy bits
         let (mut rank, mut file) = (target_rank, target_file);
         while rank < 7 && file <7 { // bottom right            
             rank+=1; file+=1;
@@ -24,7 +24,7 @@ impl DynamicAttacks {
 
 
         if target_rank > 0 && target_file > 0 { // this helps us avoid overflow (subtracting from 0)
-            // mask relevant bishop occupancy bits
+            // bitboard relevant bishop occupancy bits
             let (mut rank, mut file) = (target_rank, target_file);
             while rank > 0 && file > 0 { // top left
                 rank-=1; file-=1;
@@ -58,8 +58,8 @@ impl DynamicAttacks {
     }
 
 
-    pub fn rookie(square: u64, block: u64) -> Mask {
-        let mut attack = Mask::new();
+    pub fn rookie(square: u64, block: u64) -> Bitboard {
+        let mut attack = Bitboard::new();
 
         let target_rank = square / 8;
         let target_file  = square %8;
@@ -120,7 +120,7 @@ impl DynamicAttacks {
             // bish
         }
 
-        // init bishop & rook masks
+        // init bishop & rook bitboards
     }
 
 }

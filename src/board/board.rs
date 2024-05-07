@@ -1,30 +1,30 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::Mask;
+use crate::Bitboard;
 
-pub struct Bitboard([Mask; 12]);
+pub struct Board([Bitboard; 12]);
 
-impl Deref for Bitboard {
-    type Target = [Mask; 12];
+impl Deref for Board {
+    type Target = [Bitboard; 12];
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for Bitboard {
+impl DerefMut for Board {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0   
     }
 }
 
 
-impl Bitboard {
+impl Board {
     pub fn new() -> Self {
-        Self([Mask::new(); 12])
+        Self([Bitboard::new(); 12])
     }
 
-    pub(crate) fn get(&self, index: usize) -> &Mask {
+    pub(crate) fn get(&self, index: usize) -> &Bitboard {
         &self.0[index]
     }
 }

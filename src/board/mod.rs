@@ -1,10 +1,10 @@
 
 pub mod piece;
 pub mod major; // major pieces
-pub mod bits;
+// pub mod bits;
 pub mod occupancies;
 pub mod castling;
-pub mod bitboard;
+pub mod board;
 
 
             // WHITE PIECES

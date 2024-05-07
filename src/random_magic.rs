@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::{attacks::DynamicAttacks, bishop::Bishop, rook::Rook, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, Mask};
+use crate::{attacks::DynamicAttacks, bishop::Bishop, rook::Rook, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, Bitboard};
 
 
 #[derive(Debug)]
@@ -58,16 +58,16 @@ impl Magic {
         let mut attacks: Vec<u64> = vec![0; 4096];
         let mut used_attacks: Vec<u64> = Vec::with_capacity(4096);
 
-        let mask = match bishop {
-            true => Bishop::mask_bishop_attack(sq),
-            false => Rook::mask_rook_attacks(sq)
+        let bitboard = match bishop {
+            true => Bishop::bitboard_bishop_attack(sq),
+            false => Rook::bitboard_rook_attacks(sq)
         };
-        let n = mask.count_ones();
+        let n = bitboard.count_ones();
 
         for i in 0..(1<<n) {
             // println!("the i is {} and the n is {}", i, n);
             let i = i as usize;
-            b[i] = mask.index_to_u64(i, n);
+            b[i] = bitboard.index_to_u64(i, n);
             attacks[i] = match bishop {
                 true => DynamicAttacks::bishop(sq, b[i]).into(),
                 false => DynamicAttacks::rookie(sq, b[i]).into(),
@@ -76,8 +76,8 @@ impl Magic {
 
         for _ in 0..100000000 {
             let magic = self.random_u64_fewbits();
-            let magic_mask = mask.wrapping_mul(magic) & 0xFF00000000000000;
-            if Mask::from(magic_mask).count_ones() < 6 {continue};
+            let magic_bitboard = bitboard.wrapping_mul(magic) & 0xFF00000000000000;
+            if Bitboard::from(magic_bitboard).count_ones() < 6 {continue};
             // unsafe { ptr::write_bytes(used_attacks.as_mut_ptr(), 0, 4096) };
             used_attacks = vec![0; 4096];
             let mut i =0; let mut fail = false;
@@ -127,9 +127,9 @@ impl Magic {
         let mut attacks: Vec<u64> = Vec::with_capacity(4096);
         let mut used_attacks: Vec<u64> = Vec::with_capacity(4096);
         
-        let attack_mask = match bishop {
-            true => Bishop::mask_bishop_attack(sq),
-            false => Rook::mask_rook_attacks(sq)
+        let attack_bitboard = match bishop {
+            true => Bishop::bitboard_bishop_attack(sq),
+            false => Rook::bitboard_rook_attacks(sq)
         };
 
         // init occupancy indices
@@ -138,7 +138,7 @@ impl Magic {
         // loop over occupancy indices
         for i in 0..occupancy_indices {
             let index = i as usize;
-            occupancies.insert(index, attack_mask.set_occupancy(i, relevant_bits).into());
+            occupancies.insert(index, attack_bitboard.set_occupancy(i, relevant_bits).into());
 
             let indexed_attacks = match bishop {
                 true => DynamicAttacks::bishop(sq, occupancies[index]).into(),
@@ -154,8 +154,8 @@ impl Magic {
             // generate magic number candidate
             let magic_number = self.generate_magic_number();
             // skip inappropriate magic numbers
-            let magic_attack = (*attack_mask).wrapping_mul(magic_number) & 0xFF00000000000000u64;
-            if Mask::from(magic_attack).count_bits() < 6 {continue};
+            let magic_attack = (*attack_bitboard).wrapping_mul(magic_number) & 0xFF00000000000000u64;
+            if Bitboard::from(magic_attack).count_bits() < 6 {continue};
             // unsafe { ptr::write_bytes(used_attacks.as_mut_ptr(), 0, 4096) };
             used_attacks.drain(..);
             for _ in 0..4096 {used_attacks.push(0)};
