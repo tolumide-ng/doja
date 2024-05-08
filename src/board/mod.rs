@@ -6,6 +6,7 @@ pub mod occupancies;
 pub mod castling;
 pub mod board;
 pub mod board_state;
+pub mod fen;
 
 
 

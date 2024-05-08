@@ -57,22 +57,22 @@ impl From<Piece> for usize {
     }
 }
 
-impl From<&str> for Piece {
-    fn from(value: &str) -> Self {
+impl From<char> for Piece {
+    fn from(value: char) -> Self {
         match value {
-            "P" => Piece::WP,
-            "N" => Piece::WN,
-            "B" => Piece::WB,
-            "R" => Piece::WR,
-            "Q" => Piece::WQ,
-            "K" => Piece::WK,
-            "p" => Piece::BP,
-            "n" => Piece::BN,
-            "b" => Piece::BB,
-            "r" => Piece::BR,
-            "q" => Piece::BQ,
-            "k" => Piece::BK,
-            _ => unimplemented!()
+            'P' => Piece::WP,
+            'N' => Piece::WN,
+            'B' => Piece::WB,
+            'R' => Piece::WR,
+            'Q' => Piece::WQ,
+            'K' => Piece::WK,
+            'p' => Piece::BP,
+            'n' => Piece::BN,
+            'b' => Piece::BB,
+            'r' => Piece::BR,
+            'q' => Piece::BQ,
+            'k' => Piece::BK,
+            _ => panic!("Invalid Piece character provide {value}")
         }
     }
 }
@@ -119,5 +119,13 @@ impl Piece {
             '\u{265B}',
             '\u{265A}',
         ]
+    }
+
+    pub(crate) fn white_pieces() -> [Piece; 6] {
+        [Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK]
+    }
+
+    pub(crate) fn black_pieces() -> [Piece; 6] {
+        [ Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK ]
     }
 }
