@@ -42,7 +42,7 @@ impl Bitboard {
     /// is 1, then it uses the BitXorAssign operator described above
     pub fn pop_bit(&mut self, square: u64) {
         if self.get_bit(square.into()) != 0 {
-            self.0 ^= (1 << square);
+            self.0 ^= 1 << square;
         }
     }
 

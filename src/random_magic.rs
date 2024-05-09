@@ -68,6 +68,7 @@ impl Magic {
             // println!("the i is {} and the n is {}", i, n);
             let i = i as usize;
             b[i] = bitboard.index_to_u64(i, n);
+            // PIECE_ATTACKS;
             attacks[i] = match bishop {
                 true => DynamicAttacks::bishop(sq, b[i]).into(),
                 false => DynamicAttacks::rookie(sq, b[i]).into(),

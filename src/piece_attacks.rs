@@ -1,17 +1,17 @@
 use crate::{color::Color, constants::{NOT_AB_FILE, NOT_A_FILE, NOT_GH_FILE, NOT_H_FILE, PLAYERS_COUNT, SQUARES}, squares::{BISHOP_MAGIC_NUMBERS, BISHOP_RELEVANT_BITS, ROOK_MAGIC_NUMBERS, ROOK_RELEVANT_BITS}, Bitboard};
 
 pub struct PieceAttacks {
-    king_attacks: [u64; SQUARES],
-    knight_attacks: [u64; SQUARES],
-    bishop_masks: [u64; SQUARES],
-    rook_masks: [u64; SQUARES],
-    pawn_attacks: [[u64; SQUARES]; PLAYERS_COUNT]
+    pub(crate) king_attacks: [u64; SQUARES],
+    pub(crate) knight_attacks: [u64; SQUARES],
+    pub(crate) bishop_masks: [u64; SQUARES],
+    pub(crate) rook_masks: [u64; SQUARES],
+    pub(crate) pawn_attacks: [[u64; SQUARES]; PLAYERS_COUNT]
 }
 
 
 impl PieceAttacks {
     // Generates all the possible piece attacks, which are then accessible from the struct
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let mut king_attacks: [u64; SQUARES] = [0; SQUARES];
         let mut knight_attacks: [u64; SQUARES] = [0; SQUARES];
         let mut bishop_masks: [u64; SQUARES] = [0; SQUARES];
@@ -164,10 +164,11 @@ impl PieceAttacks {
     }
 
 
+    
     /// Gets the bishoop attacks from position sq,
     /// while stopping if there is any peice blocking the attack direction
     /// https://www.chessprogramming.net/generating-magic-multipliers/
-    pub(crate) fn get_bishop_attacks_on_the_fly(sq: u64, block: u64) -> u64 {
+    pub(crate) fn get_bishop_attacks_on_the_fly(&self, sq: u64, block: u64) -> u64 {
         let mut attack = 0;
         let target_rank = sq / 8; let target_file = sq % 8;
 
@@ -212,7 +213,8 @@ impl PieceAttacks {
     }
     
 
-    pub(crate) fn get_rook_attacks_on_the_fly(sq: u64, block: u64) -> u64 {
+    // https://www.chessprogramming.net/generating-magic-multipliers/
+    pub(crate) fn get_rook_attacks_on_the_fly(&self, sq: u64, block: u64) -> u64 {
         let mut attack = 0u64;
         let target_rank = sq / 8; let target_file  = sq %8;
 
@@ -276,13 +278,13 @@ impl PieceAttacks {
                     true => {
                         let occupancy = Bitboard::from(attack_bitboard).set_occupancy(index, relevant_bits_count);
                         let magic_index = (*occupancy).wrapping_mul(BISHOP_MAGIC_NUMBERS[sq]) >> (64 - BISHOP_RELEVANT_BITS[sq]);
-                        bishop_attacks[sq][magic_index as usize] = Self::get_bishop_attacks_on_the_fly(sq as u64, *occupancy).into();
+                        bishop_attacks[sq][magic_index as usize] = self.get_bishop_attacks_on_the_fly(sq as u64, *occupancy).into();
 
                     }
                     false => {
                         let occupancy = Bitboard::from(attack_bitboard).set_occupancy(index, relevant_bits_count);
                         let magic_index = (*occupancy).wrapping_mul(ROOK_MAGIC_NUMBERS[sq]) >> (64 - ROOK_RELEVANT_BITS[sq]);
-                        rook_attacks[sq][magic_index as usize] = Self::get_rook_attacks_on_the_fly(sq as u64, *occupancy).into();
+                        rook_attacks[sq][magic_index as usize] = self.get_rook_attacks_on_the_fly(sq as u64, *occupancy).into();
                     }
                 }
             }

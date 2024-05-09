@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::{bishop::Bishop, rook::Rook, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, Bitboard, magic::attacks::DynamicAttacks};
+use crate::{bishop::Bishop, constants::PIECE_ATTACKS, magic::attacks::DynamicAttacks, rook::Rook, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, Bitboard};
 
 
 #[derive(Debug)]
@@ -69,8 +69,8 @@ impl Magic {
             let i = i as usize;
             b[i] = bitboard.index_to_u64(i, n);
             attacks[i] = match bishop {
-                true => DynamicAttacks::bishop(sq, b[i]).into(),
-                false => DynamicAttacks::rookie(sq, b[i]).into(),
+                true => PIECE_ATTACKS.get_bishop_attacks_on_the_fly(sq, b[i]),
+                false => PIECE_ATTACKS.get_rook_attacks_on_the_fly(sq, b[i]),
             };
         }
 
@@ -126,11 +126,13 @@ impl Magic {
         let mut occupancies: Vec<u64> = Vec::with_capacity(4096);
         let mut attacks: Vec<u64> = Vec::with_capacity(4096);
         let mut used_attacks: Vec<u64> = Vec::with_capacity(4096);
+
+        let x = PIECE_ATTACKS.bishop_masks[1];
         
-        let attack_bitboard = match bishop {
-            true => Bishop::bitboard_bishop_attack(sq),
-            false => Rook::bitboard_rook_attacks(sq)
-        };
+        let attack_bitboard = Bitboard::from(match bishop {
+            true => PIECE_ATTACKS.bishop_masks[sq as usize],
+            false => PIECE_ATTACKS.rook_masks[sq as usize]
+        });
 
         // init occupancy indices
         let occupancy_indices: u64 = 1 << relevant_bits;
@@ -141,8 +143,8 @@ impl Magic {
             occupancies.insert(index, attack_bitboard.set_occupancy(i, relevant_bits).into());
 
             let indexed_attacks = match bishop {
-                true => DynamicAttacks::bishop(sq, occupancies[index]).into(),
-                false => DynamicAttacks::rookie(sq, occupancies[index]).into()
+                true => PIECE_ATTACKS.get_bishop_attacks_on_the_fly(sq, occupancies[index]),
+                false => PIECE_ATTACKS.get_rook_attacks_on_the_fly(sq, occupancies[index]).into()
             };
             attacks.insert(index, indexed_attacks);
 

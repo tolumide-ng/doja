@@ -13,8 +13,7 @@ mod magic;
 // mod attacks;
 // mod magic;
 
-use board::{board::Board, fen::FEN, piece::Piece};
-// use attacks::DynamicAttacks;
+use board::fen::FEN;
 // use bishop::Bishop;
 pub use bitboard::Bitboard;
 // use crate::constants::

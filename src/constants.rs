@@ -1,3 +1,7 @@
+use lazy_static::lazy_static;
+
+use crate::piece_attacks::PieceAttacks;
+
 ///  ----NOT_A-FILE----
 /// 8   0  1  1  1  1  1  1  1 \ 
 /// 7   0  1  1  1  1  1  1  1 \ 
@@ -67,3 +71,8 @@ pub const OCCUPANCIES: usize = 3;
 pub const RANK: usize = 8;
 pub const FILE: usize = 8;
 pub const SQUARES: usize = 64;
+
+
+lazy_static! {
+    pub static ref PIECE_ATTACKS: PieceAttacks = PieceAttacks::new();
+}
