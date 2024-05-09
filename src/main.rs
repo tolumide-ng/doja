@@ -18,7 +18,7 @@ use board::{board::Board, fen::FEN, piece::Piece};
 pub use bitboard::Bitboard;
 // use crate::constants::
 
-use crate::{bishop::Bishop, board::board_state::BoardState, color::Color, constants::{CMK_POSITION, KILLER_POSITION, TRICKY_POSITION}, magic::attacks::DynamicAttacks, rook::Rook, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
+use crate::{bishop::Bishop, board::board_state::BoardState, color::Color, constants::{CMK_POSITION, KILLER_POSITION, TRICKY_POSITION}, magic::{attacks::DynamicAttacks, plain::PlainAttacks}, rook::Rook, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
 
 
 
@@ -28,5 +28,5 @@ fn main() {
     println!("{}", board.to_string());
 
     // println!("{}", Bitboard::from(board.get_occupancy(Color::White)));
-    // // println!("{}", Bitboard::from(board.get_occupancy(Color::Both)));
+    // // println!("{}", Bitboard::from(board.get_occupancy(Color::Both)));git 
 }
