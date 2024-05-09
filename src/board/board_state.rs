@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{board::board::Board, color::Color, constants::{FILE, OCCUPANCIES, PIECE_ATTACKS, PLAYERS_COUNT, RANK, SQUARES}, king::King, knight::Knight, magic::plain::PlainAttacks, pawn::Pawn, piece_attacks::PieceAttacks, squares::Square, Bitboard};
+use crate::{board::board::Board, color::Color, constants::{OCCUPANCIES, PIECE_ATTACKS, SQUARES}, squares::Square, Bitboard};
 
 use super::{castling::Castling, fen::FEN, piece::Piece};
 

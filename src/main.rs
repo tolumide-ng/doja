@@ -1,24 +1,17 @@
 mod bitboard;
 mod squares;
-mod pawn;
 mod color;
 mod board;
 mod constants;
-mod knight;
-mod king;
-mod piece_attacks;
-mod bishop;
-mod rook;
 mod magic;
-// mod attacks;
-// mod magic;
+mod piece_attacks;
 
 use board::fen::FEN;
 // use bishop::Bishop;
 pub use bitboard::Bitboard;
 // use crate::constants::
 
-use crate::{bishop::Bishop, board::board_state::BoardState, color::Color, constants::{CMK_POSITION, KILLER_POSITION, TRICKY_POSITION}, magic::{attacks::DynamicAttacks, plain::PlainAttacks}, pawn::Pawn, rook::Rook, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
+use crate::{board::board_state::BoardState, color::Color, constants::{CMK_POSITION, KILLER_POSITION, TRICKY_POSITION}, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
 
 
 
