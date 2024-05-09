@@ -2,40 +2,40 @@
 pub enum Piece {
     /// white pawn
     #[display(fmt="P")]
-    WP, 
+    WP = 0, 
     /// white knight
     #[display(fmt="N")]
-    WN, 
+    WN = 1,
     /// white bishop
     #[display(fmt="B")]
-    WB, 
+    WB = 2,
     /// white rook
     #[display(fmt="R")]
-    WR,
+    WR = 3,
     /// white queen
     #[display(fmt="Q")]
-    WQ,
+    WQ = 4,
     /// white king
     #[display(fmt="K")]
-    WK,
+    WK = 5,
     /// black pawn
     #[display(fmt="p")]
-    BP, 
+    BP = 6, 
     /// black knight
     #[display(fmt="n")]
-    BN, 
+    BN = 7, 
     /// black bishop
     #[display(fmt="b")]
-    BB, 
+    BB = 8, 
     /// black rook
     #[display(fmt="r")]
-    BR,
+    BR = 9,
     /// black queen
     #[display(fmt="q")]
-    BQ,
+    BQ = 10,
     /// black king
     #[display(fmt="k")]
-    BK,
+    BK = 11,
 }
 
 impl From<Piece> for usize {

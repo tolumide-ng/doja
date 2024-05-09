@@ -47,13 +47,18 @@ impl Bitboard {
     }
 
     /// shifts the binary representation of 1 to the right by square (u64)
-    /// this creates a bitboard with only the `square-th` bit set i.e. if value
-    /// of the square is 6, then this (1) would become (10 0000)
-    /// and then assigns the new bitboard to self.0
+    /// this creates a mask with only the `square-th` bit set i.e. if value
+    /// of the square is 6, then this (1) would become (0010 0000)
+    /// and then BitOrAssigns the mask to self.0
     /// |= means Bitwise OR and assignment
     /// this means that if the other positions in the target bitboard are 1,
     /// the zeros on this new bitboard cannot override them 
     /// since 0 | 1 is 1 and 1 | 0 is also 0
+    /// e.g
+    /// 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00100000 (mask)
+    /// 00000000 00000000 00000001 00010000 00000000 00000000 00000000 00000000 (self)
+    /// becomes (|=)
+    /// 00000000 00000000 00000001 00010000 00000000 00000000 00000000 00100000 (mask)
     pub fn set_bit(&mut self, square: u64) {
         self.0 |= 1 << square;
     }
@@ -131,6 +136,7 @@ impl Bitboard {
 
 impl Display for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        println!("---------------------------");
         for rank in 0..8 {
             for file in 0..8 {
                 let square = (rank * 8) + file;

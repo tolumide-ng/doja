@@ -67,7 +67,7 @@ pub trait FEN {
             square +=1;
         }
         
-        println!("for square @ {}", square);
+        // println!("for square @ {}", square);
 
         let turn = fen_blocks[1];
         let color = Color::from(turn);

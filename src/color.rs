@@ -1,5 +1,5 @@
 // sides to move
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {
     White=0, Black=1, Both=2
 }

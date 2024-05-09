@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{board::piece::Piece, Bitboard};
+use crate::{bishop::Bishop, board::piece::Piece, color::Color, king::King, knight::Knight, magic::plain::PlainAttacks, pawn::Pawn, squares::Square, Bitboard};
 
 pub struct Board([Bitboard; 12]);
 

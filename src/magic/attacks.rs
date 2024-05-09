@@ -1,4 +1,4 @@
-use crate::{bishop::Bishop, knight::Knight, pawn::Pawn, Bitboard};
+use crate::{Bitboard};
 
 pub struct DynamicAttacks;
 
@@ -19,7 +19,6 @@ impl DynamicAttacks {
             rank+=1; file+=1;
             attack.0 |= 1 << (rank * 8 + file);
             if (1 << ((rank * 8) + file)) & block != 0 {break} //  AND_RESULT
-            // println!("|||||||| {}", rank * 8 + file);
         }
 
 
@@ -108,11 +107,11 @@ impl DynamicAttacks {
         attack
     }
 
-    fn init_leapers() {
-        let bishop = Bishop::init_leapers_attack();
-        let knight = Knight::init_leapers_attack();
-        let pawn = Pawn::init_leapers_attack();
-    }
+    // fn init_leapers() {
+    //     let bishop = Bishop::init_leapers_attack();
+    //     let knight = Knight::init_leapers_attack();
+    //     let pawn = Pawn::init_leapers_attack();
+    // }
 
     fn init_sliders_attacks(bishop: bool) {
         // loop over 64 board squares

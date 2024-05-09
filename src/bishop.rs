@@ -48,8 +48,6 @@ impl Bishop {
              }
          }
 
-
-
         attack
     }
 

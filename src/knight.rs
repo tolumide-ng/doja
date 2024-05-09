@@ -10,7 +10,6 @@ impl Knight {
         let mut bitboard = Bitboard::new();
         bitboard.set_bit(square);
         
-        println!("the board before \n {:#?}", bitboard.to_string());
 
 
         if ((*bitboard >> 17) & NOT_H_FILE) != 0 {

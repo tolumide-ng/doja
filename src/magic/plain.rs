@@ -1,16 +1,9 @@
-use std::ops::MulAssign;
-
 use crate::{bishop::Bishop, rook::Rook, squares::{Square, BISHOP_MAGIC_NUMBERS, BISHOP_RELEVANT_BITS, ROOK_MAGIC_NUMBERS, ROOK_RELEVANT_BITS}, Bitboard};
 
 use super::attacks::DynamicAttacks;
 
 
-pub(crate) struct PlainAttacks {
-    rook_attacks: Vec<Vec<u64>>,
-    bishop_attacks: Vec<Vec<u64>>,
-    rook_bitboards: Vec<u64>,
-    bishop_bitboards: Vec<u64>
-}
+pub(crate) struct PlainAttacks;
 
 impl PlainAttacks {
     /// Returns: (attacks, bitboard)
@@ -59,7 +52,7 @@ impl PlainAttacks {
         }
     }
 
-    pub(crate) fn get_bishop_attacks(sq: Square, occupancy: u64) -> u64 {
+    pub(crate) fn get_bishop_attacks(sq: u64, occupancy: u64) -> u64 {
         let (bishop_attacks, bishop_bitboards) = Self::init_sliders_attacks(true);
 
         let mut occ = occupancy;
@@ -73,7 +66,7 @@ impl PlainAttacks {
         return bishop_attacks[sq][occ as usize]
     }
 
-    pub(crate) fn get_rook_attacks(sq: Square, occupancy: u64) -> u64 {
+    pub(crate) fn get_rook_attacks(sq: u64, occupancy: u64) -> u64 {
         let (rook_attacks, rook_bitboards) = Self::init_sliders_attacks(false);
 
         let mut occ = occupancy;
@@ -86,7 +79,7 @@ impl PlainAttacks {
         rook_attacks[sq][occ as usize]
     }
 
-    pub(crate) fn get_queen_attacks(sq: Square, occupancy: u64) -> u64 {
+    pub(crate) fn get_queen_attacks(sq: u64, occupancy: u64) -> u64 {
         let bishop_attacks = Self::get_bishop_attacks(sq, occupancy);
         let rook_attacks = Self::get_rook_attacks(sq, occupancy);
         

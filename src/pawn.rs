@@ -4,8 +4,10 @@ use crate::{color::Color, constants::{NOT_A_FILE, NOT_H_FILE}, Bitboard};
 pub struct Pawn;
 
 impl Pawn {
-    /// result attacks bitboard
-    pub fn bitboard_pawn_attacks(color: Color, square: u64) -> Bitboard {
+    /// ::::Generate Pawn Attacks::::
+    /// Returns all the positions a pawn(at this position, with this color)
+    /// can attack (move to from it's current position (square))
+    pub fn mask_pawn_attacks(color: Color, square: u64) -> Bitboard {
         let mut attacks = Bitboard::new();
 
         // piece board
@@ -40,8 +42,9 @@ impl Pawn {
         let mut attacks: Vec<Vec<Bitboard>> = vec![vec![Bitboard::new(); 8*8]; 2];
 
         for i in 0..64 {
-            attacks[Into::<usize>::into(Color::White)][i] = Pawn::bitboard_pawn_attacks(Color::White, i as u64);
-            attacks[Into::<usize>::into(Color::Black)][i] = Pawn::bitboard_pawn_attacks(Color::Black, i as u64);
+            attacks[Color::White as usize][i] = Pawn::mask_pawn_attacks(Color::White, i as u64);
+            attacks[Color::Black as usize][i] = Pawn::mask_pawn_attacks(Color::Black, i as u64);
+
         }
         attacks
     }

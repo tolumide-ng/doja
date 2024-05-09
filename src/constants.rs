@@ -64,3 +64,6 @@ pub const CMK_POSITION: &str = "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB
 pub const PLAYERS_COUNT: usize = 2;
 pub const PLAYER_PIECES: usize = 6;
 pub const OCCUPANCIES: usize = 3;
+pub const RANK: usize = 8;
+pub const FILE: usize = 8;
+pub const SQUARES: usize = 64;
