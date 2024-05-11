@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 #[derive(Debug, Clone, Copy, derive_more::Display)]
 pub enum Piece {
     /// white pawn
@@ -36,6 +38,27 @@ pub enum Piece {
     /// black king
     #[display(fmt="k")]
     BK = 11,
+}
+
+impl<T> Index<Piece> for [T] {
+    type Output = T;
+
+    fn index(&self, index: Piece) -> &Self::Output {
+        match index {
+            Piece::WP => &self[0],
+            Piece::WN => &self[1],
+            Piece::WB => &self[2],
+            Piece::WR => &self[3],
+            Piece::WQ => &self[4],
+            Piece::WK => &self[5],
+            Piece::BP => &self[6],
+            Piece::BN => &self[7],
+            Piece::BB => &self[8],
+            Piece::BR => &self[9],
+            Piece::BQ => &self[10],
+            Piece::BK => &self[11],
+        }
+    }
 }
 
 impl From<Piece> for usize {

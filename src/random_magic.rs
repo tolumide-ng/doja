@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::{attacks::DynamicAttacks, bishop::Bishop, rook::Rook, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, Bitboard};
+use crate::{constants::PIECE_ATTACKS, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, Bitboard};
 
 
 #[derive(Debug)]
@@ -58,10 +58,10 @@ impl Magic {
         let mut attacks: Vec<u64> = vec![0; 4096];
         let mut used_attacks: Vec<u64> = Vec::with_capacity(4096);
 
-        let bitboard = match bishop {
-            true => Bishop::bitboard_bishop_attack(sq),
-            false => Rook::bitboard_rook_attacks(sq)
-        };
+        let bitboard = Bitboard::from(match bishop {
+            true => PIECE_ATTACKS.bishop_masks[sq as usize],
+            false => PIECE_ATTACKS.rook_masks[sq as usize]
+        });
         let n = bitboard.count_ones();
 
         for i in 0..(1<<n) {
@@ -70,8 +70,8 @@ impl Magic {
             b[i] = bitboard.index_to_u64(i, n);
             // PIECE_ATTACKS;
             attacks[i] = match bishop {
-                true => DynamicAttacks::bishop(sq, b[i]).into(),
-                false => DynamicAttacks::rookie(sq, b[i]).into(),
+                true => PIECE_ATTACKS.get_bishop_attacks_on_the_fly(sq, b[i]).into(),
+                false => PIECE_ATTACKS.get_rook_attacks_on_the_fly(sq, b[i]).into(),
             };
         }
 
@@ -128,10 +128,10 @@ impl Magic {
         let mut attacks: Vec<u64> = Vec::with_capacity(4096);
         let mut used_attacks: Vec<u64> = Vec::with_capacity(4096);
         
-        let attack_bitboard = match bishop {
-            true => Bishop::bitboard_bishop_attack(sq),
-            false => Rook::bitboard_rook_attacks(sq)
-        };
+        let attack_bitboard = Bitboard::from(match bishop {
+            true => PIECE_ATTACKS.bishop_masks[sq as usize],
+            false => PIECE_ATTACKS.rook_masks[sq as usize]
+        });
 
         // init occupancy indices
         let occupancy_indices: u64 = 1 << relevant_bits;
@@ -142,8 +142,8 @@ impl Magic {
             occupancies.insert(index, attack_bitboard.set_occupancy(i, relevant_bits).into());
 
             let indexed_attacks = match bishop {
-                true => DynamicAttacks::bishop(sq, occupancies[index]).into(),
-                false => DynamicAttacks::rookie(sq, occupancies[index]).into()
+                true => PIECE_ATTACKS.get_bishop_attacks_on_the_fly(sq, occupancies[index]),
+                false => PIECE_ATTACKS.get_rook_attacks_on_the_fly(sq, occupancies[index])
             };
             attacks.insert(index, indexed_attacks);
 

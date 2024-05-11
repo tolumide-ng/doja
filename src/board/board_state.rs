@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{board::board::Board, color::Color, constants::{OCCUPANCIES, PIECE_ATTACKS, SQUARES}, squares::Square, Bitboard};
+use crate::{board::board::Board, color::Color, constants::{OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, SQUARES}, squares::Square, Bitboard};
 
 use super::{castling::Castling, fen::FEN, piece::Piece};
 
@@ -10,7 +10,6 @@ pub struct BoardState {
     castling_rights: Castling,
     enpassant: Option<Square>,
     occupancies: [u64; OCCUPANCIES],
-    // attacks: PieceAttacks,
 }
 
 
@@ -32,11 +31,11 @@ impl BoardState {
     }
 
     pub(crate) fn set_occupancy(&mut self, color: Color, occupancy: u64) {
-        self.occupancies[color as usize] |= occupancy;
+        self.occupancies[color] |= occupancy;
     }
 
     pub(crate) fn get_occupancy(&self, color: Color) -> u64 {
-        self.occupancies[color as usize]
+        self.occupancies[color]
     }
 
     /// Given the current pieces on the board, is this square under attack by the given side (color)
@@ -58,19 +57,19 @@ impl BoardState {
 
         let king_attacks = PIECE_ATTACKS.king_attacks[index];
         if i_am == Color::Black && (king_attacks & u64::from(self[Piece::BK as usize])) != 0 {return true}
-        if i_am == Color::White && (king_attacks & u64::from(self[Piece::BK as usize])) != 0 {return true}
+        if i_am == Color::White && (king_attacks & u64::from(self[Piece::WK as usize])) != 0 {return true}
 
-        let bishop_attacks = PIECE_ATTACKS.get_bishop_attacks(sq, self.get_occupancy(Color::Black));
+        let bishop_attacks = PIECE_ATTACKS.get_bishop_attacks(sq, self.get_occupancy(Color::Both));
         if i_am == Color::Black && (bishop_attacks & u64::from(self[Piece::BB as usize])) != 0 {return true}
         if i_am == Color::White && (bishop_attacks & u64::from(self[Piece::WB as usize])) != 0 {return true}
 
         let rook_attacks = PIECE_ATTACKS.get_rook_attacks(sq, self.get_occupancy(Color::Both));
-        if i_am == Color::Black && (rook_attacks & u64::from(self[Piece::BB as usize])) != 0 {return true}
-        if i_am == Color::White && (rook_attacks & u64::from(self[Piece::WB as usize])) != 0 {return true}
+        if i_am == Color::Black && (rook_attacks & u64::from(self[Piece::BR as usize])) != 0 {return true}
+        if i_am == Color::White && (rook_attacks & u64::from(self[Piece::WR as usize])) != 0 {return true}
 
         let queen_attacks = PIECE_ATTACKS.get_queen_attacks(sq, self.get_occupancy(Color::Both));
-        if i_am == Color::Black && (queen_attacks & u64::from(self[Piece::BB as usize])) != 0 {return true}
-        if i_am == Color::White && (queen_attacks & u64::from(self[Piece::WB as usize])) != 0 {return true}
+        if i_am == Color::Black && (queen_attacks & u64::from(self[Piece::BQ as usize])) != 0 {return true}
+        if i_am == Color::White && (queen_attacks & u64::from(self[Piece::WQ as usize])) != 0 {return true}
 
         false
     }
@@ -81,13 +80,36 @@ impl BoardState {
 
         for sq in 0..(SQUARES as u64) {
             if self.is_square_attacked(sq, side) {
-                println!("sql is >>>>>> {sq}");
                 sample_bitboard.set_bit(sq)
             }
         }
 
         sample_bitboard
     }
+
+
+
+    
+    /// Push pawn(black or white) by one
+    pub(crate) fn single_push_targets(&self, color: Color) -> u64 {
+        if color == Color::Black {
+            return self[Piece::BP].soutOne() & !self.occupancies[Color::Both]
+        }
+        self[Piece::WP].nortOne() & !self.occupancies[Color::Both]
+    }
+    
+    /// Double push for pawns(black or white)
+    /// https://www.chessprogramming.org/Pawn_Pushes_(Bitboards)
+    pub(crate) fn double_push_targets(&self, color: Color) -> u64 {
+        let single_pushs = Bitboard::from(self.single_push_targets(color));
+        if color == Color::Black {
+            return single_pushs.soutOne() & !self.occupancies[Color::Both] & RANK_5
+        }
+
+        single_pushs.nortOne() & !self.occupancies[Color::Both] & RANK_4
+    }
+
+
 }
 
 

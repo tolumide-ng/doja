@@ -291,8 +291,8 @@ impl PieceAttacks {
         }
 
         match bishop {
-            true => (bishop_attacks),
-            false => (rook_attacks)
+            true => bishop_attacks,
+            false => rook_attacks
         }
     }
 

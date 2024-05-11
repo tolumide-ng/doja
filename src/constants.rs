@@ -12,7 +12,7 @@ use crate::piece_attacks::PieceAttacks;
 /// 2   0  1  1  1  1  1  1  1 \ 
 /// 1   0  1  1  1  1  1  1  1 \ 
 ///     a  b  c  d  e  f  g  h
-pub const NOT_A_FILE: u64 = 18374403900871474942;
+pub const NOT_A_FILE: u64 = 18374403900871474942; // 0xfefefefefefefefe
 
 
 /// ----NOT_H_FILE----
@@ -25,7 +25,7 @@ pub const NOT_A_FILE: u64 = 18374403900871474942;
 /// 2   1  1  1  1  1  1  1  0 \
 /// 1   1  1  1  1  1  1  1  0 \
 ///     a  b  c  d  e  f  g  h
-pub const NOT_H_FILE: u64 = 9187201950435737471;
+pub const NOT_H_FILE: u64 = 9187201950435737471; // 0x7f7f7f7f7f7f7f7f
 
 
 /// ----NOT_GH_FILE----
@@ -67,10 +67,14 @@ pub const CMK_POSITION: &str = "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB
 
 pub const PLAYERS_COUNT: usize = 2;
 pub const PLAYER_PIECES: usize = 6;
-pub const OCCUPANCIES: usize = 3;
+pub const TOTAL_PIECES: usize = 12;
+pub const OCCUPANCIES: usize = 3; // white, black, and both colors 
 pub const RANK: usize = 8;
 pub const FILE: usize = 8;
 pub const SQUARES: usize = 64;
+
+pub const RANK_4: u64 = 0x0000_0000_FF00_0000;
+pub const RANK_5: u64 = 0x0000_00FF_0000_0000;
 
 
 lazy_static! {

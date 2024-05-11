@@ -84,9 +84,7 @@ impl Bitboard {
 
         // let x = self.0 & -self.0;
         // let lsb = (self.0 as i64 & -(self.0 as i64)) -1
-
         // asset_eq(self.get_lsb1(), lsb);
-        
         Some(self.trailing_zeros() as u64)
     }
 
@@ -111,7 +109,9 @@ impl Bitboard {
         result
     }
 
+    pub(crate) fn soutOne(&self) -> u64 { **self >> 8 }
 
+    pub(crate) fn nortOne(&self) -> u64 { **self << 0 }
 
     pub(crate) fn set_occupancy(&self, index: u64, bits_in_bitboard: u32) -> Bitboard {
         let mut attack_bitboard: Bitboard = self.clone();
