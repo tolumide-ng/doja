@@ -34,7 +34,7 @@ pub trait FEN {
         }
 
         let pieces = fen_blocks[0].chars().collect::<Vec<char>>();
-        let mut square: u64 = 0;
+        let mut square: u64 = 64;
 
 
 
@@ -42,14 +42,17 @@ pub trait FEN {
             if char == '/' {
                 if square % 8 != 0 {
                     let rank = (square % 8) as u8;
+                    println!("sq {}", square);
+                    // println!("sq {}", square);
                     let file = (square as u8 - (8 * rank)) - 1;
+                    // let file = square - ((square / 8)) as u8;
                     return Err(FENError::NotEnoughFiles { rank: rank-1, file });
                 }
                 continue;
             }
             
             if char.is_ascii_digit() {
-                square += char.to_digit(10).unwrap() as u64;
+                square -= char.to_digit(10).unwrap() as u64;
                 continue;
             }
 
@@ -57,14 +60,14 @@ pub trait FEN {
             
             if char.is_ascii_alphabetic() {
                 let piece = Piece::from(char);
-                board[piece as usize].set_bit(square);
+                board[piece].set_bit(square-1);
             }
             
             if char.is_ascii_whitespace() {
                 break;
             }
             
-            square +=1;
+            square -=1;
         }
         
         // println!("for square @ {}", square);

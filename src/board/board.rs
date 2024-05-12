@@ -38,14 +38,12 @@ impl Display for Board {
 
 
         println!("");
-        for rank in 0..8 {
+        for rank in (0..8).rev() {
             for file in 0..8 {
                 if file == 0 {
                     print!("{}  ", 8-rank)
                 }
-                // square
                 let square = rank * 8 + file;
-                
                 let mut piece = '\u{002E}';
                 
                 // loop over all piece bitboards

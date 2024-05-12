@@ -1,17 +1,19 @@
-use crate::{constants::TOTAL_PIECES, squares::Square};
+use crate::color::Color;
 
-
-pub struct Move {
-    src: Square,
-    target: Square
+pub trait Moves {
+    fn enemy_or_empty() {}
 }
 
 
 
-impl Move {
-    fn generate_moves() {
-        for piece in 0..(TOTAL_PIECES) {
-            // 
-        }
-    }
-}
+trait Player: Moves {}
+
+struct White {}
+impl Player for White {}
+impl Moves for White {}
+
+struct Black {}
+impl Player for Black {}
+impl Moves for Black {}
+
+

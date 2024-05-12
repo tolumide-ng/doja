@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Deref};
 
-use crate::squares::{Square, BIT_TABLE};
+use crate::{constants::{NOT_A_FILE, NOT_H_FILE}, squares::{Square, BIT_TABLE}};
 
 
 
@@ -109,9 +109,19 @@ impl Bitboard {
         result
     }
 
-    pub(crate) fn soutOne(&self) -> u64 { **self >> 8 }
+    /// One shift only
+    pub(crate) fn south(&self) -> u64 { **self >> 8 }
 
-    pub(crate) fn nortOne(&self) -> u64 { **self << 0 }
+    /// One shift only
+    pub(crate) fn north(&self) -> u64 { **self << 8 }
+    
+    // /// Post-shift mask
+    // pub(crate) fn east(&self) -> u64 { (**self << 1) & NOT_A_FILE  }
+    // pub(crate) fn north_east(&self) -> u64 { (**self << 9) & NOT_A_FILE}
+    // pub(crate) fn south_east(&self) -> u64 { (**self >> 7) & NOT_A_FILE}
+    // pub(crate) fn west(&self) -> u64 { (**self >> 1) & NOT_H_FILE}
+    // pub(crate) fn south_west(&self) -> u64 { (**self >> 9) & NOT_H_FILE}
+    // pub(crate) fn north_west(&self) -> u64 { (**self << 7) & NOT_H_FILE}
 
     pub(crate) fn set_occupancy(&self, index: u64, bits_in_bitboard: u32) -> Bitboard {
         let mut attack_bitboard: Bitboard = self.clone();
@@ -134,27 +144,71 @@ impl Bitboard {
 
 }
 
+/// Returns a stringified u64 with all 64 bits being represented.
+fn format_u64(input: u64) -> String {
+    format!("{:064b}", input)
+}
+
+// pub fn string_u64(input: u64) -> String {
+//     let mut s = String::new();
+//     let format_in = format_u64(input);
+//     for x in 0..8 {
+//         let slice = &format_in[x * 8..((x * 8) + 8)];
+//         s += slice;
+//         s += "\n";
+//     }
+//     s
+// }
+
 impl Display for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         println!("---------------------------");
-        for rank in 0..8 {
+        for rank in (0..8).rev() {
             for file in 0..8 {
                 let square = (rank * 8) + file;
 
                 if file == 0 {
-                    // let index = rank-8;
-                    print!("{}  ", 8-rank);
+                    print!("{}  ", rank+1);
                 }
                 
                 print!(" {} ", self. get_bit(square));
+                // print!(" {} ", 8 * rank + file);
             }
             println!("");
         }
         println!("    \n    a  b  c  d  e  f  g  h\n");
         println!("Bitboard: {}", self.0);
         Ok(())
+        // let s = &string_u64(reverse_bytes(self.0));
+        // f.pad(s)
     }
 }
+
+pub fn reverse_bytes(b: u64) -> u64 {
+    let mut m: u64 = 0;
+    m |= (reverse_byte(((b >> 56) & 0xFF) as u8) as u64) << 56;
+    m |= (reverse_byte(((b >> 48) & 0xFF) as u8) as u64) << 48;
+    m |= (reverse_byte(((b >> 40) & 0xFF) as u8) as u64) << 40;
+    m |= (reverse_byte(((b >> 32) & 0xFF) as u8) as u64) << 32;
+    m |= (reverse_byte(((b >> 24) & 0xFF) as u8) as u64) << 24;
+    m |= (reverse_byte(((b >> 16) & 0xFF) as u8) as u64) << 16;
+    m |= (reverse_byte(((b >> 8) & 0xFF) as u8) as u64) << 8;
+    m |= reverse_byte((b & 0xFF) as u8) as u64;
+    m
+}
+
+pub fn reverse_byte(b: u8) -> u8 {
+    let m: u8 = ((0b0000_0001 & b) << 7)
+        | ((0b0000_0010 & b) << 5)
+        | ((0b0000_0100 & b) << 3)
+        | ((0b0000_1000 & b) << 1)
+        | ((0b0001_0000 & b) >> 1)
+        | ((0b0010_0000 & b) >> 3)
+        | ((0b0100_0000 & b) >> 5)
+        | ((0b1000_0000 & b) >> 7);
+    m
+}
+
 
 impl Deref for Bitboard {
     type Target = u64;

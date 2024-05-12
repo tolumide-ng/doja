@@ -1,4 +1,4 @@
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 #[derive(Debug, Clone, Copy, derive_more::Display)]
 pub enum Piece {
@@ -60,6 +60,26 @@ impl<T> Index<Piece> for [T] {
         }
     }
 }
+
+impl<T> IndexMut<Piece> for [T] {
+    fn index_mut(&mut self, index: Piece) -> &mut Self::Output {
+        match index {
+            Piece::WP => &mut self[0],
+            Piece::WN => &mut self[1],
+            Piece::WB => &mut self[2],
+            Piece::WR => &mut self[3],
+            Piece::WQ => &mut self[4],
+            Piece::WK => &mut self[5],
+            Piece::BP => &mut self[6],
+            Piece::BN => &mut self[7],
+            Piece::BB => &mut self[8],
+            Piece::BR => &mut self[9],
+            Piece::BQ => &mut self[10],
+            Piece::BK => &mut self[11],
+        }
+    }
+}
+
 
 impl From<Piece> for usize {
     fn from(value: Piece) -> Self {

@@ -2,15 +2,15 @@ use lazy_static::lazy_static;
 
 use crate::piece_attacks::PieceAttacks;
 
-///  ----NOT_A-FILE----
-/// 8   0  1  1  1  1  1  1  1 \ 
-/// 7   0  1  1  1  1  1  1  1 \ 
-/// 6   0  1  1  1  1  1  1  1 \ 
-/// 5   0  1  1  1  1  1  1  1 \ 
-/// 4   0  1  1  1  1  1  1  1 \ 
-/// 3   0  1  1  1  1  1  1  1 \ 
-/// 2   0  1  1  1  1  1  1  1 \ 
-/// 1   0  1  1  1  1  1  1  1 \ 
+///  ----NOT_A_FILE----
+/// 8   0  1  1  1  1  1  1  1 \
+/// 7   0  1  1  1  1  1  1  1 \
+/// 6   0  1  1  1  1  1  1  1 \
+/// 5   0  1  1  1  1  1  1  1 \
+/// 4   0  1  1  1  1  1  1  1 \
+/// 3   0  1  1  1  1  1  1  1 \
+/// 2   0  1  1  1  1  1  1  1 \
+/// 1   0  1  1  1  1  1  1  1 \
 ///     a  b  c  d  e  f  g  h
 pub const NOT_A_FILE: u64 = 18374403900871474942; // 0xfefefefefefefefe
 
@@ -75,6 +75,8 @@ pub const SQUARES: usize = 64;
 
 pub const RANK_4: u64 = 0x0000_0000_FF00_0000;
 pub const RANK_5: u64 = 0x0000_00FF_0000_0000;
+
+// 0xFEFE_FEFE_FEFE_FEFE
 
 
 lazy_static! {
