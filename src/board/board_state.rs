@@ -88,42 +88,76 @@ impl BoardState {
     }
 
 
-    // /// Returns the captured square of the opponent (black) if one exists, else returns None
-    // pub(crate) fn white_pawn_attacks(&self, sq: Square) -> Option<u64> {
-    //     // let white_pawn_attacks = PIECE_ATTACKS.pawn_attacks[Color::White][sq]; // possible attacks from the current sq
-    //     let attack = white_pawn_attacks & self.occupancies[Color::Black];
-    //     if attack != 0 { // checks if there is a black piece on the attack spot of color white
-    //         let captured_sq = Bitboard::from(attack).get_lsb1().unwrap();
-    //         return Some(captured_sq)
-    //     }
+    pub(crate) fn white_pawn_east_attacks(&self, pawns: bool) -> u64 { match pawns {
+        true => self.board[Piece::WP].north_east(), false => {Bitboard::from(self.occupancies[Color::White]).north_east()} }}
 
-    //     return None;
-    // }
+    pub(crate) fn white_pawn_west_attacks(&self, pawns: bool) -> u64 { match pawns {
+        true => self.board[Piece::WP].north_west(), false => {Bitboard::from(self.occupancies[Color::White]).north_west()} }}
 
-    // fn white_pawn_east_attacks(&self) -> u64 { self.board[Piece::WP].north_east() }
-    // fn white_pawn_west_attacks(&self) -> u64 { self.board[Piece::WP].north_west() }
+    pub(crate) fn black_pawn_east_attacks(&self, pawns: bool) -> u64 { match pawns {
+        true => self.board[Piece::BP].south_east(), false => {Bitboard::from(self.occupancies[Color::Black]).south_east()} }}
 
-    // fn black_pawn_east_attacks(&self) -> u64 { self.board[Piece::BP].south_east() }
-    // fn black_pawn_west_attacks(&self) -> u64 { self.board[Piece::BP].south_west() }
+    pub(crate) fn black_pawn_west_attacks(&self, pawns: bool) -> u64 { match pawns {
+        true => self.board[Piece::BP].south_west(), false => Bitboard::from(self.occupancies[Color::Black]).south_west() }}
 
-    // fn white_pawn_able_2capture_east(&self) -> u64 {*self.board[Piece::WP] & self.black_pawn_west_attacks()}
-    // fn white_pawn_able_2capture_west(&self) -> u64 {*self.board[Piece::WP] & self.black_pawn_east_attacks()}
-    // fn white_pawn_able_2_capture_any(&self) -> u64 {*self.board[Piece::WP] & (self.black_pawn_east_attacks() | self.black_pawn_west_attacks())}
+    pub(crate) fn pawn_any_attack(&self, color: Color) -> u64{
+        if color == Color::Black {
+            return self.black_pawn_east_attacks(false) | self.white_pawn_west_attacks(false)
+        }
+        self.white_pawn_east_attacks(false) | self.white_pawn_west_attacks(false)
+    }
 
-    pub(crate) fn white_pawn_attacks(&self) {}
+    pub(crate) fn pawn_double_attack(&self, color: Color) -> u64 {
+        if color == Color::Black {
+            return self.black_pawn_east_attacks(false) & self.black_pawn_west_attacks(false)
+        }
+        self.white_pawn_east_attacks(false) & self.white_pawn_west_attacks(false)
+    }
 
+    pub(crate) fn pawn_single_attack(&self, color: Color) -> u64 {
+        if color == Color::Black {
+            return self.black_pawn_east_attacks(false) ^ self.black_pawn_west_attacks(false)
+        }
+        self.white_pawn_east_attacks(false) ^ self.white_pawn_west_attacks(false)
+    }
 
-    /// Returns the captured square of the opponent (black) if one exists, else returns None
-    pub(crate) fn white_pawn_attack(&self, sq: Square) -> Option<u64> {
-        let white_pawn_attacks = PIECE_ATTACKS.pawn_attacks[Color::White][sq]; // possible attacks from the current sq
-        let attack = white_pawn_attacks & self.occupancies[Color::Black];
-        if attack != 0 { // checks if there is a black piece on the attack spot of color white
-            let captured_sq = Bitboard::from(attack).get_lsb1().unwrap();
-            return Some(captured_sq)
+    /// https://www.chessprogramming.org/Pawn_Attacks_(Bitboards)
+    pub(crate) fn safe_pawn_squares(&self, color: Color) -> u64 {
+        let bpawn_double_attacks = self.pawn_double_attack(Color::Black);
+        let wpawn_double_attacks = self.pawn_double_attack(Color::White);
+
+        if color == Color::Black {
+            let wpawn_any_attacks = self.pawn_any_attack(Color::White);
+            let bpawn_odd_attacks = self.pawn_single_attack(Color::Black);
+            return bpawn_double_attacks | !wpawn_any_attacks | (bpawn_odd_attacks ^ !wpawn_double_attacks);
         }
 
-        return None;
+        let wpawn_odd_attacks = self.pawn_single_attack(Color::White);
+        let bpawn_any_attacks = self.pawn_any_attack(Color::Black);
+        wpawn_double_attacks | !bpawn_any_attacks | (wpawn_odd_attacks & !bpawn_double_attacks)
     }
+
+    pub(crate) fn pawns_able_2capture_east(&self, color: Color) -> u64 {
+        if color == Color::Black {
+            return *self[Piece::BP] & self.white_pawn_west_attacks(false)
+        }
+        *self.board[Piece::WP] & self.black_pawn_west_attacks(false)
+    }
+    pub(crate) fn pawns_able_2capture_west(&self, color: Color) -> u64 {
+        if color == Color::Black {
+            return *self[Piece::BP] & self.white_pawn_east_attacks(false)
+        }
+        *self[Piece::WP] & self.black_pawn_east_attacks(false)
+    }
+    pub(crate) fn pawns_able_2capture_any(&self, color: Color) -> u64 {
+        if color == Color::White {
+            return *self[Piece::BP] & self.pawn_any_attack(Color::White)
+        }
+        *self[Piece::WP] & self.pawn_any_attack(Color::Black)
+    }
+
+    // pub(crate) fn pawn_captures(&self, color: Color) -> u64 {}
+
     
     /// Push pawn(black or white) by one
     pub(crate) fn single_push_targets(&self, color: Color) -> u64 {

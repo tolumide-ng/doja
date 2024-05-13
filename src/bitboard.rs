@@ -111,17 +111,22 @@ impl Bitboard {
 
     /// One shift only
     pub(crate) fn south(&self) -> u64 { **self >> 8 }
-
     /// One shift only
     pub(crate) fn north(&self) -> u64 { **self << 8 }
-    
     // /// Post-shift mask
-    // pub(crate) fn east(&self) -> u64 { (**self << 1) & NOT_A_FILE  }
-    // pub(crate) fn north_east(&self) -> u64 { (**self << 9) & NOT_A_FILE}
-    // pub(crate) fn south_east(&self) -> u64 { (**self >> 7) & NOT_A_FILE}
-    // pub(crate) fn west(&self) -> u64 { (**self >> 1) & NOT_H_FILE}
-    // pub(crate) fn south_west(&self) -> u64 { (**self >> 9) & NOT_H_FILE}
-    // pub(crate) fn north_west(&self) -> u64 { (**self << 7) & NOT_H_FILE}
+    pub(crate) fn east(&self) -> u64 { (**self << 1) & NOT_A_FILE  }
+    pub(crate) fn north_east(&self) -> u64 { (**self << 9) & NOT_A_FILE}
+    pub(crate) fn south_east(&self) -> u64 { (**self >> 7) & NOT_A_FILE}
+    pub(crate) fn west(&self) -> u64 { (**self >> 1) & NOT_H_FILE}
+    pub(crate) fn south_west(&self) -> u64 { (**self >> 9) & NOT_H_FILE}
+    pub(crate) fn north_west(&self) -> u64 { (**self << 7) & NOT_H_FILE}
+    // Pre-shifts
+    pub(crate) fn pre_east(&self) -> u64 { (**self & NOT_H_FILE) << 1  }
+    pub(crate) fn pre_north_east(&self) -> u64 { (**self & NOT_H_FILE) << 9}
+    pub(crate) fn pre_south_east(&self) -> u64 { (**self & NOT_H_FILE) >> 7}
+    pub(crate) fn pre_west(&self) -> u64 { (**self & NOT_A_FILE) >> 1}
+    pub(crate) fn pre_south_west(&self) -> u64 { (**self & NOT_A_FILE) >> 9}
+    pub(crate) fn pre_north_west(&self) -> u64 { (**self & NOT_A_FILE) << 7}
 
     pub(crate) fn set_occupancy(&self, index: u64, bits_in_bitboard: u32) -> Bitboard {
         let mut attack_bitboard: Bitboard = self.clone();
