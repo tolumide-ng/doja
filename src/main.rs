@@ -15,13 +15,14 @@ pub use bitboard::Bitboard;
 use constants::PIECE_ATTACKS;
 // use crate::constants::
 
-use crate::{board::board_state::BoardState, color::Color, constants::{CMK_POSITION, KILLER_POSITION, RANK_4, START_POSITION, TRICKY_POSITION}, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
+use crate::{board::{board_state::BoardState, piece::Piece}, color::Color, constants::{CMK_POSITION, KILLER_POSITION, RANK_4, START_POSITION, TRICKY_POSITION}, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
 
 
 
 
 fn main() {
-    let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
+    // let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
+    let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bnp1pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
 
     println!("{}", board.to_string());
     // board.double_push_targets(Color::White);
@@ -36,7 +37,10 @@ fn main() {
     // println!("{}", Bitboard::from(board.single_push_targets(Color::Black)).to_string());
     // let x = board.get_pawn_movement(Color::Black, false);
     // println!("{}", Bitboard::from(board.pawn_single_attack(Color::White)).to_string());
-    println!("{}", Bitboard::from(board.pawns_able_2capture_west(Color::White)).to_string());
+    println!("{}", Bitboard::from(board.pawns_able_2capture_any(Color::White)).to_string());
+    // let x = board.pawn_any_attack(Color::Black) & *board[Piece::WP];
+    // println!("{}", Bitboard::from(x).to_string());
+    // board.get_pawn_attacks(Color::Black);
     
     // println!("{}", board.get_possible_destination_squares_for(Color::White));
     // let x = Bitboard::from(0b1111111100000000);

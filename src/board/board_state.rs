@@ -1,12 +1,12 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, SQUARES}, squares::Square, Bitboard};
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, SQUARES}, squares::Square, Bitboard};
 
 use super::{castling::Castling, fen::FEN, piece::Piece};
 
 pub struct BoardState {
     turn: Color,
-    board: Board,
+    pub board: Board,
     castling_rights: Castling,
     enpassant: Option<Square>,
     occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
@@ -88,37 +88,40 @@ impl BoardState {
     }
 
 
-    pub(crate) fn white_pawn_east_attacks(&self, pawns: bool) -> u64 { match pawns {
+    fn white_pawn_east_attacks(&self, pawns: bool) -> u64 { match pawns {
         true => self.board[Piece::WP].north_east(), false => {Bitboard::from(self.occupancies[Color::White]).north_east()} }}
 
-    pub(crate) fn white_pawn_west_attacks(&self, pawns: bool) -> u64 { match pawns {
+    fn white_pawn_west_attacks(&self, pawns: bool) -> u64 { match pawns {
         true => self.board[Piece::WP].north_west(), false => {Bitboard::from(self.occupancies[Color::White]).north_west()} }}
 
-    pub(crate) fn black_pawn_east_attacks(&self, pawns: bool) -> u64 { match pawns {
+    fn black_pawn_east_attacks(&self, pawns: bool) -> u64 { match pawns {
         true => self.board[Piece::BP].south_east(), false => {Bitboard::from(self.occupancies[Color::Black]).south_east()} }}
 
-    pub(crate) fn black_pawn_west_attacks(&self, pawns: bool) -> u64 { match pawns {
+    fn black_pawn_west_attacks(&self, pawns: bool) -> u64 { match pawns {
         true => self.board[Piece::BP].south_west(), false => Bitboard::from(self.occupancies[Color::Black]).south_west() }}
 
-    pub(crate) fn pawn_any_attack(&self, color: Color) -> u64{
+
+    /// shows the position where the color's pawns can be attacked from
+    pub(crate) fn pawn_any_attack(&self, color: Color, pawns: bool) -> u64{
         if color == Color::Black {
-            return self.black_pawn_east_attacks(false) | self.white_pawn_west_attacks(false)
+            return self.black_pawn_east_attacks(pawns) | self.black_pawn_west_attacks(pawns)
         }
-        self.white_pawn_east_attacks(false) | self.white_pawn_west_attacks(false)
+        self.white_pawn_east_attacks(pawns) | self.white_pawn_west_attacks(pawns)
     }
 
+    /// Shows the possible double pawn attacks for color
     pub(crate) fn pawn_double_attack(&self, color: Color) -> u64 {
         if color == Color::Black {
-            return self.black_pawn_east_attacks(false) & self.black_pawn_west_attacks(false)
+            return self.black_pawn_east_attacks(true) & self.black_pawn_west_attacks(true)
         }
-        self.white_pawn_east_attacks(false) & self.white_pawn_west_attacks(false)
+        self.white_pawn_east_attacks(true) & self.white_pawn_west_attacks(true)
     }
 
     pub(crate) fn pawn_single_attack(&self, color: Color) -> u64 {
         if color == Color::Black {
-            return self.black_pawn_east_attacks(false) ^ self.black_pawn_west_attacks(false)
+            return self.black_pawn_east_attacks(true) ^ self.black_pawn_west_attacks(true)
         }
-        self.white_pawn_east_attacks(false) ^ self.white_pawn_west_attacks(false)
+        self.white_pawn_east_attacks(true) ^ self.white_pawn_west_attacks(true)
     }
 
     /// https://www.chessprogramming.org/Pawn_Attacks_(Bitboards)
@@ -127,13 +130,13 @@ impl BoardState {
         let wpawn_double_attacks = self.pawn_double_attack(Color::White);
 
         if color == Color::Black {
-            let wpawn_any_attacks = self.pawn_any_attack(Color::White);
+            let wpawn_any_attacks = self.pawn_any_attack(Color::White, true);
             let bpawn_odd_attacks = self.pawn_single_attack(Color::Black);
             return bpawn_double_attacks | !wpawn_any_attacks | (bpawn_odd_attacks ^ !wpawn_double_attacks);
         }
 
         let wpawn_odd_attacks = self.pawn_single_attack(Color::White);
-        let bpawn_any_attacks = self.pawn_any_attack(Color::Black);
+        let bpawn_any_attacks = self.pawn_any_attack(Color::Black, true);
         wpawn_double_attacks | !bpawn_any_attacks | (wpawn_odd_attacks & !bpawn_double_attacks)
     }
 
@@ -149,11 +152,13 @@ impl BoardState {
         }
         *self[Piece::WP] & self.black_pawn_east_attacks(false)
     }
+
+    /// Returns the squares of this color capable of capturing other squares
     pub(crate) fn pawns_able_2capture_any(&self, color: Color) -> u64 {
-        if color == Color::White {
-            return *self[Piece::BP] & self.pawn_any_attack(Color::White)
+        if color == Color::Black {
+            return *self[Piece::BP] & self.pawn_any_attack(Color::White, false)
         }
-        *self[Piece::WP] & self.pawn_any_attack(Color::Black)
+        *self[Piece::WP] & self.pawn_any_attack(Color::Black, false)
     }
 
     // pub(crate) fn pawn_captures(&self, color: Color) -> u64 {}
@@ -227,6 +232,63 @@ impl BoardState {
                 }
             }
         }
+
+    }
+
+
+    /// shows what squares this color's pawns (including the src square) can attack
+    pub(crate) fn get_pawn_attacks(&self, color: Color) {
+        match color {
+            Color::Black => {
+                // let mut capture = self.pawns_able_2capture_any(Color::Black);
+                // while capture != 0 {
+                //     let tindex = capture.trailing_zeros() as u8;
+                //     let attacker_on_left = ((capture << 9).trailing_zeros()) as u64;
+                //     let attacker_on_right = (capture << 7).trailing_zeros() as u64;
+    
+    
+                //     let attacker_exists = Bitboard::from(self[Piece::WP]).get_bit_by_square(attacker_on_left.into());
+                //     if attacker_exists != 0 {
+                //         let target = Square::from(tindex as u64);
+                //         let src = Square::from(attacker_on_left);
+                //         println!("target={:?}, src={:?}", target, src);
+                //     }
+    
+                //     let right_attacker_exists = Bitboard::from(self[Piece::WP]).get_bit_by_square(attacker_on_right.into());
+                //     if right_attacker_exists != 0 {
+                //         let target = Square::from(tindex as u64);
+                //         let src = Square::from(attacker_on_right);
+                //         println!("target={:?}, src={:?}", target, src);
+                //     }
+                //     capture &= capture-1;
+                // }
+            }, 
+            Color::White => {
+                let mut capture = self.pawns_able_2capture_any(Color::White);
+                while capture != 0 {
+                    let tindex = capture.trailing_zeros() as u8;
+                    let attacker_on_left = ((capture >> 9).trailing_zeros()) as u64;
+                    let attacker_on_right = (capture >> 7).trailing_zeros() as u64;
+    
+    
+                    let attacker_exists = Bitboard::from(self[Piece::WP]).get_bit_by_square(attacker_on_left.into());
+                    if attacker_exists != 0 {
+                        let target = Square::from(tindex as u64);
+                        let src = Square::from(attacker_on_left);
+                        println!("target={:?}, src={:?}", target, src);
+                    }
+    
+                    let right_attacker_exists = Bitboard::from(self[Piece::WP]).get_bit_by_square(attacker_on_right.into());
+                    if right_attacker_exists != 0 {
+                        let target = Square::from(tindex as u64);
+                        let src = Square::from(attacker_on_right);
+                        println!("target={:?}, src={:?}", target, src);
+                    }
+                    capture &= capture-1;
+                }
+            },
+            _ => panic!("Unrecognized player")
+        };
 
     }
 
