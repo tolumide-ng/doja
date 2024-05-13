@@ -40,7 +40,7 @@ fn main() {
     println!("{}", Bitboard::from(board.pawns_able_2capture_any(Color::White)).to_string());
     // let x = board.pawn_any_attack(Color::Black) & *board[Piece::WP];
     // println!("{}", Bitboard::from(x).to_string());
-    // board.get_pawn_attacks(Color::Black);
+    board.get_pawn_attacks(Color::White);
     
     // println!("{}", board.get_possible_destination_squares_for(Color::White));
     // let x = Bitboard::from(0b1111111100000000);

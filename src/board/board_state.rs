@@ -240,49 +240,48 @@ impl BoardState {
     pub(crate) fn get_pawn_attacks(&self, color: Color) {
         match color {
             Color::Black => {
-                // let mut capture = self.pawns_able_2capture_any(Color::Black);
-                // while capture != 0 {
-                //     let tindex = capture.trailing_zeros() as u8;
-                //     let attacker_on_left = ((capture << 9).trailing_zeros()) as u64;
-                //     let attacker_on_right = (capture << 7).trailing_zeros() as u64;
+                let mut capture = self.pawns_able_2capture_any(Color::Black);
+                // println!()
+                while capture != 0 {
+                    let src = capture.trailing_zeros() as u8;
+                    let left_target = ((capture >> 9).trailing_zeros()) as u64;
+                    let right_target = (capture >> 7).trailing_zeros() as u64; 
     
+                    let attacker_exists = Bitboard::from(self.occupancies[Color::White]).get_bit_by_square(left_target.into());
+                    // println!("does attacker exist?>> {attacker_exists}");
+
+                    if attacker_exists != 0 {
+                        let m = BitMove::new(src, left_target as u8);
+                        println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
+                    }
     
-                //     let attacker_exists = Bitboard::from(self[Piece::WP]).get_bit_by_square(attacker_on_left.into());
-                //     if attacker_exists != 0 {
-                //         let target = Square::from(tindex as u64);
-                //         let src = Square::from(attacker_on_left);
-                //         println!("target={:?}, src={:?}", target, src);
-                //     }
-    
-                //     let right_attacker_exists = Bitboard::from(self[Piece::WP]).get_bit_by_square(attacker_on_right.into());
-                //     if right_attacker_exists != 0 {
-                //         let target = Square::from(tindex as u64);
-                //         let src = Square::from(attacker_on_right);
-                //         println!("target={:?}, src={:?}", target, src);
-                //     }
-                //     capture &= capture-1;
-                // }
+                    let right_attacker_exists = Bitboard::from(self.occupancies[Color::White]).get_bit_by_square(right_target.into());
+                    if right_attacker_exists != 0 {
+                        let m = BitMove::new(src, right_target as u8);
+                        println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
+                    }
+                    capture &= capture-1;
+                }
             }, 
             Color::White => {
                 let mut capture = self.pawns_able_2capture_any(Color::White);
                 while capture != 0 {
-                    let tindex = capture.trailing_zeros() as u8;
-                    let attacker_on_left = ((capture >> 9).trailing_zeros()) as u64;
-                    let attacker_on_right = (capture >> 7).trailing_zeros() as u64;
+                    let src = capture.trailing_zeros() as u8;
+                    let left_target = ((capture << 9).trailing_zeros()) as u64;
+                    let right_target = (capture << 7).trailing_zeros() as u64;
     
     
-                    let attacker_exists = Bitboard::from(self[Piece::WP]).get_bit_by_square(attacker_on_left.into());
+                    let attacker_exists = Bitboard::from(self.occupancies[Color::Black]).get_bit_by_square(left_target.into());
+                    // println!("attacker_exists===={}", attacker_exists);
                     if attacker_exists != 0 {
-                        let target = Square::from(tindex as u64);
-                        let src = Square::from(attacker_on_left);
-                        println!("target={:?}, src={:?}", target, src);
+                        let m = BitMove::new(src, left_target as u8);
+                        println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
                     }
     
-                    let right_attacker_exists = Bitboard::from(self[Piece::WP]).get_bit_by_square(attacker_on_right.into());
+                    let right_attacker_exists = Bitboard::from(self.occupancies[Color::Black]).get_bit_by_square(right_target.into());
                     if right_attacker_exists != 0 {
-                        let target = Square::from(tindex as u64);
-                        let src = Square::from(attacker_on_right);
-                        println!("target={:?}, src={:?}", target, src);
+                        let m = BitMove::new(src, right_target as u8);
+                        println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
                     }
                     capture &= capture-1;
                 }
