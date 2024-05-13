@@ -1,5 +1,5 @@
 use thiserror::Error;
-use crate::{board::{castling::Castling, occupancies}, color::Color, constants::PLAYER_PIECES, squares::{Square, SQUARE_NAMES}};
+use crate::{board::{castling::Castling, occupancies, piece}, color::Color, constants::PLAYER_PIECES, squares::{Square, SQUARE_NAMES}};
 
 use super::{board_state::BoardState, piece::Piece};
 
@@ -35,14 +35,15 @@ pub trait FEN {
 
         let pieces = fen_blocks[0].chars().collect::<Vec<char>>();
         let mut square: u64 = 64;
-
-
+        let mut file = 0;
 
         for char in pieces {
+            
             if char == '/' {
+                file = 0;
                 if square % 8 != 0 {
+                    // println!("sq {}", square);
                     let rank = (square % 8) as u8;
-                    println!("sq {}", square);
                     // println!("sq {}", square);
                     let file = (square as u8 - (8 * rank)) - 1;
                     // let file = square - ((square / 8)) as u8;
@@ -53,14 +54,17 @@ pub trait FEN {
             
             if char.is_ascii_digit() {
                 square -= char.to_digit(10).unwrap() as u64;
+                file += char.to_digit(10).unwrap() as u64;
                 continue;
             }
 
 
             
             if char.is_ascii_alphabetic() {
+                let rank = (square -1) / 8;
                 let piece = Piece::from(char);
-                board[piece].set_bit(square-1);
+                let sq = ((rank * 8) + file) as u64;
+                board[piece].set_bit(sq);
             }
             
             if char.is_ascii_whitespace() {
@@ -68,6 +72,7 @@ pub trait FEN {
             }
             
             square -=1;
+            file +=1;
         }
         
         // println!("for square @ {}", square);
