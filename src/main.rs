@@ -32,9 +32,9 @@ fn main() {
     // println!("{}", Bitboard::from(board.pawns_able_to_double_push(Color::White)).to_string());
     // println!("{}", Bitboard::from(board.double_push_targets(Color::White)).to_string());
     
-    println!("{}", Bitboard::from(board.pawns_able_to_2push(Color::White)).to_string());
-    println!("{}", Bitboard::from(board.single_push_targets(Color::White)).to_string());
-    let x = board.get_pawn_movement(Color::White);
+    println!("{}", Bitboard::from(board.pawns_able_to_2push(Color::Black)).to_string());
+    println!("{}", Bitboard::from(board.single_push_targets(Color::Black)).to_string());
+    let x = board.get_pawn_movement(Color::Black, false);
 
     // println!("{}", board.get_possible_destination_squares_for(Color::White));
     // let x = Bitboard::from(0b1111111100000000);

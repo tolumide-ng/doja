@@ -163,22 +163,37 @@ impl BoardState {
     }
 
 
-    pub(crate) fn get_pawn_movement(&self, color: Color) {
-        let mut src = self.pawns_able_to_2push(color);
-        let mut target = self.single_push_targets(color);
+    pub(crate) fn get_pawn_movement(&self, color: Color, double: bool) {
+        match double {
+            true => {
+                let mut src2 = self.pawns_able_to_double_push(color);
+                let mut target2 = self.double_push_targets(color);
+                
+                while src2 !=0 {
+                    let sindex = src2.trailing_zeros() as u8;
+                    let tindex = target2.trailing_zeros() as u8;
 
-        let mut src2 = self.pawns_able_to_double_push(color);
-        let mut target2 = self.double_push_targets(color);
-
-        while src != 0 {
-            let sindex = src.trailing_zeros() as u8;
-            let tindex = target.trailing_zeros() as u8;
-
-            src &= src -1;
-            target &= target - 1;
-            let m = BitMove::new(sindex, tindex);
-            println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
+                    src2 &= src2 -1;
+                    target2 &= target2 -1;
+                    let m = BitMove::new(sindex, tindex);
+                    println!("from = {:?}  ----->>>> to = {:?}", m.get_src(), m.get_target());
+                }
+            }
+            false => {
+                let mut src = self.pawns_able_to_2push(color);
+                let mut target = self.single_push_targets(color);
+                while src != 0 {
+                    let sindex = src.trailing_zeros() as u8;
+                    let tindex = target.trailing_zeros() as u8;
+        
+                    src &= src -1;
+                    target &= target - 1;
+                    let m = BitMove::new(sindex, tindex);
+                    println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
+                }
+            }
         }
+
     }
 
 
