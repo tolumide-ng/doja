@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut};
+use std::ops::{Index, IndexMut, Not};
 
 // sides to move
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,6 +31,20 @@ impl From<&str> for Color {
             "w" => Self::White,
             "b" => Self::Black,
             _ => panic!("Unrecognized color provided: {value}")
+        }
+    }
+}
+
+
+
+impl Not for Color {
+    type Output = Self;
+    
+    fn not(self) -> Self::Output {
+        match self {
+            Self::Black => Self::White,
+            Self::White => Self::Black,
+            Self::Both => Self::White
         }
     }
 }
