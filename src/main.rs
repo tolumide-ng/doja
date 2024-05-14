@@ -22,7 +22,7 @@ use crate::{board::{board_state::BoardState, piece::Piece}, color::Color, consta
 
 fn main() {
     // let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
-    let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bnp1pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
+    let board = BoardState::parse_fen("r3k2r/pPppqpb1/bnp1pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1 ").unwrap();
 
     println!("{}", board.to_string());
     // board.double_push_targets(Color::White);
@@ -41,6 +41,8 @@ fn main() {
     // let x = board.pawn_any_attack(Color::Black) & *board[Piece::WP];
     // println!("{}", Bitboard::from(x).to_string());
     board.get_pawn_attacks(Color::White);
+    board.get_pawn_movement(Color::White, true);
+    board.get_pawn_movement(Color::White, false);
     
     // println!("{}", board.get_possible_destination_squares_for(Color::White));
     // let x = Bitboard::from(0b1111111100000000);

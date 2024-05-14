@@ -40,6 +40,26 @@ pub enum Piece {
     BK = 11,
 }
 
+impl From<u8> for Piece {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Piece::WP,
+            1 => Piece::WN,
+            2 => Piece::WB,
+            3 => Piece::WR,
+            4 => Piece::WQ,
+            5 => Piece::WK,
+            6 => Piece::BP,
+            7 => Piece::BN,
+            8 => Piece::BB,
+            9 => Piece::BR,
+            10 => Piece::BQ,
+            11 => Piece::BK,
+            _ => panic!("Unexpected Piece value")
+        }
+    }
+}
+
 impl<T> Index<Piece> for [T] {
     type Output = T;
 

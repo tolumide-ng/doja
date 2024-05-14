@@ -209,26 +209,28 @@ impl BoardState {
                 let mut target2 = self.double_push_targets(color);
                 
                 while src2 !=0 {
-                    let sindex = src2.trailing_zeros() as u8;
-                    let tindex = target2.trailing_zeros() as u8;
+                    let sindex = src2.trailing_zeros() as u16;
+                    let tindex = target2.trailing_zeros() as u16;
 
                     src2 &= src2 -1;
                     target2 &= target2 -1;
-                    let m = BitMove::new(sindex, tindex);
-                    println!("from = {:?}  ----->>>> to = {:?}", m.get_src(), m.get_target());
+                    let piece = if color == Color::Black {Piece::BP} else {Piece::WP};
+                    let m=BitMove::new(sindex, tindex, piece);
+                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
                 }
             }
             false => {
                 let mut src = self.pawns_able_to_2push(color);
                 let mut target = self.single_push_targets(color);
                 while src != 0 {
-                    let sindex = src.trailing_zeros() as u8;
-                    let tindex = target.trailing_zeros() as u8;
+                    let sindex = src.trailing_zeros() as u16;
+                    let tindex = target.trailing_zeros() as u16;
         
                     src &= src -1;
                     target &= target - 1;
-                    let m = BitMove::new(sindex, tindex);
-                    println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
+                    let piece = if color == Color::Black {Piece::BP} else {Piece::WP};
+                    let m=BitMove::new(sindex, tindex, piece);
+                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
                 }
             }
         }
@@ -238,12 +240,13 @@ impl BoardState {
 
     /// shows what squares this color's pawns (including the src square) can attack
     pub(crate) fn get_pawn_attacks(&self, color: Color) {
+        let mut  piece = if color == Color::Black {Piece::BP} else {Piece::WP};
         match color {
             Color::Black => {
                 let mut capture = self.pawns_able_2capture_any(Color::Black);
                 // println!()
                 while capture != 0 {
-                    let src = capture.trailing_zeros() as u8;
+                    let src = capture.trailing_zeros() as u16;
                     let left_target = ((capture >> 9).trailing_zeros()) as u64;
                     let right_target = (capture >> 7).trailing_zeros() as u64; 
     
@@ -251,14 +254,14 @@ impl BoardState {
                     // println!("does attacker exist?>> {attacker_exists}");
 
                     if attacker_exists != 0 {
-                        let m = BitMove::new(src, left_target as u8);
-                        println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
+                        let m = BitMove::new(src, left_target as u16, piece);
+                        println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
                     }
     
                     let right_attacker_exists = Bitboard::from(self.occupancies[Color::White]).get_bit_by_square(right_target.into());
                     if right_attacker_exists != 0 {
-                        let m = BitMove::new(src, right_target as u8);
-                        println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
+                        let m = BitMove::new(src, right_target as u16, piece);
+                        println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
                     }
                     capture &= capture-1;
                 }
@@ -266,7 +269,7 @@ impl BoardState {
             Color::White => {
                 let mut capture = self.pawns_able_2capture_any(Color::White);
                 while capture != 0 {
-                    let src = capture.trailing_zeros() as u8;
+                    let src = capture.trailing_zeros() as u16;
                     let left_target = ((capture << 9).trailing_zeros()) as u64;
                     let right_target = (capture << 7).trailing_zeros() as u64;
     
@@ -274,14 +277,14 @@ impl BoardState {
                     let attacker_exists = Bitboard::from(self.occupancies[Color::Black]).get_bit_by_square(left_target.into());
                     // println!("attacker_exists===={}", attacker_exists);
                     if attacker_exists != 0 {
-                        let m = BitMove::new(src, left_target as u8);
-                        println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
+                        let m = BitMove::new(src, left_target as u16, piece);
+                        println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
                     }
     
                     let right_attacker_exists = Bitboard::from(self.occupancies[Color::Black]).get_bit_by_square(right_target.into());
                     if right_attacker_exists != 0 {
-                        let m = BitMove::new(src, right_target as u8);
-                        println!("from = {:?} ---> to {:?}", m.get_src(), m.get_target());
+                        let m = BitMove::new(src, right_target as u16, piece);
+                        println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
                     }
                     capture &= capture-1;
                 }
