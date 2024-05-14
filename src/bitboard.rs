@@ -26,6 +26,17 @@ impl Bitboard {
         (self.0 & (1 << value)) >> value
     }
 
+
+    /// Returns true if this bitboard is 0, otherwise returns false
+    pub fn is_zero(&self) -> bool {
+        **self == 0
+    }
+
+    /// Returns true if this bitboard is not 0, otherwise returns false
+    pub fn not_zero(&self) -> bool {
+        **self != 0
+    }
+
     /// shifts self to the right by square_value (u64) 
     /// and compares the value at the LSB (Least Significant Byte)
     /// with 1 ---->> if the value at LSB is 1, then return 1 else
