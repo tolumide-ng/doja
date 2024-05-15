@@ -255,6 +255,7 @@ impl BoardState {
 
                 if attacker_exists != 0 {
                     let m = BitMove::new(src, left_target as u16, piece);
+                    println!("xot {:064b}", right_target);
                     println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
                 }
 
@@ -265,24 +266,21 @@ impl BoardState {
                 }
                 capture &= capture-1;
                 
+
                 
                 // do we have enpassant captures
                 if let Some(enpassant) = self.enpassant {
-                    // lookup pawn attacks and bitwise AND with enpassant square (bit)
-                    let right_enpassant_attack = Bitboard::from(right_target & (1 >> enpassant as u64));
-                    let left_enpassant_attack = Bitboard::from(left_target & (1 >> enpassant as u64));
-                    println!("-----------------------------------{:0b}, {:0b}", *right_enpassant_attack, *left_enpassant_attack);
-                    // print!("{} {}", right_enpassant_attack==0, left_enpassant_attack ==0);
+                    let mut target = 0u64;
 
-                    if right_enpassant_attack.not_zero() {
-                        println!("::::::::::");
-                        let target_enpassant = right_enpassant_attack.get_lsb1().unwrap() as u16;
-                        let m = BitMove::new(src, target_enpassant, piece);
-                        println!("enpassant capture: from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                    if enpassant as u64 == right_target {
+                        target = right_target
                     }
-                    if left_enpassant_attack.not_zero() {
-                        let target_enpassant = left_enpassant_attack.get_lsb1().unwrap() as u16;
-                        let m = BitMove::new(src, target_enpassant, piece);
+                    if enpassant as u64 == left_target {
+                        target = left_target;
+                    }
+
+                    if target != 0 {
+                        let m = BitMove::new(src, target as u16, piece);
                         println!("enpassant capture: from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
                     }
                 }

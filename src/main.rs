@@ -22,7 +22,7 @@ use crate::{board::{board_state::BoardState, piece::Piece}, color::Color, consta
 
 fn main() {
     // let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
-    let board = BoardState::parse_fen("r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq c6 0 1 ").unwrap();
+    let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R b KQkq a3 0 1 ").unwrap();
 
     println!("{}", board.to_string());
     // board.double_push_targets(Color::White);
@@ -37,12 +37,12 @@ fn main() {
     // println!("{}", Bitboard::from(board.single_push_targets(Color::Black)).to_string());
     // let x = board.get_pawn_movement(Color::Black, false);
     // println!("{}", Bitboard::from(board.pawn_single_attack(Color::White)).to_string());
-    println!("{}", Bitboard::from(board.pawns_able_2capture_any(Color::White)).to_string());
+    println!("{}", Bitboard::from(board.pawns_able_2capture_any(Color::Black)).to_string());
     // let x = board.pawn_any_attack(Color::Black) & *board[Piece::WP];
     // println!("{}", Bitboard::from(x).to_string());
-    board.get_pawn_attacks(Color::White);
-    board.get_pawn_movement(Color::White, true);
-    board.get_pawn_movement(Color::White, false);
+    board.get_pawn_attacks(Color::Black);
+    board.get_pawn_movement(Color::Black, true);
+    board.get_pawn_movement(Color::Black, false);
 
     // println!("{}", Bitboard::from(0x7F_7F_7F_7F_7F_7F));
     
