@@ -1,5 +1,7 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
+use bitflags::Flags;
+
 use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, SQUARES}, squares::Square, Bitboard};
 
 use super::{castling::Castling, fen::FEN, piece::Piece};
@@ -253,7 +255,7 @@ impl BoardState {
 
                 if attacker_exists != 0 {
                     let m = BitMove::new(src, left_target as u16, piece);
-                    println!("xot {:064b}", right_target);
+                    // println!("xot {:064b}", right_target);
                     println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
                 }
 
@@ -299,6 +301,70 @@ impl BoardState {
             },
             _ => {0}
         }
+    }
+
+    fn get_castling(&self, color: Color) {
+        match color {
+            Color::White => {
+                // rank 1 cell 4,5,6,7
+                let king_castling_cells = self.occupancies[Color::Both] & 0xf0;
+                let only_expected_cells_are_filled = (king_castling_cells ^ 0x90) == 0;
+
+                // king castling is available and the square between king and rook (f and g are empty)
+                if (self.castling_rights & Castling::WHITE_KING) != Castling::NONE && only_expected_cells_are_filled {
+                    let no_attacks = !self.is_square_attacked(Square::E1.into(), !color) && !self.is_square_attacked(Square::F1.into(), !color);
+                    if no_attacks {
+                        let m = BitMove::new(Square::E1 as u16, Square::G1 as u16, Piece::WK);
+                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                    }
+                }
+
+                let queen_castling_cells = self.occupancies[Color::Both] & 0x1f;
+                let only_expected_cells_are_filled = (queen_castling_cells ^ 0x11) == 01;
+                if (self.castling_rights & Castling::WHITE_QUEEN) != Castling::NONE && only_expected_cells_are_filled {
+                    let no_attacks = !self.is_square_attacked(Square::E1.into(), !color) && !self.is_square_attacked(Square::D1.into(), !color);
+                    if no_attacks {
+                        let m = BitMove::new(Square::E1 as u16, Square::C1 as u16, Piece::WK);
+                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                    }
+                }
+            }
+            Color::Black => {
+                let king_castling_cells = self.occupancies[Color::Both] & 0xf000000000000000;
+                let only_expected_cells_are_filled = (king_castling_cells ^ 0x9000000000000000) == 0;
+
+                // king castling is available and the square between king and rook (f and g are empty)
+                if (self.castling_rights & Castling::BLACK_KING) != Castling::NONE && only_expected_cells_are_filled {
+                    let no_attacks = !self.is_square_attacked(Square::E8.into(), !color) && !self.is_square_attacked(Square::F8.into(), !color);
+                    if no_attacks {
+                        let m = BitMove::new(Square::E8 as u16, Square::G8 as u16, Piece::BK);
+                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                    }
+                }
+
+                let queen_castling_cells = self.occupancies[Color::Both] & 0x1f00000000000000;
+                // println!("{}", Bitboard::from(queen_castling_cells).to_string());
+                let only_expected_cells_are_filled = (queen_castling_cells ^ 0x1100000000000000) == 0;
+                if (self.castling_rights & Castling::BLACK_QUEEN) != Castling::NONE && only_expected_cells_are_filled {
+                    let no_attacks = !self.is_square_attacked(Square::E8.into(), !color) && !self.is_square_attacked(Square::D8.into(), !color);
+                    if no_attacks {
+                        let m = BitMove::new(Square::E8 as u16, Square::D8 as u16, Piece::BK);
+                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+
+    pub(crate) fn gen_movement(&self, color: Color) {
+        self.get_pawn_attacks(Color::Black);
+        self.get_pawn_movement(Color::Black, true);
+        self.get_pawn_movement(Color::Black, false);
+        self.get_castling(color);
+
+        // castling
     }
 
 

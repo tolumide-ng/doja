@@ -18,6 +18,8 @@ bitflags! {
 /// 1111         both sides can castle both directions \
 /// 1001         black king => queen side \
 ///              whitre king => king side \
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct Castling: u8 {
         const WHITE_KING = 0b0001;
         const WHITE_QUEEN = 0b0010;
