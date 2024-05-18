@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{fmt::Display, ops::Deref};
 
 use crate::{board::piece::Piece, squares::Square};
 
@@ -27,13 +27,16 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
 
 
 
+#[derive(Debug, Default, Clone, Copy)]
  pub struct NBitMove(u32);
 
  impl NBitMove {
 
 
-    pub(crate) fn new(source: u32, target: u32, piece: Piece, promoted: Piece, capture: bool, double_push: bool, enpassant: bool, castling: bool) -> Self {
-        let bmove = source | target << 6 | (piece as u32) << 12 | (promoted as u32) << 16 | 
+    pub(crate) fn new(source: u32, target: u32, piece: Piece, promotion: Option<Piece>, capture: bool, double_push: bool, enpassant: bool, castling: bool) -> Self {
+        let promotion_piece = if let Some(p) = promotion {p as u32} else {0};
+
+        let bmove = source | target << 6 | (piece as u32) << 12 | promotion_piece << 16 | 
             (capture as u32) << 20 |(double_push as u32) << 21 | (enpassant as u32) << 22 | (castling as u32) << 23;
         NBitMove(bmove)
     }
@@ -78,10 +81,41 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
     }
  }
 
+
+
+/// for UCI purpose 
+ impl Display for NBitMove {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let src = self.get_src().to_string();
+        let target = self.get_target().to_string();
+        let promotion = match self.get_promotion() {
+            Piece::WP | Piece::BP => String::new(),
+            x => x.to_string().to_lowercase()
+        };
+
+        print!("{src}{target}{promotion}");
+        
+        Ok(())
+    }
+ }
+
  impl Deref for NBitMove {
     type Target = u32;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+ }
+
+
+ impl From<u32> for NBitMove {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+ }
+
+ impl From<NBitMove> for u32 {
+    fn from(value: NBitMove) -> Self {
+        *value
     }
  }
 

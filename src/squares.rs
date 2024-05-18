@@ -1,4 +1,4 @@
-use std::ops::Index;
+use std::{fmt::Display, ops::Index};
 
 
 
@@ -18,6 +18,13 @@ pub enum Square {
 impl From<Square> for u64 {
     fn from(value: Square) -> Self {
         value as u64
+    }
+}
+
+impl Display for Square {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let square = SQUARE_NAMES[*self].to_lowercase();
+        write!(f, "{square}")
     }
 }
 

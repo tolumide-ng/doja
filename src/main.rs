@@ -15,7 +15,7 @@ pub use bitboard::Bitboard;
 use constants::PIECE_ATTACKS;
 // use crate::constants::
 
-use crate::{bit_move::NBitMove, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{CMK_POSITION, KILLER_POSITION, RANK_4, START_POSITION, TRICKY_POSITION}, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
+use crate::{bit_move::NBitMove, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{CMK_POSITION, KILLER_POSITION, RANK_4, START_POSITION, TRICKY_POSITION}, moves::Moves, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
 
 
 
@@ -46,7 +46,7 @@ fn main() {
 
     board.gen_movement(Color::White);
 
-    let mv = NBitMove::new(32u32, 20u32, Piece::BN, Piece::WB, false, true, false, true);
+    let mv = NBitMove::new(32u32, 20u32, Piece::BN, None, false, true, false, true);
 
     println!("{:?}", mv.get_src());
     println!("{:?}", mv.get_target());
@@ -56,6 +56,12 @@ fn main() {
     println!("{:?}", mv.get_double_push());
     println!("{:?}", mv.get_enpassant());
     println!("{:?}", mv.get_castling());
+
+    println!("{}", mv.to_string());
+
+    let mut mvv = Moves::new();
+    mvv.add(mv);;
+    println!("{:?}", mvv.to_string());
 
     // println!("{:#?}", Bitboard::from(0b0011_1111).to_string());
 
