@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::{board::piece::Piece, squares::Square};
 
 
@@ -10,8 +12,79 @@ use crate::{board::piece::Piece, squares::Square};
  * 0001 0000 0000 0000 0000 0000    capture flag        0x100000
  * 0010 0000 0000 0000 0000 0000    double push flag    0x200000
  * 0100 0000 0000 0000 0000 0000    enpassant           0x400000
+ * 1000 0000 0000 0000 0000 0000    castling flag       0x800000
  * 
  */
+
+const SOURCE_SQUARE: u32 = 0b0000_0000_0000_0011_1111;
+const TARGET_SQUARE: u32 = 0b0000_0000_1111_1100_0000;
+const PIECE: u32 = 0b0000_0000_1111_0000_0000_0000;
+const PROMOTED_PIECE: u32 = 0b0000_1111_0000_0000_0000_0000;
+const CAPTURED_PIECE: u32 = 0b0001_0000_0000_0000_0000_0000;
+const DOUBLE_PUSH_FLAG: u32 = 0b0010_0000_0000_0000_0000_0000;
+const ENPASSANT: u32 = 0b0100_0000_0000_0000_0000_0000;
+const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
+
+
+
+ pub struct NBitMove(u32);
+
+ impl NBitMove {
+
+
+    pub(crate) fn new(source: u32, target: u32, piece: Piece, promoted: Piece, capture: bool, double_push: bool, enpassant: bool, castling: bool) -> Self {
+        let bmove = source | target << 6 | (piece as u32) << 12 | (promoted as u32) << 16 | 
+            (capture as u32) << 20 |(double_push as u32) << 21 | (enpassant as u32) << 22 | (castling as u32) << 23;
+        NBitMove(bmove)
+    }
+
+    pub(crate) fn get_src(&self) -> Square {
+        let sq = (**self & SOURCE_SQUARE) as u64;
+        Square::from(sq)
+    }
+
+    pub(crate) fn get_target(&self) -> Square {
+        let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
+        Square::from(sq)
+    }
+
+    pub(crate) fn get_piece(&self) -> Piece {
+        let value = ((**self & PIECE) >> 12) as u8;
+        Piece::from(value)
+    }
+
+    pub(crate) fn get_promotion(&self) -> Piece {
+        let value = ((**self & PROMOTED_PIECE) >> 16) as u8;
+        Piece::from(value)
+    }
+
+    pub(crate) fn get_capture(&self) -> bool {
+        let capture = (**self & CAPTURED_PIECE) != 0;
+        capture
+    }
+
+    pub(crate) fn get_double_push(&self) -> bool {
+        let capture = (**self & DOUBLE_PUSH_FLAG) != 0;
+        capture
+    }
+
+    pub(crate) fn get_enpassant(&self) -> bool {
+        let enpass = (**self & ENPASSANT) != 0;
+        enpass
+    }
+
+    pub(crate) fn get_castling(&self) -> bool {
+        **self & CATSLING != 0
+    }
+ }
+
+ impl Deref for NBitMove {
+    type Target = u32;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+ }
+
 
 pub struct BitMove(u16);
 

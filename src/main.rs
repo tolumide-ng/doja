@@ -15,7 +15,7 @@ pub use bitboard::Bitboard;
 use constants::PIECE_ATTACKS;
 // use crate::constants::
 
-use crate::{board::{board_state::BoardState, piece::Piece}, color::Color, constants::{CMK_POSITION, KILLER_POSITION, RANK_4, START_POSITION, TRICKY_POSITION}, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
+use crate::{bit_move::NBitMove, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{CMK_POSITION, KILLER_POSITION, RANK_4, START_POSITION, TRICKY_POSITION}, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
 
 
 
@@ -45,6 +45,19 @@ fn main() {
     // board.get_pawn_movement(Color::Black, false);
 
     board.gen_movement(Color::White);
+
+    let mv = NBitMove::new(32u32, 20u32, Piece::BN, Piece::WB, false, true, false, true);
+
+    println!("{:?}", mv.get_src());
+    println!("{:?}", mv.get_target());
+    println!("{:?}", mv.get_promotion());
+    println!("{:?}", mv.get_piece());
+    println!("{:?}", mv.get_capture());
+    println!("{:?}", mv.get_double_push());
+    println!("{:?}", mv.get_enpassant());
+    println!("{:?}", mv.get_castling());
+
+    // println!("{:#?}", Bitboard::from(0b0011_1111).to_string());
 
     // println!("{}", Bitboard::from(0x7F_7F_7F_7F_7F_7F));
     
