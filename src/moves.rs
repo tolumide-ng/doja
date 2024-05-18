@@ -33,14 +33,18 @@ impl Moves {
 impl Display for Moves {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let pieces = Piece::unicode_pieces();
-        println!("| move  | piece     | capture   | double | enpassant  | castling  |");
-        println!("-------------------------------------------------------------------");
+        println!("I/O | move  | piece     | promotion   | capture   | double | enpassant  | castling  |");
+        println!("-------------------------------------------------------------------------------------");
         for count in 0..self.count {
+            print!(" {count}  ");
             let l = self.list[count];
             print!("| ");
-            print!("{}  ", l.to_string());
-            println!("|   {}       | {}     | {}    | {}     | {}      |", pieces[l.get_piece()], l.get_capture(), l.get_double_push(), l.get_enpassant(), l.get_castling());
+            print!("{} ", l.to_string());
+            let promotion = if let Some(p) = l.get_promotion() {pieces[p]} else {' '};
+            println!("|   {}       |   {}         |  {}    | {}   | {}      | {}      |", pieces[l.get_piece()], promotion, l.get_capture(), l.get_double_push(), l.get_enpassant(), l.get_castling());
         }
+ 
+        println!("\n\nTotal number of moves {} \n\n", self.count);
 
         Ok(())
     }

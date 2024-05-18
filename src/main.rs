@@ -46,7 +46,7 @@ fn main() {
 
     board.gen_movement(Color::White);
 
-    let mv = NBitMove::new(32u32, 20u32, Piece::BN, None, false, true, false, true);
+    let mv = NBitMove::new(32u32, 20u32, Piece::BN, Some(Piece::BQ), false, true, false, true);
 
     println!("{:?}", mv.get_src());
     println!("{:?}", mv.get_target());

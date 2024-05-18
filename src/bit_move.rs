@@ -56,9 +56,13 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
         Piece::from(value)
     }
 
-    pub(crate) fn get_promotion(&self) -> Piece {
+    pub(crate) fn get_promotion(&self) -> Option<Piece> {
         let value = ((**self & PROMOTED_PIECE) >> 16) as u8;
-        Piece::from(value)
+
+        match Piece::from(value) {
+            Piece::WP | Piece::BP => None,
+            x => Some(x)
+        }
     }
 
     pub(crate) fn get_capture(&self) -> bool {
@@ -88,12 +92,9 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let src = self.get_src().to_string();
         let target = self.get_target().to_string();
-        let promotion = match self.get_promotion() {
-            Piece::WP | Piece::BP => String::new(),
-            x => x.to_string().to_lowercase()
-        };
+        let promotion = self.get_promotion().map(|x| x.to_string().to_lowercase()).or(Some(String::new()));
 
-        print!("{src}{target}{promotion}");
+        print!("{src}{target}{}", promotion.unwrap());
         
         Ok(())
     }
