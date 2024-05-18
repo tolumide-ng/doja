@@ -2,7 +2,7 @@ use std::{fmt::Display, ops::{Deref, DerefMut}};
 
 use bitflags::Flags;
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, SQUARES}, squares::Square, Bitboard};
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, SQUARES}, piece_attacks, squares::Square, Bitboard};
 
 use super::{castling::Castling, fen::FEN, piece::Piece};
 
@@ -216,7 +216,7 @@ impl BoardState {
                     target2 &= target2 -1;
                     let piece = if color == Color::Black {Piece::BP} else {Piece::WP};
                     let m=BitMove::new(sindex, tindex, piece);
-                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
                 }
             }
             false => {
@@ -230,7 +230,7 @@ impl BoardState {
                     target &= target - 1;
                     let piece = if color == Color::Black {Piece::BP} else {Piece::WP};
                     let m=BitMove::new(sindex, tindex, piece);
-                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
                 }
             }
         }
@@ -256,13 +256,13 @@ impl BoardState {
                 if attacker_exists != 0 {
                     let m = BitMove::new(src, left_target as u16, piece);
                     // println!("xot {:064b}", right_target);
-                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
                 }
 
                 let right_attacker_exists = Bitboard::from(self.occupancies[!color]).get_bit_by_square(right_target.into());
                 if right_attacker_exists != 0 {
                     let m = BitMove::new(src, right_target as u16, piece);
-                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
                 }
                 capture &= capture-1;
                 
@@ -281,7 +281,7 @@ impl BoardState {
 
                     if target != 0 {
                         let m = BitMove::new(src, target as u16, piece);
-                        println!("enpassant capture: from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                        println!("enpassant capture: from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
                     }
                 }
             }
@@ -315,7 +315,7 @@ impl BoardState {
                     let no_attacks = !self.is_square_attacked(Square::E1.into(), !color) && !self.is_square_attacked(Square::F1.into(), !color);
                     if no_attacks {
                         let m = BitMove::new(Square::E1 as u16, Square::G1 as u16, Piece::WK);
-                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
                     }
                 }
 
@@ -325,7 +325,7 @@ impl BoardState {
                     let no_attacks = !self.is_square_attacked(Square::E1.into(), !color) && !self.is_square_attacked(Square::D1.into(), !color);
                     if no_attacks {
                         let m = BitMove::new(Square::E1 as u16, Square::C1 as u16, Piece::WK);
-                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
                     }
                 }
             }
@@ -338,7 +338,7 @@ impl BoardState {
                     let no_attacks = !self.is_square_attacked(Square::E8.into(), !color) && !self.is_square_attacked(Square::F8.into(), !color);
                     if no_attacks {
                         let m = BitMove::new(Square::E8 as u16, Square::G8 as u16, Piece::BK);
-                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
                     }
                 }
 
@@ -349,7 +349,7 @@ impl BoardState {
                     let no_attacks = !self.is_square_attacked(Square::E8.into(), !color) && !self.is_square_attacked(Square::D8.into(), !color);
                     if no_attacks {
                         let m = BitMove::new(Square::E8 as u16, Square::D8 as u16, Piece::BK);
-                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} \n", m.get_src(), m.get_target(), m.get_piece());
+                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
                     }
                 }
             }
@@ -358,13 +358,72 @@ impl BoardState {
     }
 
 
+    // fn get_sliding_moves(&self, color: Color, piece: Piece) {
+    //     match piece {
+    //         Piece::WN | Piece::BN => {
+    //             self.get_sliding_and_leaper_moves(color, piece, PIECE_ATTACKS.knight_attacks, !self.occupancies[color]);
+    //         }
+    //         Piece::WB | Piece::BB => {
+    //             self.get_sliding_and_leaper_moves(color, piece, PIECE_ATTACKS.get_bishop_attacks(sq, occupancy), self.occupancies[Color::Both]);
+    //         }
+    //         _ => unreachable!("")
+    //     }
+    // }
+
+    fn get_sliding_and_leaper_moves(&self, color: Color, piece: Piece){
+        // let knight = if color == Color::White {Piece::WN} else {Piece::BN};
+        let mut pieces_on_board = self[piece];
+
+        while pieces_on_board.not_zero() {
+            let square = pieces_on_board.get_lsb1().unwrap();
+            pieces_on_board.pop_bit(square);
+            let src = Square::from(square);
+            
+            let (attacks, occupancies) = match piece {
+                Piece::WN | Piece::BN => (PIECE_ATTACKS.knight_attacks[src], !self.occupancies[color]),
+                Piece::WB | Piece::BB => (PIECE_ATTACKS.get_bishop_attacks(square, self.occupancies[Color::Both]), !self.occupancies[color]),
+                Piece::WR | Piece::BR  => (PIECE_ATTACKS.get_rook_attacks(square, self.occupancies[Color::Both]), !self.occupancies[color]),
+                Piece::WQ | Piece::BQ => (PIECE_ATTACKS.get_queen_attacks(square, self.occupancies[Color::Both]), !self.occupancies[color]),
+                Piece::WK | Piece::BK => (PIECE_ATTACKS.king_attacks[src], !self.occupancies[color]),
+                _ => unreachable!()
+            };
+
+            // let attacks = attack_map[src];
+            // we're getting !self.occupancies[color] because our knight should be able to make both quiet or capture moves (on the opponent)
+            let mut targets = Bitboard::from(attacks & occupancies);
+
+            // println!("{}", targets.to_string());
+
+            while targets.not_zero() {
+                let target = targets.get_lsb1().unwrap();
+                // capture move // there is an opponent on the target square
+                let opponent_on_target = Bitboard::from(self.occupancies[!color]).get_bit(target) != 0;
+                if opponent_on_target {
+                    let m = BitMove::new(src as u16, target as u16, piece);
+                    println!("CAPTURE {} move: from = {:?}  ----->>>> to = {:?} ||||| becomes {:?}", piece.to_string(), m.get_src(), m.get_target(), m.get_piece());
+                } else {
+                    // quiet move
+                    let m = BitMove::new(src as u16, target as u16, piece);
+                    println!("QUIET {} move: from = {:?}  ----->>>> to = {:?} ||||| becomes {:?}", piece.to_string(), m.get_src(), m.get_target(), m.get_piece());
+                }
+                targets.pop_bit(target);
+            }
+        }
+    }
+
     pub(crate) fn gen_movement(&self, color: Color) {
         self.get_pawn_attacks(Color::Black);
         self.get_pawn_movement(Color::Black, true);
         self.get_pawn_movement(Color::Black, false);
         self.get_castling(color);
+        self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BN}else {Piece::WN});
+        self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BB}else {Piece::WB});
+        self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BR}else {Piece::WR});
+        self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BQ}else {Piece::WQ});
+        self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BK}else {Piece::WK});
 
-        // castling
+        // generate knight squares
+        
     }
 
 

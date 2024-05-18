@@ -44,7 +44,7 @@ fn main() {
     // board.get_pawn_movement(Color::Black, true);
     // board.get_pawn_movement(Color::Black, false);
 
-    board.gen_movement(Color::Black);
+    board.gen_movement(Color::White);
 
     // println!("{}", Bitboard::from(0x7F_7F_7F_7F_7F_7F));
     

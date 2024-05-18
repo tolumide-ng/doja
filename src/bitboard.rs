@@ -148,7 +148,7 @@ impl Bitboard {
             // get the index of the least significant first bit(LS1B) in the attack bitboard
             let square = attack_bitboard.get_lsb1().unwrap();
             // then pop the it
-            attack_bitboard.pop_bit(square.into());
+            attack_bitboard.pop_bit(square);
             // make sure the occupancy is on the board
             if (index & (1<<count)) != 0 {
                 occupancy |= 1u64 << square;
