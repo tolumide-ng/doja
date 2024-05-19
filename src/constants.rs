@@ -75,6 +75,17 @@ pub const SQUARES: usize = 64;
 
 pub const RANK_4: u64 = 0x0000_0000_FF00_0000;
 pub const RANK_5: u64 = 0x0000_00FF_0000_0000;
+pub const RANK_8: u64 = 0xff00_0000_0000_0000; // RANK 8 IS FILLED
+pub const RANK_1: u64 = 0xff; // RANK 1 IS FILLED
+pub const WHITE_KING_CASTLING_CELLS: u64 = 0xf0;
+pub const E1_F1_FILLED: u64 = 0x90; // out of the white king castling cells only E1 and F1 cells bits are set
+pub const BLACK_KING_CASTLING_CELLS: u64 = 0xf000000000000000;
+pub const E8_F8_IS_FILLED: u64 = 0x9000000000000000; // out of the black kings castling cells only E8 and F8 cell bits are set
+pub const WHITE_QUEEN_CASTLING_CELLS: u64 = 0x1f;
+pub const A1_E1_IS_FILLED: u64 = 0x11; // out of the white queen castling cells, only A1 and E1 cell bits are set
+pub const BLACK_QUEEN_CASTLING_CELLS: u64 = 0x1f00000000000000;
+pub const A8_E8_IS_FILLED: u64  = 0x1100000000000000;
+// pub const 
 
 // 0xFEFE_FEFE_FEFE_FEFE
 

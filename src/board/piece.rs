@@ -1,5 +1,7 @@
 use std::ops::{Index, IndexMut};
 
+use crate::color::Color;
+
 #[derive(Debug, Clone, Copy, derive_more::Display)]
 pub enum Piece {
     /// white pawn
@@ -190,5 +192,30 @@ impl Piece {
 
     pub(crate) fn black_pieces() -> [Piece; 6] {
         [ Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK ]
+    }
+
+    pub(crate) fn queen(color: Color) -> Piece {
+        if color == Color::Black { return Piece::BQ }
+        return Piece::WQ;
+    }
+
+    pub(crate) fn knight(color: Color) -> Piece {
+        if color == Color::Black { return Piece::BN }
+        return Piece::WN;
+    }
+
+    pub(crate) fn bishop(color: Color) -> Piece {
+        if color == Color::Black { return Piece::BB }
+        return Piece::WB;
+    }
+
+    pub(crate) fn rook(color: Color) -> Piece {
+        if color == Color::Black { return Piece::BR }
+        return Piece::WR;
+    }
+
+    pub(crate) fn pawn(color: Color) -> Piece {
+        if color == Color::Black { return Piece::BP }
+        return Piece::WP;
     }
 }

@@ -1,7 +1,8 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{board::piece::Piece, color::Color, Bitboard};
+use crate::{board::piece::Piece, Bitboard};
 
+#[derive(Debug, Clone)]
 pub struct Board([Bitboard; 12]);
 
 impl Deref for Board {

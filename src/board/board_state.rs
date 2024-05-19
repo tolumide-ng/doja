@@ -1,23 +1,28 @@
-use std::{fmt::Display, ops::{Deref, DerefMut}};
+use std::{fmt::Display, ops::{Deref, DerefMut}, sync::Arc};
 
 use bitflags::Flags;
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, SQUARES}, piece_attacks, squares::Square, Bitboard};
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{A1_E1_IS_FILLED, A8_E8_IS_FILLED, BLACK_KING_CASTLING_CELLS, BLACK_QUEEN_CASTLING_CELLS, E1_F1_FILLED, E8_F8_IS_FILLED, NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_1, RANK_4, RANK_5, RANK_8, SQUARES, WHITE_KING_CASTLING_CELLS, WHITE_QUEEN_CASTLING_CELLS}, move_type::{self, MoveType}, moves::Moves, piece_attacks, squares::Square, Bitboard};
 
 use super::{castling::Castling, fen::FEN, piece::Piece};
 
+
+#[derive(Debug, Clone)]
 pub struct BoardState {
     turn: Color,
     pub board: Board,
     castling_rights: Castling,
     enpassant: Option<Square>,
     occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
+    // prev: Option<Arc<BoardState>>
 }
 
 
+const PROMOTABLE_TARGETS: usize = 4;
+
 impl BoardState {
     pub fn new() -> BoardState {
-        Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::NONE, occupancies: [0; OCCUPANCIES], }
+        Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::NONE, occupancies: [0; OCCUPANCIES] }
     }
 
     pub(crate) fn set_turn(&mut self, turn: Color) {
@@ -142,13 +147,13 @@ impl BoardState {
         wpawn_double_attacks | !bpawn_any_attacks | (wpawn_odd_attacks & !bpawn_double_attacks)
     }
 
-    pub(crate) fn pawns_able_2capture_east(&self, color: Color) -> u64 {
+    fn pawns_able_2capture_east(&self, color: Color) -> u64 {
         if color == Color::Black {
             return *self[Piece::BP] & self.white_pawn_west_attacks(false)
         }
         *self.board[Piece::WP] & self.black_pawn_west_attacks(false)
     }
-    pub(crate) fn pawns_able_2capture_west(&self, color: Color) -> u64 {
+    fn pawns_able_2capture_west(&self, color: Color) -> u64 {
         if color == Color::Black {
             return *self[Piece::BP] & self.white_pawn_east_attacks(false)
         }
@@ -156,7 +161,7 @@ impl BoardState {
     }
 
     /// Returns the squares of this color capable of capturing other squares
-    pub(crate) fn pawns_able_2capture_any(&self, color: Color) -> u64 {
+    fn pawns_able_2capture_any(&self, color: Color) -> u64 {
         if color == Color::Black {
             return *self[Piece::BP] & self.pawn_any_attack(Color::White, false)
         }
@@ -165,7 +170,7 @@ impl BoardState {
 
     
     /// Push pawn(black or white) by one
-    pub(crate) fn single_push_targets(&self, color: Color) -> u64 {
+    fn single_push_targets(&self, color: Color) -> u64 {
         if color == Color::Black {
             return self[Piece::BP].south() & !self.occupancies[Color::Both]
         }
@@ -175,7 +180,7 @@ impl BoardState {
     
     /// Double push for pawns(black or white)
     /// https://www.chessprogramming.org/Pawn_Pushes_(Bitboards)
-    pub(crate) fn double_push_targets(&self, color: Color) -> u64 {
+    fn double_push_targets(&self, color: Color) -> u64 {
         let single_push = Bitboard::from(self.single_push_targets(color));
         if color == Color::Black {
             return single_push.south() & !self.occupancies[Color::Both] & RANK_5
@@ -184,14 +189,14 @@ impl BoardState {
         single_push.north() & !self.occupancies[Color::Both] & RANK_4
     }
 
-    pub(crate) fn pawns_able_to_2push(&self, color: Color) -> u64 {
+    fn pawns_able_to_2push(&self, color: Color) -> u64 {
         if color == Color::White {
             return Bitboard::from(!self.occupancies[Color::Both]).south() & *self[Piece::WP]    
         }
         Bitboard::from(!self.occupancies[Color::Both]).north() & *self[Piece::BP]
     }
 
-    pub(crate) fn pawns_able_to_double_push(&self, color: Color) -> u64 {
+    fn pawns_able_to_double_push(&self, color: Color) -> u64 {
         let empty = !self.occupancies[Color::Both];
         if color == Color::Black {
             let empty_rank6 = Bitboard::from(empty & RANK_5).north() & empty;
@@ -201,95 +206,129 @@ impl BoardState {
         return Bitboard::from(empty_rank_3).south() & *self[Piece::WP];
     }
 
-
-    pub(crate) fn get_pawn_movement(&self, color: Color, double: bool) {
+    pub(crate) fn get_pawn_movement(&self, color: Color, double: bool) -> Vec<BitMove> {
         match double {
             true => {
                 let mut src2 = self.pawns_able_to_double_push(color);
                 let mut target2 = self.double_push_targets(color);
                 
+                let length = target2.count_ones() as usize; // because doubles cannot be promoted
+                let mut move_list: Vec<BitMove> = Vec::with_capacity(length);
+
+                
                 while src2 !=0 {
-                    let sindex = src2.trailing_zeros() as u16;
-                    let tindex = target2.trailing_zeros() as u16;
+                    let sindex = src2.trailing_zeros() as u32;
+                    let tindex = target2.trailing_zeros() as u32;
+                    
+                    let piece = Piece::pawn(color);
+                    move_list.push(BitMove::new(sindex, tindex, piece, None, false, true, false, false));
 
                     src2 &= src2 -1;
                     target2 &= target2 -1;
-                    let piece = if color == Color::Black {Piece::BP} else {Piece::WP};
-                    let m=BitMove::new(sindex, tindex, piece);
-                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
                 }
+                move_list
             }
             false => {
                 let mut src = self.pawns_able_to_2push(color);
-                let mut target = self.single_push_targets(color);
+                let mut targets = self.single_push_targets(color);
+
+                let mut length = targets.count_ones() as usize; // because doubles cannot be promoted
+                let promotable = if color == Color::White {(targets & RANK_8).count_ones()} else {(targets & RANK_1).count_ones()} as usize;
+                length = (length - promotable) + (promotable * PROMOTABLE_TARGETS);
+
+                let mut move_list: Vec<BitMove> = Vec::with_capacity(length);
+                
                 while src != 0 {
-                    let sindex = src.trailing_zeros() as u16;
-                    let tindex = target.trailing_zeros() as u16;
-        
+                    let sindex = src.trailing_zeros();
+                    let tindex = targets.trailing_zeros();
+                    
+                    let move_promotes = tindex >= Square::A8 as u32 && tindex <= Square::H8 as u32;
+                    let piece = Piece::pawn(color);
+
+                    if move_promotes {
+                        move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::bishop(color)), false, false, false, false));
+                        move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::queen(color)), false, false, false, false));
+                        move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::knight(color)), false, false, false, false));
+                        move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::rook(color)), false, false, false, false));
+                    } else {
+                        move_list.push(BitMove::new(sindex, tindex, piece, None, false, false, false, false));
+                    }
+
                     src &= src -1;
-                    target &= target - 1;
-                    let piece = if color == Color::Black {Piece::BP} else {Piece::WP};
-                    let m=BitMove::new(sindex, tindex, piece);
-                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
+                    targets &= targets - 1;
                 }
+                move_list
             }
         }
-
     }
 
 
     /// shows what squares this color's pawns (including the src square) can attack
-    pub(crate) fn get_pawn_attacks(&self, color: Color) {
-        let piece = if color == Color::Black {Piece::BP} else {Piece::WP};
-          
-          let mut capture = self.pawns_able_2capture_any(color);
-            // println!()
-            while capture != 0 {
-                let src = capture.trailing_zeros() as u16;
-                let left_target = if color == Color::Black {(capture >> 9).trailing_zeros()} else {(capture << 9).trailing_zeros()} as u64;
-                let right_target = if color == Color::Black {(capture >> 7).trailing_zeros()} else {(capture << 7).trailing_zeros()} as u64;
-                
+    pub(crate) fn get_pawn_attacks(&self, color: Color) -> Vec<BitMove> {
+        let piece = Piece::pawn(color);
+        
+        let mut capture = self.pawns_able_2capture_any(color);
+        
+        let mut length = capture.count_ones() as usize; // because doubles cannot be promoted
+        let promotable = if color == Color::White {(capture & RANK_8).count_ones()} else {(capture & RANK_1).count_ones()} as usize;
+        length = (length - promotable) + (promotable * PROMOTABLE_TARGETS);
+        let mut move_list: Vec<BitMove> = Vec::with_capacity(length);
 
-                let attacker_exists = Bitboard::from(self.occupancies[!color]).get_bit_by_square(left_target.into());
-                // println!("does attacker exist?>> {attacker_exists}");
 
-                if attacker_exists != 0 {
-                    let m = BitMove::new(src, left_target as u16, piece);
-                    // println!("xot {:064b}", right_target);
-                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
-                }
+        // println!()
+        while capture != 0 {
+            let src = capture.trailing_zeros();
+            let left_target = if color == Color::Black {(capture >> 9).trailing_zeros()} else {(capture << 7).trailing_zeros()};
+            let right_target = if color == Color::Black {(capture >> 7).trailing_zeros()} else {(capture << 9).trailing_zeros()};
+            
+            let left_attacker_exists = Bitboard::from(self.occupancies[!color]).get_bit_by_square((left_target as u64).into());
+            let right_attacker_exists = Bitboard::from(self.occupancies[!color]).get_bit_by_square((right_target as u64).into());
 
-                let right_attacker_exists = Bitboard::from(self.occupancies[!color]).get_bit_by_square(right_target.into());
-                if right_attacker_exists != 0 {
-                    let m = BitMove::new(src, right_target as u16, piece);
-                    println!("from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
-                }
-                capture &= capture-1;
-                
+            // do we have enpassant captures
+            let (left_is_enpassant, right_is_enpassant) = match self.enpassant {
+                Some(enpassant) => {
+                    (enpassant == (left_target as u64).into(), enpassant == (right_target as u64).into())}
+                None => (false, false)
+            };
+            
+            
+            let (left_promotes, right_promotes) = match color {
+                Color::White => (
+                    left_attacker_exists != 0 && (left_target >= Square::A8 as u32 && left_target <= Square::H8 as u32), 
+                    right_attacker_exists != 0 && (right_target >= Square::A8 as u32 && right_target <= Square::H8 as u32)
+                ),
+                Color::Black => {
+                        ( left_attacker_exists != 0 &&  (left_target >= Square::A1 as u32 && left_target <= Square::H1 as u32),
+                            right_attacker_exists != 0 && right_target >= Square::A1 as u32 && right_target <= Square::H1 as u32)
+                }, 
+                _ => {unreachable!("")}};
 
-                
-                // do we have enpassant captures
-                if let Some(enpassant) = self.enpassant {
-                    let mut target = 0u64;
 
-                    if enpassant as u64 == right_target {
-                        target = right_target
-                    }
-                    if enpassant as u64 == left_target {
-                        target = left_target;
-                    }
+            // attacking the target on the LHS will result in this pawn's promotion (enpassant cannot occur at this point anymore)
+            [(left_promotes, left_target), (right_promotes, right_target)].iter().filter(|(p, _)| *p == true).for_each(|(_, target)| {
+                move_list.push(BitMove::new(src, *target, piece, Some(Piece::bishop(color)), true, false, false, false));
+                move_list.push(BitMove::new(src, *target, piece, Some(Piece::queen(color)), true, false, false, false));
+                move_list.push(BitMove::new(src, *target, piece, Some(Piece::knight(color)), true, false, false, false));
+                move_list.push(BitMove::new(src, *target, piece, Some(Piece::rook(color)), true, false, false, false));
+            });
+            
 
-                    if target != 0 {
-                        let m = BitMove::new(src, target as u16, piece);
-                        println!("enpassant capture: from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
-                    }
-                }
+            let left_enpassant_move = (left_attacker_exists == 0 && !left_promotes && left_is_enpassant);
+            if (left_attacker_exists != 0 && !left_promotes) || left_enpassant_move {
+                move_list.push(BitMove::new(src, left_target, piece, None, true, false, left_is_enpassant, false));
             }
+
+            let right_enpassant_move = left_attacker_exists == 0 && !left_promotes && left_is_enpassant;
+            if (right_attacker_exists != 0 && !right_promotes) || right_enpassant_move {
+                move_list.push(BitMove::new(src, right_target, piece, None, true, false, right_is_enpassant, false));
+            }
+            capture &= capture-1;
+        }
+
+        move_list
 
     }
 
-
-    pub(crate) fn get_moves() {}
 
     fn enemy_or_empty(&self, color: Color) -> u64 {
         match color {
@@ -303,75 +342,70 @@ impl BoardState {
         }
     }
 
-    fn get_castling(&self, color: Color) {
+    fn get_castling(&self, color: Color) -> Vec<BitMove> {
+        let mut move_list = Vec::with_capacity(2);
+
         match color {
             Color::White => {
                 // rank 1 cell 4,5,6,7
-                let king_castling_cells = self.occupancies[Color::Both] & 0xf0;
-                let only_expected_cells_are_filled = (king_castling_cells ^ 0x90) == 0;
+                let king_castling_cells = self.occupancies[Color::Both] & WHITE_KING_CASTLING_CELLS;
+                let only_expected_cells_are_filled = (king_castling_cells ^ E1_F1_FILLED) == 0;
+
+                let src = Square::E1 as u32;
 
                 // king castling is available and the square between king and rook (f and g are empty)
                 if (self.castling_rights & Castling::WHITE_KING) != Castling::NONE && only_expected_cells_are_filled {
                     let no_attacks = !self.is_square_attacked(Square::E1.into(), !color) && !self.is_square_attacked(Square::F1.into(), !color);
                     if no_attacks {
-                        let m = BitMove::new(Square::E1 as u16, Square::G1 as u16, Piece::WK);
-                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
+                        move_list.push(BitMove::new(src, Square::G1 as u32, Piece::WK, None, false, false, false, true));
                     }
                 }
 
-                let queen_castling_cells = self.occupancies[Color::Both] & 0x1f;
-                let only_expected_cells_are_filled = (queen_castling_cells ^ 0x11) == 01;
+                let queen_castling_cells = self.occupancies[Color::Both] & WHITE_QUEEN_CASTLING_CELLS;
+                let only_expected_cells_are_filled = (queen_castling_cells ^ A1_E1_IS_FILLED) == 0;
                 if (self.castling_rights & Castling::WHITE_QUEEN) != Castling::NONE && only_expected_cells_are_filled {
                     let no_attacks = !self.is_square_attacked(Square::E1.into(), !color) && !self.is_square_attacked(Square::D1.into(), !color);
                     if no_attacks {
-                        let m = BitMove::new(Square::E1 as u16, Square::C1 as u16, Piece::WK);
-                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
+                        move_list.push(BitMove::new(src, Square::C1 as u32, Piece::WK, None, false, false, false, true));
                     }
                 }
             }
             Color::Black => {
-                let king_castling_cells = self.occupancies[Color::Both] & 0xf000000000000000;
-                let only_expected_cells_are_filled = (king_castling_cells ^ 0x9000000000000000) == 0;
+                let king_castling_cells = self.occupancies[Color::Both] & BLACK_KING_CASTLING_CELLS;
+                let only_expected_cells_are_filled = (king_castling_cells ^ E8_F8_IS_FILLED) == 0;
+
+                let src = Square::E8 as u32;
+
 
                 // king castling is available and the square between king and rook (f and g are empty)
                 if (self.castling_rights & Castling::BLACK_KING) != Castling::NONE && only_expected_cells_are_filled {
                     let no_attacks = !self.is_square_attacked(Square::E8.into(), !color) && !self.is_square_attacked(Square::F8.into(), !color);
                     if no_attacks {
-                        let m = BitMove::new(Square::E8 as u16, Square::G8 as u16, Piece::BK);
-                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
+                        move_list.push(BitMove::new(src, Square::G8 as u32, Piece::BK, None, false, false, false, true));
                     }
                 }
 
-                let queen_castling_cells = self.occupancies[Color::Both] & 0x1f00000000000000;
+                let queen_castling_cells = self.occupancies[Color::Both] & BLACK_QUEEN_CASTLING_CELLS;
                 // println!("{}", Bitboard::from(queen_castling_cells).to_string());
-                let only_expected_cells_are_filled = (queen_castling_cells ^ 0x1100000000000000) == 0;
+                let only_expected_cells_are_filled = (queen_castling_cells ^ A8_E8_IS_FILLED) == 0;
                 if (self.castling_rights & Castling::BLACK_QUEEN) != Castling::NONE && only_expected_cells_are_filled {
                     let no_attacks = !self.is_square_attacked(Square::E8.into(), !color) && !self.is_square_attacked(Square::D8.into(), !color);
                     if no_attacks {
-                        let m = BitMove::new(Square::E8 as u16, Square::D8 as u16, Piece::BK);
-                        println!("castling:::::>>> from = {:?}  ----->>>> to = {:?} ||||| becomes {:?} ", m.get_src(), m.get_target(), m.get_piece());
+                        move_list.push(BitMove::new(src, Square::D8 as u32, Piece::BK, None, false, false, false, true));
                     }
                 }
             }
             _ => {}
         }
+
+        move_list
     }
 
 
-    // fn get_sliding_moves(&self, color: Color, piece: Piece) {
-    //     match piece {
-    //         Piece::WN | Piece::BN => {
-    //             self.get_sliding_and_leaper_moves(color, piece, PIECE_ATTACKS.knight_attacks, !self.occupancies[color]);
-    //         }
-    //         Piece::WB | Piece::BB => {
-    //             self.get_sliding_and_leaper_moves(color, piece, PIECE_ATTACKS.get_bishop_attacks(sq, occupancy), self.occupancies[Color::Both]);
-    //         }
-    //         _ => unreachable!("")
-    //     }
-    // }
-
-    fn get_sliding_and_leaper_moves(&self, color: Color, piece: Piece){
+    fn get_sliding_and_leaper_moves(&self, color: Color, piece: Piece) -> Vec<BitMove> {
         // let knight = if color == Color::White {Piece::WN} else {Piece::BN};
+        let mut move_list: Vec<BitMove> = vec![];
+        
         let mut pieces_on_board = self[piece];
 
         while pieces_on_board.not_zero() {
@@ -393,39 +427,87 @@ impl BoardState {
             let mut targets = Bitboard::from(attacks & occupancies);
 
             // println!("{}", targets.to_string());
+            let source = src as u32;
 
             while targets.not_zero() {
                 let target = targets.get_lsb1().unwrap();
                 // capture move // there is an opponent on the target square
                 let opponent_on_target = Bitboard::from(self.occupancies[!color]).get_bit(target) != 0;
-                if opponent_on_target {
-                    let m = BitMove::new(src as u16, target as u16, piece);
-                    println!("CAPTURE {} move: from = {:?}  ----->>>> to = {:?} ||||| becomes {:?}", piece.to_string(), m.get_src(), m.get_target(), m.get_piece());
-                } else {
-                    // quiet move
-                    let m = BitMove::new(src as u16, target as u16, piece);
-                    println!("QUIET {} move: from = {:?}  ----->>>> to = {:?} ||||| becomes {:?}", piece.to_string(), m.get_src(), m.get_target(), m.get_piece());
-                }
+                move_list.push(BitMove::new(source, target as u32, piece, None, opponent_on_target, false, false, false));
+
                 targets.pop_bit(target);
             }
         }
+
+        move_list
     }
 
-    pub(crate) fn gen_movement(&self, color: Color) {
-        self.get_pawn_attacks(Color::Black);
-        self.get_pawn_movement(Color::Black, true);
-        self.get_pawn_movement(Color::Black, false);
-        self.get_castling(color);
-        self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BN}else {Piece::WN});
-        self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BB}else {Piece::WB});
-        self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BR}else {Piece::WR});
-        self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BQ}else {Piece::WQ});
-        self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BK}else {Piece::WK});
+    pub(crate) fn gen_movement(&self) -> Moves {
+        let color = self.turn;
+        println!("color is {:?}", color);
+
+        let mut move_list = Moves::new();
+
+        move_list.add_many(&self.get_pawn_attacks(color));
+        move_list.add_many(&self.get_pawn_movement(color, true));
+        move_list.add_many(&self.get_pawn_movement(color, false));
+        move_list.add_many(&self.get_castling(color));
+        move_list.add_many(&self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BN}else {Piece::WN}));
+        move_list.add_many(&self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BB}else {Piece::WB}));
+        move_list.add_many(&self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BR}else {Piece::WR}));
+        move_list.add_many(&self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BQ}else {Piece::WQ}));
+        move_list.add_many(&self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BK}else {Piece::WK}));
 
         // generate knight squares
-        
+
+        move_list
     }
 
+
+    pub(crate) fn make_move(&self, bit_move: BitMove, move_type: MoveType) -> Self {
+        let mut board = self.clone();
+        let x = Arc::new(self);
+        // board.prev = Some(Arc::new(self));
+
+        match move_type {
+            MoveType::AllMoves => {
+                let src = bit_move.get_src();
+                let target = bit_move.get_target();
+                let prev_piece = bit_move.get_piece();
+                
+                let new_piece = match bit_move.get_promotion() {
+                    Some(p) => p, None => prev_piece
+                };
+                
+                // let promoted_piece = bit_move.get_promotion();
+
+                
+                Bitboard::from(board.occupancies[board.turn]).pop_bit(src.into());
+                // Removes the captured piece from the the captured piece bitboard
+                if bit_move.get_capture() {
+                    let target_pieces = match board.turn {Color::Black => {board[Piece::WP.into()..=Piece::WK.into()].iter_mut()}, _ => {board[Piece::BP.into()..=Piece::BK.into()].iter_mut()}};
+    
+                    for bitboard in target_pieces {
+                        if bitboard.get_bit(target.into()) != 0 {
+                            bitboard.pop_bit(target.into());
+                            break;
+                        };
+                    }
+
+                    Bitboard::from(board.occupancies[!board.turn]).pop_bit(target.into());
+                }
+                
+                board[new_piece].pop_bit(src.into());
+                board[new_piece].set_bit(target.into());
+                Bitboard::from(board.occupancies[board.turn]).set_bit(target.into());
+                
+
+            }
+            MoveType::CapturesOnly => {}
+        }
+
+        board
+    }
 
 }
 

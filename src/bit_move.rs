@@ -28,9 +28,9 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
 
 
 #[derive(Debug, Default, Clone, Copy)]
- pub struct NBitMove(u32);
+ pub struct BitMove(u32);
 
- impl NBitMove {
+ impl BitMove {
 
 
     pub(crate) fn new(source: u32, target: u32, piece: Piece, promotion: Option<Piece>, capture: bool, double_push: bool, enpassant: bool, castling: bool) -> Self {
@@ -38,7 +38,7 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
 
         let bmove = source | target << 6 | (piece as u32) << 12 | promotion_piece << 16 | 
             (capture as u32) << 20 |(double_push as u32) << 21 | (enpassant as u32) << 22 | (castling as u32) << 23;
-        NBitMove(bmove)
+        BitMove(bmove)
     }
 
     pub(crate) fn get_src(&self) -> Square {
@@ -88,11 +88,11 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
 
 
 /// for UCI purpose 
- impl Display for NBitMove {
+ impl Display for BitMove {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let src = self.get_src().to_string();
         let target = self.get_target().to_string();
-        let promotion = self.get_promotion().map(|x| x.to_string().to_lowercase()).or(Some(String::new()));
+        let promotion = self.get_promotion().map(|x| x.to_string().to_lowercase()).or(Some(String::from(" ")));
 
         print!("{src}{target}{}", promotion.unwrap());
         
@@ -100,7 +100,7 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
     }
  }
 
- impl Deref for NBitMove {
+ impl Deref for BitMove {
     type Target = u32;
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -108,46 +108,14 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
  }
 
 
- impl From<u32> for NBitMove {
+ impl From<u32> for BitMove {
     fn from(value: u32) -> Self {
         Self(value)
     }
  }
 
- impl From<NBitMove> for u32 {
-    fn from(value: NBitMove) -> Self {
+ impl From<BitMove> for u32 {
+    fn from(value: BitMove) -> Self {
         *value
     }
  }
-
-
-pub struct BitMove(u16);
-
-
-impl BitMove {
-    /// Piece indicates whatever this piece was promoted to, or what it remains as
-    pub(crate) fn new(src: u16, target: u16, piece: Piece) -> Self {
-        // print!("the src, and t {} ... {} |||| ", src, target);
-        let src_bits = src & 0b0011_1111;
-        let target_bits = (target & 0b0011_1111) << 6;
-        let piece_bits = ((piece as u16) & 0b0011_1111) << 12;
-        // println!("src: {src_bits:0b}, target: {target_bits:0b}, promotion: {piece_bits:0b}");
-        
-        Self(src_bits | target_bits | piece_bits)
-    }
-
-    pub(crate) fn get_src(&self) -> Square  {
-        let src = (self.0 & 0b0011_1111) as u64;
-        Square::from(src)
-    }
-
-    pub(crate) fn get_target(&self) -> Square {
-        let target = ((self.0 >> 6) & 0b0011_1111) as u64;
-        Square::from(target)
-    }
-
-    pub(crate) fn get_piece(&self) -> Piece {
-        let value = ((self.0 >> 12) & 0b0011_1111) as u8;
-        Piece::from(value)
-    }
-}
