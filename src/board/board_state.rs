@@ -485,8 +485,8 @@ impl BoardState {
                 Bitboard::from(board.occupancies[board.turn]).pop_bit(src.into());
                 // Removes the captured piece from the the captured piece bitboard
                 if bit_move.get_capture() {
-                    // let tt = board[Piece::pawn(!turn).into()..Piece::king(!turn).into()].iter_mut();
-                    let target_pieces = match board.turn {Color::Black => {board[Piece::WP.into()..=Piece::WK.into()].iter_mut()}, _ => {board[Piece::BP.into()..=Piece::BK.into()].iter_mut()}};
+                    let target_pieces = board[Piece::pawn(!turn).into()..Piece::king(!turn).into()].iter_mut();
+                    // let target_pieces = match board.turn {Color::Black => {board[Piece::WP.into()..=Piece::WK.into()].iter_mut()}, _ => {board[Piece::BP.into()..=Piece::BK.into()].iter_mut()}};
     
                     for bitboard in target_pieces {
                         if bitboard.get_bit(target.into()) != 0 {
@@ -509,6 +509,11 @@ impl BoardState {
                 }
 
                 board.enpassant = None;
+
+                if bit_move.get_double_push() {
+                    let enpass_target = match board.turn {Color::Black => target as u64 + 8, _ => target as u64 -  8};
+                    board.enpassant = Some(enpass_target.into());
+                }
             }
 
             MoveType::CapturesOnly => {}
