@@ -24,7 +24,7 @@ use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, c
 
 
 fn main() {
-    let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
+    let board = BoardState::parse_fen("r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 1 ").unwrap();
 
     // let xx = Arc::new(&board);
     println!("{}", board.to_string());
@@ -43,5 +43,5 @@ fn main() {
     //     // println!("{:?}", resulting_board.to_string());
     // }
 
-    // println!("{}", move_list);
+    println!("{}", move_list);
 }

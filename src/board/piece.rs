@@ -218,4 +218,9 @@ impl Piece {
         if color == Color::Black { return Piece::BP }
         return Piece::WP;
     }
+
+    pub(crate) fn king(color: Color) -> Piece {
+        if color == Color::Black { return Piece::BK }
+        return Piece::WK;
+    }
 }
