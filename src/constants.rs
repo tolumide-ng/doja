@@ -90,6 +90,16 @@ pub const A8_E8_IS_FILLED: u64  = 0x1100000000000000;
 // 0xFEFE_FEFE_FEFE_FEFE
 
 
+/// King-castling_rights mask for white player
+pub(crate)const WHITE_KING_CASTLING_MASK: u8 = 0b0001; 
+/// Queen-castling_rights mask for white player
+pub(crate)const WHITE_QUEEN_CASTLING_MASK: u8 = 0b0010;
+/// King-castling_rights mask for black player
+pub(crate)const BLACK_KING_CASTLING_MASK: u8 = 0b0100;
+/// Queen-castling_rights mask for black player
+pub(crate)const BLACK_QUEEN_CASTLING_MASK: u8 = 0b1000;
+
+
 lazy_static! {
     pub static ref PIECE_ATTACKS: PieceAttacks = PieceAttacks::new();
 }

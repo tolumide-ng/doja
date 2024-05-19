@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::{Deref, DerefMut}, sync::Arc};
+use std::{fmt::Display, ops::{BitAnd, Deref, DerefMut}, sync::Arc};
 
 use bitflags::Flags;
 
@@ -22,7 +22,7 @@ const PROMOTABLE_TARGETS: usize = 4;
 
 impl BoardState {
     pub fn new() -> BoardState {
-        Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::NONE, occupancies: [0; OCCUPANCIES] }
+        Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), occupancies: [0; OCCUPANCIES] }
     }
 
     pub(crate) fn set_turn(&mut self, turn: Color) {
@@ -47,7 +47,7 @@ impl BoardState {
 
     /// Given the current pieces on the board, is this square under attack by the given side (color)
     /// Getting attackable(reachable) spots from this square, it also means this square can be reached from those
-    /// attackable spots 
+    /// attackable spots (i_am is hte attacker)
     pub(crate) fn is_square_attacked(&self, sq: u64, i_am: Color) -> bool {
         let index = sq as usize;
 
@@ -391,7 +391,7 @@ impl BoardState {
                 if (self.castling_rights & Castling::BLACK_QUEEN) != Castling::NONE && only_expected_cells_are_filled {
                     let no_attacks = !self.is_square_attacked(Square::E8.into(), !color) && !self.is_square_attacked(Square::D8.into(), !color);
                     if no_attacks {
-                        move_list.push(BitMove::new(src, Square::D8 as u32, Piece::BK, None, false, false, false, true));
+                        move_list.push(BitMove::new(src, Square::C8 as u32, Piece::BK, None, false, false, false, true));
                     }
                 }
             }
@@ -458,13 +458,15 @@ impl BoardState {
         move_list.add_many(&self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BQ}else {Piece::WQ}));
         move_list.add_many(&self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BK}else {Piece::WK}));
 
+        // move_list.list.setle
+
         // generate knight squares
 
         move_list
     }
 
 
-    pub(crate) fn make_move(&self, bit_move: BitMove, move_type: MoveType) -> Self {
+    pub(crate) fn make_move(&self, bit_move: BitMove, move_type: MoveType) -> Option<Self> {
         let mut board = self.clone();
         let turn = board.turn;
         // board.prev = Some(Arc::new(self));
@@ -482,7 +484,6 @@ impl BoardState {
                 // let promoted_piece = bit_move.get_promotion();
 
                 
-                Bitboard::from(board.occupancies[board.turn]).pop_bit(src.into());
                 // Removes the captured piece from the the captured piece bitboard
                 if bit_move.get_capture() {
                     let target_pieces = board[Piece::pawn(!turn).into()..Piece::king(!turn).into()].iter_mut();
@@ -494,13 +495,10 @@ impl BoardState {
                             break;
                         };
                     }
-
-                    Bitboard::from(board.occupancies[!board.turn]).pop_bit(target.into());
                 }
                 
                 board[new_piece].pop_bit(src.into());
                 board[new_piece].set_bit(target.into());
-                Bitboard::from(board.occupancies[board.turn]).set_bit(target.into());               
                 
                 
                 if bit_move.get_enpassant() {
@@ -514,12 +512,61 @@ impl BoardState {
                     let enpass_target = match board.turn {Color::Black => target as u64 + 8, _ => target as u64 -  8};
                     board.enpassant = Some(enpass_target.into());
                 }
+
+                if bit_move.get_castling() {
+                    match target {
+                        Square::G1 => { // white castles king side
+                            board[Piece::WR].pop_bit(Square::H1.into());
+                            board[Piece::WR].set_bit(Square::F1.into());
+                        }
+                        Square::G8 => { // black castles king side
+                            board[Piece::BR].pop_bit(Square::H8.into());
+                            board[Piece::BR].set_bit(Square::F8.into());
+                        }
+                        Square::C1 => { // white castles queen side
+                            board[Piece::WR].pop_bit(Square::A1.into());
+                            board[Piece::WR].set_bit(Square::D1.into());
+                        }
+                        Square::C8 => { // black castles queen side
+                            board[Piece::BR].pop_bit(Square::A8.into());
+                            board[Piece::BR].set_bit(Square::D8.into());
+                        }
+                        x => unreachable!("Not a valid castling target {x}")
+                    }
+                }
+
+                let castling_rights = board.new_castling_rights(src, target);
+                board.castling_rights = castling_rights;
+
+                board.occupancies[Color::White] = *board[Piece::WP] | *board[Piece::WB] | *board[Piece::WK] | *board[Piece::WN] | *board[Piece::WQ] | *board[Piece::WR];
+                board.occupancies[Color::Black] = *board[Piece::BP] | *board[Piece::BB] | *board[Piece::BK] | *board[Piece::BN] | *board[Piece::BQ] | *board[Piece::BR];
+                board.occupancies[Color::Both] = board.occupancies[Color::White] | board.occupancies[Color::Black];
+
+                
+                // is this an illegal move?
+                if src == Square::E1 && target == Square::C1 {
+                    println!(">>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<< {}", board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !turn));
+                }
+                if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !turn) {
+                    return None;
+                }
+
+
+                board.turn = !board.turn;
             }
 
             MoveType::CapturesOnly => {}
         }
 
-        board
+        Some(board)
+    }
+
+
+    pub(crate) fn new_castling_rights(&mut self, from: Square, to: Square) -> Castling {
+        let new_mask = from.castling_mask() | to.castling_mask();
+        let existing_rights = self.castling_rights.bits() & new_mask;
+        let new_rights = self.castling_rights.bits().bitand(!existing_rights);
+        Castling::from(new_rights)
     }
 
 }

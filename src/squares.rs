@@ -1,4 +1,6 @@
-use std::{fmt::Display, ops::Index};
+use std::{any::Any, fmt::Display, hash::Hash, ops::Index};
+
+use crate::{board::castling::Castling, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK}};
 
 
 
@@ -172,6 +174,9 @@ impl From<u64> for Square {
             7 => Square::H1,
             _ => panic!("Unrecognized value: {value}")
         }
+    
+    
+    
     }
 }
 
@@ -179,6 +184,18 @@ impl From<u64> for Square {
 impl Square {
     pub fn name(index: u64) -> String {
         String::from(SQUARE_NAMES[index as usize])
+    }
+
+    pub(crate) fn castling_mask(&self) -> u8 {
+        match self {
+            Square::H1 => WHITE_KING_CASTLING_MASK,
+            Square::A1 => WHITE_QUEEN_CASTLING_MASK,
+            Square::H8 => BLACK_KING_CASTLING_MASK,
+            Square::A8 => BLACK_QUEEN_CASTLING_MASK,
+            Square::E1 => WHITE_KING_CASTLING_MASK | WHITE_QUEEN_CASTLING_MASK,
+            Square::E8 => WHITE_QUEEN_CASTLING_MASK | BLACK_QUEEN_CASTLING_MASK,
+            _ => 0
+        }
     }
 }
 
@@ -224,13 +241,13 @@ pub(crate) const ROOK_RELEVANT_BITS: [u32; 64] = [
 
 
 pub(crate) const BIT_TABLE: [u64; 64] = [
-  63, 30, 3, 32, 25, 41, 22, 33,
+  63, 30, 3,  32, 25, 41, 22, 33,
   15, 50, 42, 13, 11, 53, 19, 34,
-  61, 29, 2, 51, 21, 43, 45, 10,
-  18, 47, 1, 54, 9, 57, 0, 35,
-  62, 31, 40, 4, 49, 5, 52, 26,
-  60, 6, 23, 44, 46, 27, 56, 16,
-  7, 39, 48, 24, 59, 14, 12, 55,
+  61, 29, 2,  51, 21, 43, 45, 10,
+  18, 47, 1,  54, 9,  57, 0,  35,
+  62, 31, 40, 4, 49,  5,  52, 26,
+  60, 6,  23, 44, 46, 27, 56, 16,
+  7,  39, 48, 24, 59, 14, 12, 55,
   38, 28, 58, 20, 37, 17, 36, 8
 ];
 

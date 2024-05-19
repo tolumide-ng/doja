@@ -4,6 +4,8 @@ use std::fmt::Display;
 
 use bitflags::{bitflags, Flags};
 
+use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
+
 bitflags! {
 ///  \
 /// Casting bits binary representation \
@@ -21,10 +23,10 @@ bitflags! {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct Castling: u8 {
-        const WHITE_KING = 0b0001;
-        const WHITE_QUEEN = 0b0010;
-        const BLACK_KING = 0b0100;
-        const BLACK_QUEEN = 0b1000;
+        const WHITE_KING = WHITE_KING_CASTLING_MASK;
+        const WHITE_QUEEN = WHITE_QUEEN_CASTLING_MASK;
+        const BLACK_KING = BLACK_KING_CASTLING_MASK;
+        const BLACK_QUEEN = BLACK_QUEEN_CASTLING_MASK;
         const NONE = 0b0000;
     }
 }
@@ -60,6 +62,12 @@ impl Display for Castling {
 }
 
 
+
+impl From<u8> for Castling {
+    fn from(value: u8) -> Self {
+        Castling::from_bits_retain(value)
+    }
+}
 
 impl From<&str> for Castling {
     fn from(value: &str) -> Self {
