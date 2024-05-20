@@ -30,6 +30,13 @@ impl PieceAttacks {
         }
 
 
+        // println!("king::::::::     {king_attacks:?}");
+        // println!("knight::::::::   {knight_attacks:?}");
+        // println!("king::::::::     {bishop_masks:?}");
+        // println!("king::::::::     {rook_masks:?}");
+        // println!("king::::::::     {pawn_attacks:?}");
+
+
 
         Self { king_attacks, knight_attacks, bishop_masks, pawn_attacks, rook_masks }
     }
@@ -259,7 +266,6 @@ impl PieceAttacks {
     fn init_sliders_attacks(&self, bishop: bool) -> Vec<Vec<u64>> {
         let mut bishop_attacks: Vec<Vec<u64>> = vec![vec![0; 512]; 64];
         let mut rook_attacks: Vec<Vec<u64>> = vec![vec![0; 4096]; 64];
-
 
         for sq in 0..64_usize {
             // init current bitboard

@@ -95,6 +95,9 @@ impl BoardState {
     }
 
 
+    fn attacksTo() {}
+
+
     fn white_pawn_east_attacks(&self, pawns: bool) -> u64 { match pawns {
         true => self.board[Piece::WP].north_east(), false => {Bitboard::from(self.occupancies[Color::White]).north_east()} }}
 
@@ -189,7 +192,7 @@ impl BoardState {
         single_push.north() & !self.occupancies[Color::Both] & RANK_4
     }
 
-    fn pawns_able_to_2push(&self, color: Color) -> u64 {
+    fn pawns_able_2push(&self, color: Color) -> u64 {
         if color == Color::White {
             return Bitboard::from(!self.occupancies[Color::Both]).south() & *self[Piece::WP]    
         }
@@ -229,7 +232,7 @@ impl BoardState {
                 move_list
             }
             false => {
-                let mut src = self.pawns_able_to_2push(color);
+                let mut src = self.pawns_able_2push(color);
                 let mut targets = self.single_push_targets(color);
 
                 let mut length = targets.count_ones() as usize; // because doubles cannot be promoted
@@ -444,7 +447,6 @@ impl BoardState {
 
     pub(crate) fn gen_movement(&self) -> Moves {
         let color = self.turn;
-        println!("color is {:?}", color);
 
         let mut move_list = Moves::new();
 
@@ -544,9 +546,6 @@ impl BoardState {
 
                 
                 // is this an illegal move?
-                if src == Square::E1 && target == Square::C1 {
-                    println!(">>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<<>>>>><<<<< {}", board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !turn));
-                }
                 if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !turn) {
                     return None;
                 }
