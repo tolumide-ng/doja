@@ -7,6 +7,14 @@ pub enum Color {
 }
 
 
+impl From<Color> for usize {
+    fn from(value: Color) -> Self {
+        match value {
+            Color::White => 0, Color::Black=> 1, Color::Both=>2,
+        }
+    }
+}
+
 impl<T> Index<Color> for [T] {
     type Output = T;
     fn index(&self, index: Color) -> &Self::Output {

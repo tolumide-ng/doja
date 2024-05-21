@@ -4,7 +4,7 @@
 
 use std::ops::{BitAnd, BitAndAssign, BitOrAssign};
 
-use crate::{constants::{AVOID_WRAP, NOT_A_FILE, NOT_H_FILE, SHIFT}, shift::Shift};
+use crate::{color::Color, constants::{AVOID_WRAP, NOT_A_FILE, NOT_H_FILE, PIECE_ATTACKS, SHIFT}, shift::Shift, Bitboard};
 
 pub struct KoggeStone;
 
@@ -204,9 +204,9 @@ impl KoggeStone {
     pub(crate) fn east_attacks(rooks: u64, empty: u64) -> u64 {
         Self::east(Self::east_occl(rooks, empty))
     }
-    pub(crate) fn no_east_attacks(bishops: u64, empty: u64) -> u64 {
-        Self::north_east(Self::no_ea_occl(bishops, empty))
-    }
+    // pub(crate) fn no_east_attacks(bishops: u64, empty: u64) -> u64 {
+    //     Self::north_east(Self::no_ea_occl(bishops, empty))
+    // }
     pub(crate) fn so_east_attacks(bishops: u64, empty: u64) -> u64 {
         Self::south_east(Self::so_ea_occl(bishops, empty))
     }
@@ -220,11 +220,12 @@ impl KoggeStone {
         Self::north_west(Self::no_we_occl(bishops, empty))
     }
 
-    fn rotate_left(bits: u64, s: i8) -> u64 {
+    fn rotate_left(x: u64, s: i8) -> u64 {
         if s >= 0 {
-            return bits.rotate_left(s as u32)
+            // return bits.rotate_left(s as u32)
+            return (x << s) | (x >> (64-s))
         }
-        return bits.rotate_right((-s) as u32);
+        return x.rotate_right((-s) as u32);
     }
     fn rotate_right(x: u64, s: i8) -> u64 {(x >> s) | (x << (64-s))}
 
@@ -233,7 +234,8 @@ impl KoggeStone {
         let r = shift.amount;
         
         pro &= shift.mask;
-        // because rust only supports rotate_left and right by u32
+
+        // becnause rust only supports rotate_left and right by u32
         gen |= pro & Self::rotate_left(gen, r);
         pro &= Self::rotate_left(pro, r);
         gen |= pro & Self::rotate_left(gen, 2*r);
@@ -251,4 +253,6 @@ impl KoggeStone {
         let fill = Self::occluded_fill(sliders, empty, shift);
         Self::shift_one(fill, shift)
     }
+
+    
 }

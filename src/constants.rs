@@ -79,14 +79,14 @@ pub(crate) const AVOID_WRAP: [u64; 8] = [
 ];
 
 pub(crate) const SHIFT_DATA: [ShiftData; 8] = [
-    ShiftData::new(NOT_A_FILE_NOT_1_RANK, 8),
-    ShiftData::new(NOT_A_FILE, 9),
-    ShiftData::new(NOT_A_FILE_NOT_8_RANK, 1),
-    ShiftData::new(NOT_8_RANK, -7),
-    ShiftData::new(NOT_H_FILE_NOT_8_RANK, -8),
-    ShiftData::new(NOT_H_FILE, -9),
-    ShiftData::new(NOT_H_FILE_NOT_1_RANK, -1),
-    ShiftData::new(NOT_1_RANK, 7),
+    ShiftData::new(NOT_A_FILE_NOT_1_RANK, 9),
+    ShiftData::new(NOT_A_FILE, 1),
+    ShiftData::new(NOT_A_FILE_NOT_8_RANK, -7),
+    ShiftData::new(NOT_8_RANK, -8),
+    ShiftData::new(NOT_H_FILE_NOT_8_RANK, -9),
+    ShiftData::new(NOT_H_FILE, -1), //southwest
+    ShiftData::new(NOT_H_FILE_NOT_1_RANK, 7), //south
+    ShiftData::new(NOT_1_RANK, 8), // north
 ];
 
 /// Postive left, negative right shifts

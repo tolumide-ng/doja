@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::{BitAnd, Deref, DerefMut}, sync::Arc};
+use std::{fmt::Display, ops::{BitAnd, BitXor, Deref, DerefMut}, sync::Arc};
 
 use bitflags::Flags;
 
@@ -47,37 +47,61 @@ impl BoardState {
 
     /// Given the current pieces on the board, is this square under attack by the given side (color)
     /// Getting attackable(reachable) spots from this square, it also means this square can be reached from those
-    /// attackable spots (i_am is hte attacker)
-    pub(crate) fn is_square_attacked(&self, sq: u64, i_am: Color) -> bool {
+    /// attackable spots
+    pub(crate) fn xxxxxxxxxis_square_attacked(&self, sq: u64, attacker: Color) -> bool {
         let index = sq as usize;
 
         // Attacks by black pawn (can an attack by any black pawn on the board reach this sq)
-        if i_am == Color::Black && PIECE_ATTACKS.pawn_attacks[Color::White][index] & u64::from(self[Piece::BP]) !=0 {return true};
+        if attacker == Color::Black && PIECE_ATTACKS.pawn_attacks[Color::White][index] & u64::from(self[Piece::BP]) !=0 {return true};
         // Attacks by white pawn (can an attack by a white pawn reach this position)
-        if i_am == Color::White && PIECE_ATTACKS.pawn_attacks[Color::Black][index] & u64::from(self[Piece::WP]) != 0 {return true};
+        if attacker == Color::White && PIECE_ATTACKS.pawn_attacks[Color::Black][index] & u64::from(self[Piece::WP]) != 0 {return true};
 
         let knight_attacks = PIECE_ATTACKS.knight_attacks[index];
         // if there is a knight on this square, can it attack any of my knights(black) on the board
-        if i_am == Color::Black && (knight_attacks & u64::from(self[Piece::BN]) != 0) {return true};
+        if attacker == Color::Black && (knight_attacks & u64::from(self[Piece::BN]) != 0) {return true};
         // if there is a knight on this square, can it attack any of my knights(white) on the board
-        if i_am == Color::White && (knight_attacks & u64::from(self[Piece::WN]) != 0) {return true};
+        if attacker == Color::White && (knight_attacks & u64::from(self[Piece::WN]) != 0) {return true};
 
         let king_attacks = PIECE_ATTACKS.king_attacks[index];
-        if i_am == Color::Black && (king_attacks & u64::from(self[Piece::BK])) != 0 {return true}
-        if i_am == Color::White && (king_attacks & u64::from(self[Piece::WK])) != 0 {return true}
+        if attacker == Color::Black && (king_attacks & u64::from(self[Piece::BK])) != 0 {return true}
+        if attacker == Color::White && (king_attacks & u64::from(self[Piece::WK])) != 0 {return true}
 
         let bishop_attacks = PIECE_ATTACKS.get_bishop_attacks(sq, self.get_occupancy(Color::Both));
-        if i_am == Color::Black && (bishop_attacks & u64::from(self[Piece::BB])) != 0 {return true}
-        if i_am == Color::White && (bishop_attacks & u64::from(self[Piece::WB])) != 0 {return true}
+        if attacker == Color::Black && (bishop_attacks & u64::from(self[Piece::BB])) != 0 {return true}
+        if attacker == Color::White && (bishop_attacks & u64::from(self[Piece::WB])) != 0 {return true}
 
         let rook_attacks = PIECE_ATTACKS.get_rook_attacks(sq, self.get_occupancy(Color::Both));
-        if i_am == Color::Black && (rook_attacks & u64::from(self[Piece::BR])) != 0 {return true}
-        if i_am == Color::White && (rook_attacks & u64::from(self[Piece::WR])) != 0 {return true}
+        if attacker == Color::Black && (rook_attacks & u64::from(self[Piece::BR])) != 0 {return true}
+        if attacker == Color::White && (rook_attacks & u64::from(self[Piece::WR])) != 0 {return true}
 
         let queen_attacks = PIECE_ATTACKS.get_queen_attacks(sq, self.get_occupancy(Color::Both));
-        if i_am == Color::Black && (queen_attacks & u64::from(self[Piece::BQ])) != 0 {return true}
-        if i_am == Color::White && (queen_attacks & u64::from(self[Piece::WQ])) != 0 {return true}
+        if attacker == Color::Black && (queen_attacks & u64::from(self[Piece::BQ])) != 0 {return true}
+        if attacker == Color::White && (queen_attacks & u64::from(self[Piece::WQ])) != 0 {return true}
 
+        false
+    }
+
+
+    pub(crate) fn is_square_attacked(&self, sq_64: u64, attacker: Color) -> bool {
+        // bitboard with only the square's bit set
+        let sq_bit = 1u64 << sq_64;
+        let sq = Square::from(sq_64);
+        // let pawns = self[Piece::pawn(Color::White + attacker)];
+        let pawns = self[Piece::pawn(attacker)];
+        if (PIECE_ATTACKS.pawn_attacks[!attacker][sq] & *pawns) != 0 { return true }
+
+        let knights = self[Piece::knight(attacker)];
+        if (PIECE_ATTACKS.knight_attacks[sq] & *knights) != 0 { return true }
+
+        let king = self[Piece::king(attacker)];
+        if (PIECE_ATTACKS.king_attacks[sq] & *king) != 0 { return true }
+
+        let bishops_queens = *self[Piece::queen(attacker)] | *self[Piece::bishop(attacker)];
+        if (PIECE_ATTACKS.nnbishop_attacks(sq_bit, self.occupancies[Color::Both]) & bishops_queens) != 0 { return true }
+
+        let rooks_queens = *self[Piece::queen(attacker)] | *self[Piece::rook(attacker)];
+        if (PIECE_ATTACKS.nnrook_attacks(sq_bit, self.occupancies[Color::Both]) & rooks_queens) != 0 { return true }
+        
         false
     }
 
@@ -415,12 +439,24 @@ impl BoardState {
             let square = pieces_on_board.get_lsb1().unwrap();
             pieces_on_board.pop_bit(square);
             let src = Square::from(square);
+
+        //     let bishops_queens =  *self[Piece::bishop(attacker)];
+        // if (PIECE_ATTACKS.nnbishop_attacks(sq_bit, self.occupancies[Color::Both]) & *self[Piece::bishop(attacker)]) != 0 { return true }
+        
+        // generates a bitboard(u64) where only this index of this square is set
+        let sq_bits = 1u64 << src as u64;
+        // 1u64.shl(Square::E4 as u64)
+            // let xo = Bitboard::from(PIECE_ATTACKS.nnbishop_attacks(1u64.shl(Square::E4 as u64), 0));
             
             let (attacks, occupancies) = match piece {
                 Piece::WN | Piece::BN => (PIECE_ATTACKS.knight_attacks[src], !self.occupancies[color]),
-                Piece::WB | Piece::BB => (PIECE_ATTACKS.get_bishop_attacks(square, self.occupancies[Color::Both]), !self.occupancies[color]),
-                Piece::WR | Piece::BR  => (PIECE_ATTACKS.get_rook_attacks(square, self.occupancies[Color::Both]), !self.occupancies[color]),
-                Piece::WQ | Piece::BQ => (PIECE_ATTACKS.get_queen_attacks(square, self.occupancies[Color::Both]), !self.occupancies[color]),
+                // Piece::WB | Piece::BB => (PIECE_ATTACKS.get_bishop_attacks(square, self.occupancies[Color::Both]), !self.occupancies[color]),
+                Piece::WB | Piece::BB => (PIECE_ATTACKS.nnbishop_attacks(sq_bits, self.occupancies[Color::Both]), !self.occupancies[color]),
+                Piece::WR | Piece::BR  => (PIECE_ATTACKS.nnrook_attacks(sq_bits, self.occupancies[Color::Both]), !self.occupancies[color]),
+                Piece::WQ | Piece::BQ => {
+                    let queen_attacks = PIECE_ATTACKS.nnbishop_attacks(sq_bits, self.occupancies[Color::Both]) | PIECE_ATTACKS.nnrook_attacks(sq_bits, self.occupancies[Color::Both]);
+                    (queen_attacks, !self.occupancies[color])
+                },
                 Piece::WK | Piece::BK => (PIECE_ATTACKS.king_attacks[src], !self.occupancies[color]),
                 _ => unreachable!()
             };

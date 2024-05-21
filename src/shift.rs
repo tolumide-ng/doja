@@ -43,14 +43,14 @@ impl Deref for Shift {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::North => &SHIFT_DATA[0],
-            Self::NorthEast => &SHIFT_DATA[1],
-            Self::East => &SHIFT_DATA[2],
-            Self::SouthEast => &SHIFT_DATA[3],
-            Self::South => &SHIFT_DATA[4],
-            Self::SouthWest => &SHIFT_DATA[5],
-            Self::West => &SHIFT_DATA[6],
-            Self::NorthWest => &SHIFT_DATA[7],
+            Self::North => &SHIFT_DATA[7],
+            Self::NorthEast => &SHIFT_DATA[0],
+            Self::East => &SHIFT_DATA[1],
+            Self::SouthEast => &SHIFT_DATA[2],
+            Self::South => &SHIFT_DATA[3],
+            Self::SouthWest => &SHIFT_DATA[4],
+            Self::West => &SHIFT_DATA[5],
+            Self::NorthWest => &SHIFT_DATA[6],
         }
     }
 }

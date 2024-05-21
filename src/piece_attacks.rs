@@ -1,4 +1,4 @@
-use crate::{color::Color, constants::{NOT_AB_FILE, NOT_A_FILE, NOT_GH_FILE, NOT_H_FILE, PLAYERS_COUNT, SQUARES}, squares::{BISHOP_MAGIC_NUMBERS, BISHOP_RELEVANT_BITS, ROOK_MAGIC_NUMBERS, ROOK_RELEVANT_BITS}, Bitboard};
+use crate::{color::Color, constants::{NOT_AB_FILE, NOT_A_FILE, NOT_GH_FILE, NOT_H_FILE, PLAYERS_COUNT, SQUARES}, kogge_stone::KoggeStone, shift::Shift, squares::{BISHOP_MAGIC_NUMBERS, BISHOP_RELEVANT_BITS, ROOK_MAGIC_NUMBERS, ROOK_RELEVANT_BITS}, Bitboard};
 
 pub struct PieceAttacks {
     pub(crate) king_attacks: [u64; SQUARES],
@@ -337,4 +337,26 @@ impl PieceAttacks {
         queen_attacks
     }
 
+    /// attackers: u64 where only the bits of the attackers are set
+    /// board: this refers to the entire board (containing all of your pieces and opponent's pieces)
+    /// Generates all possible attacks from attackers
+    pub(crate) fn nnbishop_attacks(&self, attackers: u64, board: u64) -> u64 {
+        let empty = !board;
+        let north_east = KoggeStone::sliding_attacks(attackers, empty, Shift::NorthEast);
+        let south_east = KoggeStone::sliding_attacks(attackers, empty, Shift::SouthEast);
+        let south_west = KoggeStone::sliding_attacks(attackers, empty, Shift::SouthWest);
+        let north_west = KoggeStone::sliding_attacks(attackers, empty, Shift::NorthWest);
+
+        north_east | south_east | south_west | north_west
+    }
+
+    pub(crate) fn nnrook_attacks(&self, attackers: u64, board: u64) -> u64 {
+        let empty = !board;
+        let north = KoggeStone::sliding_attacks(attackers, empty, Shift::North);
+        let east = KoggeStone::sliding_attacks(attackers, empty, Shift::East);
+        let south = KoggeStone::sliding_attacks(attackers, empty, Shift::South);
+        let west = KoggeStone::sliding_attacks(attackers, empty, Shift::West);
+
+        north | east | south | west
+    }
 }
