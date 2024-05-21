@@ -381,7 +381,7 @@ impl BoardState {
                 let src = Square::E1 as u32;
 
                 // king castling is available and the square between king and rook (f and g are empty)
-                if (self.castling_rights & Castling::WHITE_KING) != Castling::NONE && only_expected_cells_are_filled {
+                if ((self.castling_rights & Castling::WHITE_KING) != Castling::NONE )&& only_expected_cells_are_filled {
                     let no_attacks = !self.is_square_attacked(Square::E1.into(), !color) && !self.is_square_attacked(Square::F1.into(), !color);
                     if no_attacks {
                         move_list.push(BitMove::new(src, Square::G1 as u32, Piece::WK, None, false, false, false, true));
@@ -450,7 +450,6 @@ impl BoardState {
             
             let (attacks, occupancies) = match piece {
                 Piece::WN | Piece::BN => (PIECE_ATTACKS.knight_attacks[src], !self.occupancies[color]),
-                // Piece::WB | Piece::BB => (PIECE_ATTACKS.get_bishop_attacks(square, self.occupancies[Color::Both]), !self.occupancies[color]),
                 Piece::WB | Piece::BB => (PIECE_ATTACKS.nnbishop_attacks(sq_bits, self.occupancies[Color::Both]), !self.occupancies[color]),
                 Piece::WR | Piece::BR  => (PIECE_ATTACKS.nnrook_attacks(sq_bits, self.occupancies[Color::Both]), !self.occupancies[color]),
                 Piece::WQ | Piece::BQ => {

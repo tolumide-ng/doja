@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use crate::constants::START_POSITION;
 use crate::move_type::MoveType;
 use crate::{board::board_state::BoardState, constants::TRICKY_POSITION};
 use crate::board::fen::FEN;
@@ -33,7 +34,7 @@ impl Perft {
         println!("STARTED!!");
         let mut nodes = 0;
         let instant = Instant::now();
-        Self::run(4, &mut nodes, BoardState::parse_fen(TRICKY_POSITION).unwrap());
+        Self::run(6, &mut nodes, BoardState::parse_fen(START_POSITION).unwrap());
         let elapsed = instant.elapsed();
         println!("{nodes} nodes in time: {}ms", elapsed.as_millis());
         println!("done!!!");
