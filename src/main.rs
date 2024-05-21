@@ -28,7 +28,7 @@ use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, c
 
 
 fn main() {
-    Perft::start();
+    Perft::start(6);
 
     // let no_attacks = !self.is_square_attacked(Square::E1.into(), !color) && !self.is_square_attacked(Square::F1.into(), !color);
 

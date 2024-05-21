@@ -81,6 +81,7 @@ impl BoardState {
         false
     }
 
+    
 
     pub(crate) fn is_square_attacked(&self, sq_64: u64, attacker: Color) -> bool {
         // bitboard with only the square's bit set

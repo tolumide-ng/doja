@@ -10,7 +10,8 @@ pub(crate) struct Perft;
 
 
 impl Perft {
-    pub(crate) fn run(depth: usize, nodes: &mut usize, board: BoardState) {
+    // #[inline(always)]
+    pub(crate) fn driver(depth: usize, nodes: &mut usize, board: BoardState) {
         if depth == 0 {
             *nodes += 1;
             return;
@@ -24,19 +25,46 @@ impl Perft {
             let bmove = move_list.list[index];
             let legal_move = board.make_move(bmove, MoveType::AllMoves);
             if let Some(new_board) = legal_move {
-                let nodes = Perft::run(depth-1, nodes, new_board);
+                Perft::driver(depth-1, nodes, new_board);
             }
         }
     }
 
+    // pub(crate) fn cummulative_nodes() {}
 
-    pub(crate) fn start() {
+
+    pub(crate) fn start(depth: usize) {
         println!("STARTED!!");
         let mut nodes = 0;
         let instant = Instant::now();
-        Self::run(6, &mut nodes, BoardState::parse_fen(START_POSITION).unwrap());
+        Self::test(depth, &mut nodes, BoardState::parse_fen(START_POSITION).unwrap());
         let elapsed = instant.elapsed();
-        println!("{nodes} nodes in time: {}ms", elapsed.as_millis());
-        println!("done!!!");
+        println!("\n\n");
+        println!("      Depth: {depth}");
+        println!("      Nodes: {nodes}");
+        println!("      Time: {}ms", elapsed.as_millis());
+        println!("      Done!!!");
+    }
+
+    pub(crate) fn test(depth: usize, nodes: &mut usize, board: BoardState) {
+        if depth == 0 {
+            *nodes += 1;
+            return;
+        }
+
+
+        // println!("{}", board.to_string());
+        let move_list =board.gen_movement();
+
+        for index in 0..move_list.count() {
+            let cummulative_nodes = *nodes;
+            let bmove = move_list.list[index];
+            let legal_move = board.make_move(bmove, MoveType::AllMoves);
+            if let Some(new_board) = legal_move {
+                Perft::driver(depth-1, nodes, new_board);
+                let old_nodes = *nodes - cummulative_nodes;
+                println!("      move: {}{}     nodes: {:?}", bmove.get_src(), bmove.get_target(), old_nodes);
+            }
+        }
     }
 }
