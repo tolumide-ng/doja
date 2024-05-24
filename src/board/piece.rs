@@ -2,7 +2,7 @@ use std::ops::{Index, IndexMut};
 
 use crate::color::Color;
 
-#[derive(Debug, Clone, Copy, derive_more::Display)]
+#[derive(Debug, Clone, Copy, derive_more::Display, PartialEq, Eq)]
 pub enum Piece {
     /// white pawn
     #[display(fmt="P")]

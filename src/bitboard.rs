@@ -120,6 +120,32 @@ impl Bitboard {
         result
     }
 
+
+    #[inline(always)]
+    pub(crate) fn south_east1(mask: u64) -> u64 {
+        (mask >> 7) & NOT_A_FILE
+    }
+
+    #[inline(always)]
+    pub(crate) fn south_west1(mask: u64) -> u64 {
+        (mask >> 9) & NOT_H_FILE
+    }
+
+    #[inline(always)]
+    pub(crate) fn north_west1(mask: u64) -> u64 {
+        (mask << 7) & NOT_H_FILE
+    }
+
+    #[inline(always)]
+    pub(crate) fn north_east1(mask: u64) -> u64 {
+        (mask << 9) & NOT_A_FILE
+    }
+
+    /// One shift only
+    pub(crate) fn south_one(mask: u64) -> u64 { mask >> 8 }
+    /// One shift only
+    pub(crate) fn north_one(mask: u64) -> u64 { mask << 8 }
+
     /// One shift only
     pub(crate) fn south(&self) -> u64 { **self >> 8 }
     /// One shift only
@@ -127,10 +153,10 @@ impl Bitboard {
     // /// Post-shift mask
     pub(crate) fn east(&self) -> u64 { (**self << 1) & NOT_A_FILE  }
     pub(crate) fn north_east(&self) -> u64 { (**self << 9) & NOT_A_FILE}
-    pub(crate) fn south_east(&self) -> u64 { (**self >> 7) & NOT_A_FILE}
-    pub(crate) fn west(&self) -> u64 { (**self >> 1) & NOT_H_FILE}
-    pub(crate) fn south_west(&self) -> u64 { (**self >> 9) & NOT_H_FILE}
     pub(crate) fn north_west(&self) -> u64 { (**self << 7) & NOT_H_FILE}
+    pub(crate) fn south_east(&self) -> u64 { (**self >> 7) & NOT_A_FILE}
+    pub(crate) fn south_west(&self) -> u64 { (**self >> 9) & NOT_H_FILE}
+    pub(crate) fn west(&self) -> u64 { (**self >> 1) & NOT_H_FILE}
     // Pre-shifts
     pub(crate) fn pre_east(&self) -> u64 { (**self & NOT_H_FILE) << 1  }
     pub(crate) fn pre_north_east(&self) -> u64 { (**self & NOT_H_FILE) << 9}

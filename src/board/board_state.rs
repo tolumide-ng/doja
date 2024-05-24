@@ -2,14 +2,14 @@ use std::{fmt::Display, ops::{BitAnd, BitXor, Deref, DerefMut}, sync::Arc};
 
 use bitflags::Flags;
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{A1_E1_IS_FILLED, A8_E8_IS_FILLED, BLACK_KING_CASTLING_CELLS, BLACK_QUEEN_CASTLING_CELLS, E1_F1_FILLED, E8_F8_IS_FILLED, NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_1, RANK_4, RANK_5, RANK_8, SQUARES, WHITE_KING_CASTLING_CELLS, WHITE_QUEEN_CASTLING_CELLS}, move_type::{self, MoveType}, moves::Moves, piece_attacks, squares::Square, Bitboard};
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{A1_E1_IS_FILLED, A8_E8_IS_FILLED, BLACK_KING_CASTLING_CELLS, BLACK_QUEEN_CASTLING_CELLS, E1_F1_FILLED, E8_F8_IS_FILLED, NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_1, RANK_4, RANK_5, RANK_8, SQUARES, WHITE_KING_CASTLING_CELLS, WHITE_QUEEN_CASTLING_CELLS}, move_type::{self, MoveType}, moves::Moves, perft::{CAPTURES, CASTLES, ENPASSANT, PROMOTIONS}, piece_attacks, squares::Square, Bitboard};
 
-use super::{castling::Castling, fen::FEN, piece::Piece};
+use super::{castling::Castling, fen::FEN, piece::{self, Piece}};
 
 
 #[derive(Debug, Clone)]
 pub struct BoardState {
-    turn: Color,
+    pub(crate) turn: Color,
     pub board: Board,
     castling_rights: Castling,
     enpassant: Option<Square>,
@@ -81,7 +81,7 @@ impl BoardState {
         false
     }
 
-    
+
 
     pub(crate) fn is_square_attacked(&self, sq_64: u64, attacker: Color) -> bool {
         // bitboard with only the square's bit set
@@ -190,20 +190,23 @@ impl BoardState {
 
     /// Returns the squares of this color capable of capturing other squares
     fn pawns_able_2capture_any(&self, color: Color) -> u64 {
-        if color == Color::Black {
-            return *self[Piece::BP] & self.pawn_any_attack(Color::White, false)
-        }
-        *self[Piece::WP] & self.pawn_any_attack(Color::Black, false)
+        *self[Piece::pawn(color)] & self.pawn_any_attack(!color, false)
+        // if color == Color::Black {
+        //     return *self[Piece::BP] & self.pawn_any_attack(Color::White, false)
+        // }
+        // *self[Piece::WP] & self.pawn_any_attack(Color::Black, false)
     }
 
     
-    /// Push pawn(black or white) by one
+    /// Target for single pawn pushes (black or white)
     fn single_push_targets(&self, color: Color) -> u64 {
-        if color == Color::Black {
-            return self[Piece::BP].south() & !self.occupancies[Color::Both]
+        let empty = !self.occupancies[Color::Both];
+        let color_pawns = self[Piece::pawn(color)];
+        
+        match color {
+            Color::White => {color_pawns.north() & empty},
+            _ => {color_pawns.south() & empty}
         }
-
-        self[Piece::WP].north() & !self.occupancies[Color::Both]
     }
     
     /// Double push for pawns(black or white)
@@ -218,10 +221,12 @@ impl BoardState {
     }
 
     fn pawns_able_2push(&self, color: Color) -> u64 {
-        if color == Color::White {
-            return Bitboard::from(!self.occupancies[Color::Both]).south() & *self[Piece::WP]    
+        let empty = Bitboard::from(!self.occupancies[Color::Both]);
+        
+        match color {
+            Color::White => empty.south() & *self[Piece::pawn(color)],
+            _ => empty.north() & *self[Piece::pawn(color)]
         }
-        Bitboard::from(!self.occupancies[Color::Both]).north() & *self[Piece::BP]
     }
 
     fn pawns_able_to_double_push(&self, color: Color) -> u64 {
@@ -247,9 +252,14 @@ impl BoardState {
                 while src2 !=0 {
                     let sindex = src2.trailing_zeros() as u32;
                     let tindex = target2.trailing_zeros() as u32;
+
                     
                     let piece = Piece::pawn(color);
-                    move_list.push(BitMove::new(sindex, tindex, piece, None, false, true, false, false));
+                    let xx = BitMove::new(sindex, tindex, piece, None, false, true, false, false);
+                    move_list.push(xx);
+                    // if Square::from(sindex as u64) == Square::G2 && Square::from(tindex as u64) == Square::G4 {
+                    //     print!("{xx:?}")
+                    // }
 
                     src2 &= src2 -1;
                     target2 &= target2 -1;
@@ -265,26 +275,55 @@ impl BoardState {
                 length = (length - promotable) + (promotable * PROMOTABLE_TARGETS);
 
                 let mut move_list: Vec<BitMove> = Vec::with_capacity(length);
-                
-                while src != 0 {
-                    let sindex = src.trailing_zeros();
-                    let tindex = targets.trailing_zeros();
+
+                // match color {
+                //     Color::White => {}
+                //     _ => {}
+                // }
+                let mut single_push_targets = targets;
+                while single_push_targets != 0 {
+                    let target_sq = single_push_targets & (!single_push_targets + 1);
+                    let src_sq = match color {Color::White => Bitboard::south_one(target_sq), _ => Bitboard::north_one(target_sq)};
+
+                    let t_sq = target_sq.trailing_zeros();
+                    let s_sq = src_sq.trailing_zeros();
+                    // println!("src {}, target {}", Square::from(s_sq as u64), Square::from(t_sq as u64));
                     
-                    let move_promotes = tindex >= Square::A8 as u32 && tindex <= Square::H8 as u32;
+                    let move_promotes = t_sq >= Square::A8 as u32 && t_sq <= Square::H8 as u32;
                     let piece = Piece::pawn(color);
 
                     if move_promotes {
-                        move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::bishop(color)), false, false, false, false));
-                        move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::queen(color)), false, false, false, false));
-                        move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::knight(color)), false, false, false, false));
-                        move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::rook(color)), false, false, false, false));
+                        move_list.push(BitMove::new(s_sq, t_sq, piece, Some(Piece::bishop(color)), false, false, false, false));
+                        move_list.push(BitMove::new(s_sq, t_sq, piece, Some(Piece::queen(color)), false, false, false, false));
+                        move_list.push(BitMove::new(s_sq, t_sq, piece, Some(Piece::knight(color)), false, false, false, false));
+                        move_list.push(BitMove::new(s_sq, t_sq, piece, Some(Piece::rook(color)), false, false, false, false));
                     } else {
-                        move_list.push(BitMove::new(sindex, tindex, piece, None, false, false, false, false));
+                        move_list.push(BitMove::new(s_sq, t_sq, piece, None, false, false, false, false));
                     }
 
-                    src &= src -1;
-                    targets &= targets - 1;
+                    single_push_targets &= single_push_targets - 1;
                 }
+
+                
+                // while src != 0 {
+                //     let sindex = src.trailing_zeros();
+                //     let tindex = targets.trailing_zeros();
+                    
+                //     let move_promotes = tindex >= Square::A8 as u32 && tindex <= Square::H8 as u32;
+                //     let piece = Piece::pawn(color);
+
+                //     if move_promotes {
+                //         move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::bishop(color)), false, false, false, false));
+                //         move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::queen(color)), false, false, false, false));
+                //         move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::knight(color)), false, false, false, false));
+                //         move_list.push(BitMove::new(sindex, tindex, piece, Some(Piece::rook(color)), false, false, false, false));
+                //     } else {
+                //         move_list.push(BitMove::new(sindex, tindex, piece, None, false, false, false, false));
+                //     }
+
+                //     src &= src -1;
+                //     targets &= targets - 1;
+                // }
                 move_list
             }
         }
@@ -294,66 +333,187 @@ impl BoardState {
     /// shows what squares this color's pawns (including the src square) can attack
     pub(crate) fn get_pawn_attacks(&self, color: Color) -> Vec<BitMove> {
         let piece = Piece::pawn(color);
-        
-        let mut capture = self.pawns_able_2capture_any(color);
-        
-        let mut length = capture.count_ones() as usize; // because doubles cannot be promoted
-        let promotable = if color == Color::White {(capture & RANK_8).count_ones()} else {(capture & RANK_1).count_ones()} as usize;
-        length = (length - promotable) + (promotable * PROMOTABLE_TARGETS);
-        let mut move_list: Vec<BitMove> = Vec::with_capacity(length);
+        let mut mv_list = vec![];
 
-
-        // println!()
-        while capture != 0 {
-            let src = capture.trailing_zeros();
-            let left_target = if color == Color::Black {(capture >> 9).trailing_zeros()} else {(capture << 7).trailing_zeros()};
-            let right_target = if color == Color::Black {(capture >> 7).trailing_zeros()} else {(capture << 9).trailing_zeros()};
+        // current position of all pawn pieces of this color on the board
+        let mut color_pawns = *self[piece];
+        // println!("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| {:?} {:?}", self.turn, color);
+        // println!("{}", self.to_string());
+        
+        // println!("{}", Bitboard::from(self.occupancies[!color]).to_string());
+        
+        while color_pawns != 0 {
+            let src = color_pawns.trailing_zeros();
+            let targets = PIECE_ATTACKS.pawn_attacks[!color][Square::from(src as u64)];
             
-            let left_attacker_exists = Bitboard::from(self.occupancies[!color]).get_bit_by_square((left_target as u64).into());
-            let right_attacker_exists = Bitboard::from(self.occupancies[!color]).get_bit_by_square((right_target as u64).into());
+            let mut captures = targets & self.occupancies[!color];
+            // println!("sq is {:?}", Square::from(src as u64));
+            // println!("targets {}", Bitboard::from(targets).to_string());
+            
+            // println!("captures {}", captures.count_ones());
+            // println!("targets {}", targets.count_ones());
+            // println!("------++++------++++------++++------++++------++++------++++");
 
-            // do we have enpassant captures
-            let (left_is_enpassant, right_is_enpassant) = match self.enpassant {
-                Some(enpassant) => {
-                    (enpassant == (left_target as u64).into(), enpassant == (right_target as u64).into())}
-                None => (false, false)
+            while captures != 0 {
+                let target: u64 = captures.trailing_zeros() as u64;
+                
+                let can_promote = match color {
+                    Color::White => {target >= Square::A8 as u64 && target <= Square::H8 as u64}
+                    _ => {target >= Square::A1 as u64 && target <= Square::H1 as u64}
+                };
+
+                // if Square::from(src as u64) == Square::B4 && Square::from(target as u64) == Square::A3 {
+                //     println!("|||||||||||{can_promote:?}")
+                // }
+
+                if can_promote {
+                    mv_list.push(BitMove::new(src, target as u32, piece, Some(Piece::bishop(color)), true, false, false, false));
+                    mv_list.push(BitMove::new(src, target as u32, piece, Some(Piece::rook(color)), true, false, false, false));
+                    mv_list.push(BitMove::new(src, target as u32, piece, Some(Piece::knight(color)), true, false, false, false));
+                    mv_list.push(BitMove::new(src, target as u32, piece, Some(Piece::queen(color)), true, false, false, false));
+
+                } else {
+                    mv_list.push(BitMove::new(src, target as u32, piece, None, true, false, false, false));
+
+                }
+                captures &= captures-1;
+            }    
+            color_pawns &= color_pawns-1;
+        }
+
+
+        // let enpassant = if let Some(enpass) = self.enpassant {enpass as u64 == target} else {false};
+        // color_pawns &= !(1 << src);
+
+        if let Some(enpass) = self.enpassant {
+            let enpass_mask = 1u64 << u64::from(enpass);
+
+            let (enpass_right_attack, enpass_left_attack) = match color {
+                Color::White => {
+                    let enpass_right_attack = Bitboard::south_west1(enpass_mask);
+                    let enpass_left_attack = Bitboard::south_east1(enpass_mask);
+                    (enpass_right_attack, enpass_left_attack)
+                }
+                _ => {
+                    let enpass_right_attack = Bitboard::north_east1(enpass_mask);
+                    let enpass_left_attack = Bitboard::north_west1(enpass_mask);
+                    (enpass_right_attack, enpass_left_attack)
+                }
             };
             
             
-            let (left_promotes, right_promotes) = match color {
-                Color::White => (
-                    left_attacker_exists != 0 && (left_target >= Square::A8 as u32 && left_target <= Square::H8 as u32), 
-                    right_attacker_exists != 0 && (right_target >= Square::A8 as u32 && right_target <= Square::H8 as u32)
-                ),
-                Color::Black => {
-                        ( left_attacker_exists != 0 &&  (left_target >= Square::A1 as u32 && left_target <= Square::H1 as u32),
-                            right_attacker_exists != 0 && right_target >= Square::A1 as u32 && right_target <= Square::H1 as u32)
-                }, 
-                _ => {unreachable!("")}};
-
-
-            // attacking the target on the LHS will result in this pawn's promotion (enpassant cannot occur at this point anymore)
-            [(left_promotes, left_target), (right_promotes, right_target)].iter().filter(|(p, _)| *p == true).for_each(|(_, target)| {
-                move_list.push(BitMove::new(src, *target, piece, Some(Piece::bishop(color)), true, false, false, false));
-                move_list.push(BitMove::new(src, *target, piece, Some(Piece::queen(color)), true, false, false, false));
-                move_list.push(BitMove::new(src, *target, piece, Some(Piece::knight(color)), true, false, false, false));
-                move_list.push(BitMove::new(src, *target, piece, Some(Piece::rook(color)), true, false, false, false));
-            });
-            
-
-            let left_enpassant_move = (left_attacker_exists == 0 && !left_promotes && left_is_enpassant);
-            if (left_attacker_exists != 0 && !left_promotes) || left_enpassant_move {
-                move_list.push(BitMove::new(src, left_target, piece, None, true, false, left_is_enpassant, false));
+            if enpass_right_attack != 0 {
+                println!("{}", self[piece].to_string());
+                
+                
+                if (enpass_right_attack as u64 & *self[piece]) != 0 {
+                    let source = enpass_right_attack.trailing_zeros();
+                    // println!("rrr src = {:?}", Square::from(source as u64));
+                    // println!("rrr target = {:?}", Square::from(enpass as u64));
+                    // if Square::from(source as u64) == Square::B4 && Square::from(enpass as u64) == Square::A3 {
+                    //     println!("XXXXXXX")
+                    // }
+                    
+                    let bmove = BitMove::new(source, enpass as u32, piece, None, true, false, true, false);
+                    mv_list.push(bmove);
+                }
             }
-
-            let right_enpassant_move = left_attacker_exists == 0 && !left_promotes && left_is_enpassant;
-            if (right_attacker_exists != 0 && !right_promotes) || right_enpassant_move {
-                move_list.push(BitMove::new(src, right_target, piece, None, true, false, right_is_enpassant, false));
+            if enpass_left_attack != 0 {
+                if (u64::from(enpass_left_attack) as u64 & *self[piece]) != 0 {
+                    let source = enpass_left_attack.trailing_zeros();
+                    // println!("llll src = {:?}", Square::from(source as u64));
+                    // println!("llll target = {:?}", Square::from(enpass));
+                    // if Square::from(source as u64) == Square::B4 && Square::from(enpass as u64) == Square::A3 {
+                    //     println!("<<<|||||||>>>")
+                    // }
+    
+                    let bmove = BitMove::new(source, enpass as u32, piece, None, true, false, true, false);
+                    mv_list.push(bmove);
+                }
             }
-            capture &= capture-1;
         }
 
-        move_list
+        mv_list
+        
+        
+        // let mut capture = self.pawns_able_2capture_any(color);
+        
+        // let mut length = capture.count_ones() as usize; // because doubles cannot be promoted
+        // let promotable = if color == Color::White {(capture & RANK_8).count_ones()} else {(capture & RANK_1).count_ones()} as usize;
+        // length = (length - promotable) + (promotable * PROMOTABLE_TARGETS);
+        // let mut move_list: Vec<BitMove> = Vec::with_capacity(length);
+
+
+        // while capture != 0 {
+        //     let src = capture.trailing_zeros();
+        //     let left_target = if color == Color::Black {(capture >> 9).trailing_zeros()} else {(capture << 7).trailing_zeros()};
+        //     let right_target = if color == Color::Black {(capture >> 7).trailing_zeros()} else {(capture << 9).trailing_zeros()};
+
+        //     println!("LEFT TARGET IS {left_target} AND RIGHT TARGET IS {right_target}");
+            
+        //     let left_attacker_exists = Bitboard::from(self.occupancies[!color]).get_bit_by_square((left_target as u64).into());
+        //     let right_attacker_exists = Bitboard::from(self.occupancies[!color]).get_bit_by_square((right_target as u64).into());
+
+        //     // do we have enpassant captures
+        //     let (left_is_enpassant, right_is_enpassant) = match self.enpassant {
+        //         Some(enpassant) => {
+        //             (enpassant == (left_target as u64).into(), enpassant == (right_target as u64).into())}
+        //         None => (false, false)
+        //     };
+            
+            
+        //     let (left_promotes, right_promotes) = match color {
+        //         Color::White => (
+        //             left_attacker_exists != 0 && (left_target >= Square::A8 as u32 && left_target <= Square::H8 as u32), 
+        //             right_attacker_exists != 0 && (right_target >= Square::A8 as u32 && right_target <= Square::H8 as u32)
+        //         ),
+        //         Color::Black => {
+        //                 ( left_attacker_exists != 0 &&  (left_target >= Square::A1 as u32 && left_target <= Square::H1 as u32),
+        //                     right_attacker_exists != 0 && right_target >= Square::A1 as u32 && right_target <= Square::H1 as u32)
+        //         }, 
+        //         _ => {unreachable!("")}};
+
+
+        //     // attacking the target on the LHS will result in this pawn's promotion (enpassant cannot occur at this point anymore)
+        //     [(left_promotes, left_target), (right_promotes, right_target)].iter().filter(|(p, _)| *p == true).for_each(|(_, target)| {
+        //         if Square::from(src as u64) == Square::H3 && Square::from(left_target as u64) == Square::A3 {
+        //             println!("PROMOTER src===>>>>{} target ===>>>> {}", Square::from(src as u64), Square::from(left_target as u64));
+        //         }
+        //         move_list.push(BitMove::new(src, *target, piece, Some(Piece::bishop(color)), true, false, false, false));
+        //         move_list.push(BitMove::new(src, *target, piece, Some(Piece::queen(color)), true, false, false, false));
+        //         move_list.push(BitMove::new(src, *target, piece, Some(Piece::knight(color)), true, false, false, false));
+        //         move_list.push(BitMove::new(src, *target, piece, Some(Piece::rook(color)), true, false, false, false));
+        //     });
+            
+
+        //     let left_enpassant_move = (left_attacker_exists == 0 && !left_promotes && left_is_enpassant);
+        //     if (left_attacker_exists != 0 && !left_promotes) || left_enpassant_move {
+        //         println!("LEFT src===>>>>{} target ===>>>> {}", Square::from(src as u64), Square::from(left_target as u64));
+        //         // if Square::from(src as u64) == Square::H3 && Square::from(left_target as u64) == Square::A3 {
+        //         // }
+        //         move_list.push(BitMove::new(src, left_target, piece, None, true, false, left_is_enpassant, false));
+        //         // print!("{left_is_enpassant}");
+        //         println!("**************===============src {}-------------target>>>>{}", move_list[move_list.len()-1].get_src(), move_list[move_list.len()-1].get_target());
+        //         println!("LLLLLLLLL {:?}", move_list[move_list.len()-1]);
+        //     }
+
+        //     let right_enpassant_move = left_attacker_exists == 0 && !left_promotes && right_is_enpassant;
+        //     if (right_attacker_exists != 0 && !right_promotes) || right_enpassant_move {
+        //         println!("RIGHT src===>>>>{} target ===>>>> {}", Square::from(src as u64), Square::from(left_target as u64));
+        //         // if Square::from(src as u64) == Square::H3 && Square::from(left_target as u64) == Square::A3 {
+        //             // }
+        //             move_list.push(BitMove::new(src, right_target, piece, None, true, false, right_is_enpassant, false));
+        //             // print!("{right_is_enpassant}");
+        //         println!("===============src {}-------------target>>>{}", move_list[move_list.len()-1].get_src(), move_list[move_list.len()-1].get_target());
+        //         println!("XXXXXXX {:?}", move_list[move_list.len()-1]);
+        //     }
+        //     println!("\n\n");
+        //     capture &= capture-1;
+        // }
+
+        // move_list.iter().for_each(|x| {println!("src ==>> {} target--- {}", x.get_src(), x.get_target())});
+
+        // move_list
 
     }
 
@@ -486,9 +646,16 @@ impl BoardState {
 
         let mut move_list = Moves::new();
 
-        move_list.add_many(&self.get_pawn_attacks(color));
-        move_list.add_many(&self.get_pawn_movement(color, true));
-        move_list.add_many(&self.get_pawn_movement(color, false));
+        let spush = self.get_pawn_attacks(color);
+        let dbattacks = self.get_pawn_movement(color, true);
+        let sattacks = self.get_pawn_movement(color, false);
+        // spush.iter().for_each(|s| {if s.get_src() == Square::A2 && s.get_target() == Square::A4 {println!("found is spush")}});
+        // dbattacks.iter().for_each(|s| {if s.get_src() == Square::A2 && s.get_target() == Square::A4 {println!("{:?} found is dbattacks", s)}});
+        // sattacks.iter().for_each(|s| {if s.get_src() == Square::A2 && s.get_target() == Square::A4 {println!("{} found is sattacks", s)}});
+
+        move_list.add_many(&spush);
+        move_list.add_many(&dbattacks);
+        move_list.add_many(&sattacks);
         move_list.add_many(&self.get_castling(color));
         move_list.add_many(&self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BN}else {Piece::WN}));
         move_list.add_many(&self.get_sliding_and_leaper_moves(color, if color == Color::Black {Piece::BB}else {Piece::WB}));
@@ -511,12 +678,19 @@ impl BoardState {
 
         match move_type {
             MoveType::AllMoves => {
-                let src = bit_move.get_src();
-                let target = bit_move.get_target();
-                let prev_piece = bit_move.get_piece();
+                let from = bit_move.get_src(); // initial position of the piece
+                let to = bit_move.get_target(); // target position of the piece
+                let prev_piece = bit_move.get_piece(); // the piece trying to move
                 
-                let new_piece = match bit_move.get_promotion() {
-                    Some(p) => p, None => prev_piece
+                
+                let new_piece = match bit_move.get_promotion() { // if this piece is eligible for promotion, the new type it's vying for
+                    Some(p) => {
+                        if let Ok(mut val) = PROMOTIONS.lock() {
+                            *val +=1;
+                        }
+                        p
+                    }, 
+                    None => prev_piece
                 };
                 
                 // let promoted_piece = bit_move.get_promotion();
@@ -524,35 +698,48 @@ impl BoardState {
                 
                 // Removes the captured piece from the the captured piece bitboard
                 if bit_move.get_capture() {
+                    // there would usually only be a maximum of 2 captures each, consider unrolling this for loop
                     let target_pieces = board[Piece::pawn(!turn).into()..Piece::king(!turn).into()].iter_mut();
                     // let target_pieces = match board.turn {Color::Black => {board[Piece::WP.into()..=Piece::WK.into()].iter_mut()}, _ => {board[Piece::BP.into()..=Piece::BK.into()].iter_mut()}};
     
                     for bitboard in target_pieces {
-                        if bitboard.get_bit(target.into()) != 0 {
-                            bitboard.pop_bit(target.into());
+                        if bitboard.get_bit(to.into()) != 0 {
+                            bitboard.pop_bit(to.into());
+                            if let Ok(mut val) = CAPTURES.lock() {
+                                *val +=1;
+                            }
                             break;
                         };
                     }
                 }
                 
-                board[new_piece].pop_bit(src.into());
-                board[new_piece].set_bit(target.into());
+                board[new_piece].pop_bit(from.into());
+                board[new_piece].set_bit(to.into());
                 
                 
                 if bit_move.get_enpassant() {
-                    let enpass_target = match board.turn {Color::Black => target as u64 + 8, _ => target as u64 -  8};
+                    let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     board[Piece::pawn(!turn)].pop_bit(enpass_target);
+                    if let Ok(mut val) = ENPASSANT.lock() {
+                        *val +=1;
+                    }
                 }
 
                 board.enpassant = None;
 
                 if bit_move.get_double_push() {
-                    let enpass_target = match board.turn {Color::Black => target as u64 + 8, _ => target as u64 -  8};
+                    let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     board.enpassant = Some(enpass_target.into());
                 }
 
                 if bit_move.get_castling() {
-                    match target {
+                    if new_piece != Piece::WK || new_piece != Piece::BK {
+                        
+                        if let Ok(mut val) = CASTLES.lock() {
+                            *val +=1;
+                        }
+                    }
+                    match to {
                         Square::G1 => { // white castles king side
                             board[Piece::WR].pop_bit(Square::H1.into());
                             board[Piece::WR].set_bit(Square::F1.into());
@@ -573,7 +760,7 @@ impl BoardState {
                     }
                 }
 
-                let castling_rights = board.new_castling_rights(src, target);
+                let castling_rights = board.new_castling_rights(from, to);
                 board.castling_rights = castling_rights;
 
                 board.occupancies[Color::White] = *board[Piece::WP] | *board[Piece::WB] | *board[Piece::WK] | *board[Piece::WN] | *board[Piece::WQ] | *board[Piece::WR];
@@ -583,6 +770,7 @@ impl BoardState {
                 
                 // is this an illegal move?
                 if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !turn) {
+                    // println!("******************************************************************************************");
                     return None;
                 }
 

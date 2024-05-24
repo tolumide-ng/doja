@@ -34,6 +34,7 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
 
 
     pub(crate) fn new(source: u32, target: u32, piece: Piece, promotion: Option<Piece>, capture: bool, double_push: bool, enpassant: bool, castling: bool) -> Self {
+        // println!("source==={source} target=={target}");
         let promotion_piece = if let Some(p) = promotion {p as u32} else {0};
 
         let bmove = source | target << 6 | (piece as u32) << 12 | promotion_piece << 16 | 

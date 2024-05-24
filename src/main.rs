@@ -18,17 +18,71 @@ use std::{borrow::Cow, io, ops::Shl, sync::Arc};
 use board::fen::FEN;
 // use bishop::Bishop;
 pub use bitboard::Bitboard;
+use constants::NOT_H_FILE;
 use kogge_stone::KoggeStone;
 use perft::Perft;
 // use crate::constants::
 
-use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{CMK_POSITION, KILLER_POSITION, PIECE_ATTACKS, RANK_4, START_POSITION, TRICKY_POSITION}, move_type::MoveType, moves::Moves, shift::Shift, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
+use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{CMK_POSITION, KILLER_POSITION, NOT_A_FILE, PIECE_ATTACKS, RANK_4, START_POSITION, TRICKY_POSITION}, move_type::MoveType, moves::Moves, shift::Shift, squares::{Square, BISHOP_RELEVANT_BITS, SQUARE_NAMES}};
 
 
 
 
 fn main() {
-    Perft::start(6);
+    Perft::start(2);
+    // println!("{}", BitMove::new(Square::A2, Square::A4, Piece::pawn(Color::White), None, false, true, false, false));
+    // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2QPp/PPPBBP1P/R3K2R b KQkq G2 0 1 ").unwrap();
+    // let plays = board.get_pawn_attacks(Color::Black);
+
+    // plays.iter().for_each(|x| println!("from={} to={} enpass={} promo={:?}", x.get_src(), x.get_target(), x.get_enpassant(), x.get_promotion()));
+
+
+
+
+    // println!("{} {}", u64::from(Square::D4), Square::D4 as u64);
+    // let x = 1 << u64::from(Square::C2);
+    // println!("{}", Bitboard::from(x).to_string());
+    // println!("move");
+    // let xx = Bitboard::south_west1(x);
+    // println!("{}", Bitboard::from(xx).to_string());
+    // let xxx = Square::from(xx.trailing_zeros() as u64);
+    // println!("after {:?}", xxx);
+    // let xxtt = xx.trailing_zeros() as u64;
+    // let xxot = xxtt as u32;
+    // println!("after {:?}", Square::from(xxot as u64));
+
+
+
+    // let mask = 1 << Square::A5 as u64;
+    // println!("{}", Bitboard::from(mask).to_string());
+
+    // let new_mask = (mask  >> 9u64) & NOT_H_FILE;
+    // println!("{}", Bitboard::from(new_mask).to_string());
+
+
+    // println!("{0:b}", !0b0010100u8);
+    // let xx = BoardState::parse_fen(START_POSITION).unwrap();
+    // println!("{}", xx.to_string());
+
+    // // let moves = xx.get_pawn_movement(Color::Black, false);
+    // println!("::::::::: {:?}", xx.get_pawn_movement(Color::White, false).iter().for_each(|m| {
+    //         println!("FROM =={}  TO =={} CAPTURE=={}", m.get_src(), m.get_target(), m.get_capture());
+    //         println!("{:?}", m);
+    //     }));
+        // let xxx = BitMove::from(1032);
+        // println!("FROM =={}  TO =={} CAPTURE=={}", xxx.get_src(), xxx.get_target(), xxx.get_capture());
+    // println!("{:?}", moves);
+
+
+
+
+
+
+    // let sw = Bitboard::from(Bitboard::from(0x210041200).south_west());
+    // let pre_sw = Bitboard::from(Bitboard::from(0x210041200).pre_south_west());
+
+    // println!("{}", sw.to_string());
+    // println!("{}", pre_sw.to_string());
 
     // let no_attacks = !self.is_square_attacked(Square::E1.into(), !color) && !self.is_square_attacked(Square::F1.into(), !color);
 

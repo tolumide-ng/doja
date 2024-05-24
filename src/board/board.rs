@@ -52,7 +52,9 @@ impl Display for Board {
                     // bitboard belonging to the current piece
                     let bitboard =  self[bitboard_piece as usize];
                     if bitboard.get_bit(square) != 0 {
-                        piece = bitboard_piece.into();
+                        // piece = bitboard_piece.into();
+                        piece = bitboard_piece.to_string().chars().collect::<Vec<_>>()[0]
+                        // piece = bitboard_piece.to_string().chars()[]
                     }
                 }
                 
