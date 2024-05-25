@@ -1,6 +1,7 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{board::piece::Piece, Bitboard};
+use crate::board::piece::Piece;
+use crate::bitboard::Bitboard;
 
 #[derive(Debug, Clone)]
 pub struct Board([Bitboard; 12]);

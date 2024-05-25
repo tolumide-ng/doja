@@ -1,4 +1,4 @@
-use crate::{color::Color, constants::{NOT_AB_FILE, NOT_A_FILE, NOT_GH_FILE, NOT_H_FILE, PLAYERS_COUNT, SQUARES}, kogge_stone::KoggeStone, shift::Shift, squares::{BISHOP_MAGIC_NUMBERS, BISHOP_RELEVANT_BITS, ROOK_MAGIC_NUMBERS, ROOK_RELEVANT_BITS}, Bitboard};
+use crate::{color::Color, constants::{NOT_AB_FILE, NOT_A_FILE, NOT_GH_FILE, NOT_H_FILE, PLAYERS_COUNT, SQUARES}, kogge_stone::KoggeStone, shift::Shift, squares::{BISHOP_MAGIC_NUMBERS, BISHOP_RELEVANT_BITS, ROOK_MAGIC_NUMBERS, ROOK_RELEVANT_BITS}, bitboard::Bitboard};
 
 pub struct PieceAttacks {
     pub(crate) king_attacks: [u64; SQUARES],

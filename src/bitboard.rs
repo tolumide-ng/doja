@@ -4,7 +4,7 @@ use crate::{constants::{NOT_A_FILE, NOT_H_FILE}, squares::{Square, BIT_TABLE}};
 
 
 
-#[repr(transparent)]
+// #[repr(transparent)]
 #[derive(Debug, Clone, Copy)]
 pub struct Bitboard(pub u64);
 
@@ -157,13 +157,6 @@ impl Bitboard {
     pub(crate) fn south_east(&self) -> u64 { (**self >> 7) & NOT_A_FILE}
     pub(crate) fn south_west(&self) -> u64 { (**self >> 9) & NOT_H_FILE}
     pub(crate) fn west(&self) -> u64 { (**self >> 1) & NOT_H_FILE}
-    // Pre-shifts
-    pub(crate) fn pre_east(&self) -> u64 { (**self & NOT_H_FILE) << 1  }
-    pub(crate) fn pre_north_east(&self) -> u64 { (**self & NOT_H_FILE) << 9}
-    pub(crate) fn pre_south_east(&self) -> u64 { (**self & NOT_H_FILE) >> 7}
-    pub(crate) fn pre_west(&self) -> u64 { (**self & NOT_A_FILE) >> 1}
-    pub(crate) fn pre_south_west(&self) -> u64 { (**self & NOT_A_FILE) >> 9}
-    pub(crate) fn pre_north_west(&self) -> u64 { (**self & NOT_A_FILE) << 7}
 
     pub(crate) fn set_occupancy(&self, index: u64, bits_in_bitboard: u32) -> Bitboard {
         let mut attack_bitboard: Bitboard = self.clone();

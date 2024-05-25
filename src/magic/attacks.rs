@@ -1,4 +1,4 @@
-use crate::{Bitboard};
+use crate::bitboard::Bitboard;
 
 pub struct DynamicAttacks;
 

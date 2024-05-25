@@ -1,7 +1,7 @@
 use thiserror::Error;
-use crate::{board::{castling::Castling, occupancies, piece}, color::Color, constants::PLAYER_PIECES, squares::{Square, SQUARE_NAMES}};
+use crate::{board::{castling::Castling, piece::Piece}, color::Color, squares::{Square, SQUARE_NAMES}};
 
-use super::{board_state::BoardState, piece::Piece};
+use super::board_state::BoardState;
 
 
 #[derive(Error, Debug)]

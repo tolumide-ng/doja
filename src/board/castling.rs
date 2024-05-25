@@ -2,7 +2,7 @@
 
 use std::fmt::Display;
 
-use bitflags::{bitflags, Flags};
+use bitflags::bitflags;
 
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 

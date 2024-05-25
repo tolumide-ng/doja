@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::{constants::PIECE_ATTACKS, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, Bitboard};
+use crate::{constants::PIECE_ATTACKS, squares::{BISHOP_RELEVANT_BITS, ROOK_RELEVANT_BITS}, bitboard::Bitboard};
 
 
 #[derive(Debug)]

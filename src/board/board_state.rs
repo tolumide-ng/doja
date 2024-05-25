@@ -1,10 +1,9 @@
-use std::{fmt::Display, ops::{BitAnd, BitXor, Deref, DerefMut}, sync::Arc};
+use std::{fmt::Display, ops::{BitAnd, Deref, DerefMut}};
 
-use bitflags::Flags;
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5,SQUARES}, move_type::MoveType, moves::Moves, squares::Square};
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{A1_E1_IS_FILLED, A8_E8_IS_FILLED, BLACK_KING_CASTLING_CELLS, BLACK_QUEEN_CASTLING_CELLS, CASTLING_TABLE, E1_F1_FILLED, E8_F8_IS_FILLED, NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_1, RANK_4, RANK_5, RANK_8, SQUARES, WHITE_KING_CASTLING_CELLS, WHITE_QUEEN_CASTLING_CELLS}, move_type::{self, MoveType}, moves::Moves, perft::{CAPTURES, CASTLES, ENPASSANT, PROMOTIONS}, piece_attacks, squares::Square, Bitboard};
-
-use super::{castling::Castling, fen::FEN, piece::{self, Piece}};
+use super::{castling::Castling, fen::FEN, piece::Piece};
+use crate::bitboard::Bitboard;
 
 
 #[derive(Debug, Clone)]
@@ -18,8 +17,6 @@ pub struct BoardState {
     // prev: Option<Arc<BoardState>>
 }
 
-
-const PROMOTABLE_TARGETS: usize = 4;
 
 impl BoardState {
     pub fn new() -> BoardState {
@@ -685,25 +682,6 @@ impl BoardState {
         }
 
         Some(board)
-    }
-
-
-    pub(crate) fn new_castling_rights(&mut self, from: Square, to: Square) -> Castling {
-        // if from == Square::D2 && to == Square::C1 {
-        //     println!("*****************:::::*****************:::::");
-        //     println!("{}", self.to_string());
-        // }
-
-        let new_mask = from.castling_mask() | to.castling_mask();
-        let existing_rights = self.castling_rights.bits() & new_mask;
-        let new_rights = self.castling_rights.bits().bitand(!existing_rights);
-        let nr  = Castling::from(new_rights);
-        // if from == Square::D2 && to == Square::C1 {
-        //     println!("*****************:::****************************::*****************:::::");
-        //     println!("{}", nr);
-        // }
-
-        return nr
     }
 
 }
