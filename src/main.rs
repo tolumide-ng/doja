@@ -41,7 +41,7 @@ fn main() {
     // // println!("{}", new_board.to_string());
     // // println!("{}", new_new_board.to_string());
     
-    Perft::start(4);
+    Perft::start(3);
     
     // // let x = 61u64;
     // // let xb = 1 << x;

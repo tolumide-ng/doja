@@ -84,30 +84,34 @@ impl Perft {
         let instant = Instant::now();
         let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
         println!("{}", board.to_string());
-        // Self::test(depth, &mut nodes, board);
+        Self::test(depth, &mut nodes, board);
         
         // let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
         // // let lt = BitMove::from(2099086);
         // let bm = BitMove::from(2098696);
         // let xot = BitMove::from(2099086);
         
-        let b2b3 = BitMove::from(1097);
-        let board_01 = board.make_move(b2b3, MoveType::AllMoves).unwrap();
-        let depth = depth -1;
+        // let b2b3 = BitMove::from(1097);
+        // let board_01 = board.make_move(b2b3, MoveType::AllMoves).unwrap();
+        // let depth = depth -1;
         
-        let h3g2 = BitMove::from(1074071);
-        let board_02 = board_01.make_move(h3g2, MoveType::AllMoves).unwrap();
-        let depth = depth -1;
+        // let h3g2 = BitMove::from(1074071);
+        // let board_02 = board_01.make_move(h3g2, MoveType::AllMoves).unwrap();
+        // let depth = depth -1;
 
-        let a2a3 = BitMove::from(1032);
-        let board_03 = board_02.make_move(a2a3, MoveType::AllMoves).unwrap();
-        let depth = depth -1;
+        // let a2a3 = BitMove::from(1032);
+        // let board_03 = board_02.make_move(a2a3, MoveType::AllMoves).unwrap();
+        // let depth = depth -1;
         
-        println!("{} {}", a2a3.get_src(), a2a3.get_target());
+        // println!("{} {}", a2a3.get_src(), a2a3.get_target());
 
-        println!("{}", board_03.to_string());
-        Self::test(depth, &mut nodes, board_03);
-        // println!("src={}  target={} \n src={}     target={} \n\n", bm.get_src(), bm.get_target(), xot.get_src(), xot.get_target());
+        // println!("{}", board_03.to_string());
+        // Self::test(depth, &mut nodes, board_03);
+        // // println!("src={}  target={} \n src={}     target={} \n\n", bm.get_src(), bm.get_target(), xot.get_src(), xot.get_target());
+
+
+
+
 
         let elapsed = instant.elapsed();
         println!("\n\n");

@@ -259,8 +259,19 @@ impl BoardState {
                     let s_sq = src_sq.trailing_zeros();
                     // println!("src {}, target {}", Square::from(s_sq as u64), Square::from(t_sq as u64));
                     
-                    let move_promotes = t_sq >= Square::A8 as u32 && t_sq <= Square::H8 as u32;
+                    // let move_promotes = t_sq >= Square::A8 as u32 && t_sq <= Square::H8 as u32;
+                    
                     let piece = Piece::pawn(color);
+                    let move_promotes = match color {
+                        Color::White => {t_sq >= Square::A8 as u32 && t_sq <= Square::H8 as u32}
+                        _ => {t_sq >= Square::A1 as u32 && t_sq <= Square::H1 as u32}
+                    };
+
+
+                    // if Square::from(s_sq as u64) == Square::G2 && color == Color::Black {
+                    //     println!("can you promote?????? {}", move_promotes);
+                    // }
+
 
                     if move_promotes {
                         move_list.push(BitMove::new(s_sq, t_sq, piece, Some(Piece::bishop(color)), false, false, false, false));
