@@ -213,9 +213,7 @@ impl Display for Bitboard {
         }
         println!("    \n    a  b  c  d  e  f  g  h\n");
         println!("Bitboard: {}", self.0);
-        Ok(())
-        // let s = &string_u64(reverse_bytes(self.0));
-        // f.pad(s)
+        writeln!(f, "")
     }
 }
 

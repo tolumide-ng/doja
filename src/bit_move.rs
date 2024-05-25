@@ -95,9 +95,7 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
         let target = self.get_target().to_string();
         let promotion = self.get_promotion().map(|x| x.to_string().to_lowercase()).or(Some(String::from(" ")));
 
-        print!("{src}{target}{}", promotion.unwrap());
-        
-        Ok(())
+        writeln!(f, "{src}{target}{}", promotion.unwrap())
     }
  }
 

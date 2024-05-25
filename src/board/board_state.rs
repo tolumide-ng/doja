@@ -78,97 +78,6 @@ impl BoardState {
         false
     }
 
-    // print all the squares that the current color can attack or move to.
-    pub(crate) fn get_possible_destination_squares_for(&self, side: Color) -> Bitboard {
-        let mut sample_bitboard = Bitboard::new();
-
-        for sq in 0..(SQUARES as u64) {
-            if self.is_square_attacked(sq, side) {
-                sample_bitboard.set_bit(sq)
-            }
-        }
-
-        sample_bitboard
-    }
-
-
-    fn attacksTo() {}
-
-
-    fn white_pawn_east_attacks(&self, pawns: bool) -> u64 { match pawns {
-        true => self.board[Piece::WP].north_east(), false => {Bitboard::from(self.occupancies[Color::White]).north_east()} }}
-
-    fn white_pawn_west_attacks(&self, pawns: bool) -> u64 { match pawns {
-        true => self.board[Piece::WP].north_west(), false => {Bitboard::from(self.occupancies[Color::White]).north_west()} }}
-
-    fn black_pawn_east_attacks(&self, pawns: bool) -> u64 { match pawns {
-        true => self.board[Piece::BP].south_east(), false => {Bitboard::from(self.occupancies[Color::Black]).south_east()} }}
-
-    fn black_pawn_west_attacks(&self, pawns: bool) -> u64 { match pawns {
-        true => self.board[Piece::BP].south_west(), false => Bitboard::from(self.occupancies[Color::Black]).south_west() }}
-
-
-    /// shows the position where the color's pawns can be attacked from
-    pub(crate) fn pawn_any_attack(&self, color: Color, pawns: bool) -> u64{
-        if color == Color::Black {
-            return self.black_pawn_east_attacks(pawns) | self.black_pawn_west_attacks(pawns)
-        }
-        self.white_pawn_east_attacks(pawns) | self.white_pawn_west_attacks(pawns)
-    }
-
-    /// Shows the possible double pawn attacks for color
-    pub(crate) fn pawn_double_attack(&self, color: Color) -> u64 {
-        if color == Color::Black {
-            return self.black_pawn_east_attacks(true) & self.black_pawn_west_attacks(true)
-        }
-        self.white_pawn_east_attacks(true) & self.white_pawn_west_attacks(true)
-    }
-
-    pub(crate) fn pawn_single_attack(&self, color: Color) -> u64 {
-        if color == Color::Black {
-            return self.black_pawn_east_attacks(true) ^ self.black_pawn_west_attacks(true)
-        }
-        self.white_pawn_east_attacks(true) ^ self.white_pawn_west_attacks(true)
-    }
-
-    /// https://www.chessprogramming.org/Pawn_Attacks_(Bitboards)
-    pub(crate) fn safe_pawn_squares(&self, color: Color) -> u64 {
-        let bpawn_double_attacks = self.pawn_double_attack(Color::Black);
-        let wpawn_double_attacks = self.pawn_double_attack(Color::White);
-
-        if color == Color::Black {
-            let wpawn_any_attacks = self.pawn_any_attack(Color::White, true);
-            let bpawn_odd_attacks = self.pawn_single_attack(Color::Black);
-            return bpawn_double_attacks | !wpawn_any_attacks | (bpawn_odd_attacks ^ !wpawn_double_attacks);
-        }
-
-        let wpawn_odd_attacks = self.pawn_single_attack(Color::White);
-        let bpawn_any_attacks = self.pawn_any_attack(Color::Black, true);
-        wpawn_double_attacks | !bpawn_any_attacks | (wpawn_odd_attacks & !bpawn_double_attacks)
-    }
-
-    fn pawns_able_2capture_east(&self, color: Color) -> u64 {
-        if color == Color::Black {
-            return *self[Piece::BP] & self.white_pawn_west_attacks(false)
-        }
-        *self.board[Piece::WP] & self.black_pawn_west_attacks(false)
-    }
-    fn pawns_able_2capture_west(&self, color: Color) -> u64 {
-        if color == Color::Black {
-            return *self[Piece::BP] & self.white_pawn_east_attacks(false)
-        }
-        *self[Piece::WP] & self.black_pawn_east_attacks(false)
-    }
-
-    /// Returns the squares of this color capable of capturing other squares
-    fn pawns_able_2capture_any(&self, color: Color) -> u64 {
-        *self[Piece::pawn(color)] & self.pawn_any_attack(!color, false)
-        // if color == Color::Black {
-        //     return *self[Piece::BP] & self.pawn_any_attack(Color::White, false)
-        // }
-        // *self[Piece::WP] & self.pawn_any_attack(Color::Black, false)
-    }
-
     
     /// Target for single pawn pushes (black or white)
     fn single_push_targets(&self, color: Color) -> u64 {
@@ -190,15 +99,6 @@ impl BoardState {
         }
 
         single_push.north() & !self.occupancies[Color::Both] & RANK_4
-    }
-
-    fn pawns_able_2push(&self, color: Color) -> u64 {
-        let empty = Bitboard::from(!self.occupancies[Color::Both]);
-        
-        match color {
-            Color::White => empty.south() & *self[Piece::pawn(color)],
-            _ => empty.north() & *self[Piece::pawn(color)]
-        }
     }
 
     fn pawns_able_to_double_push(&self, color: Color) -> u64 {
@@ -229,9 +129,6 @@ impl BoardState {
                     let piece = Piece::pawn(color);
                     let xx = BitMove::new(sindex, tindex, piece, None, false, true, false, false);
                     move_list.push(xx);
-                    // if Square::from(sindex as u64) == Square::G2 && Square::from(tindex as u64) == Square::G4 {
-                    //     print!("{xx:?}")
-                    // }
 
                     src2 &= src2 -1;
                     target2 &= target2 -1;
@@ -244,12 +141,7 @@ impl BoardState {
                 let mut move_list: Vec<BitMove>  = vec![];
                 let mut single_push_targets = self.single_push_targets(color);
 
-                // println!("{}", Bitboard::from(psrc).to_string());
-                // println!("{}", Bitboard::from(single_push_targets).to_string());
-
                 while single_push_targets != 0 {
-                    // println!("----->>>>>>   {}", Square::from(single_push_targets.trailing_zeros() as u64));
-                    // let target_sq = single_push_targets.trailing_zeros() as u64;
                     let target_sq = single_push_targets & (!single_push_targets + 1);
                     let src_sq = match color {Color::White => Bitboard::south_one(target_sq), _ => Bitboard::north_one(target_sq)};
 
@@ -257,20 +149,11 @@ impl BoardState {
 
                     let t_sq = target_sq.trailing_zeros();
                     let s_sq = src_sq.trailing_zeros();
-                    // println!("src {}, target {}", Square::from(s_sq as u64), Square::from(t_sq as u64));
-                    
-                    // let move_promotes = t_sq >= Square::A8 as u32 && t_sq <= Square::H8 as u32;
-                    
                     let piece = Piece::pawn(color);
                     let move_promotes = match color {
                         Color::White => {t_sq >= Square::A8 as u32 && t_sq <= Square::H8 as u32}
                         _ => {t_sq >= Square::A1 as u32 && t_sq <= Square::H1 as u32}
                     };
-
-
-                    // if Square::from(s_sq as u64) == Square::G2 && color == Color::Black {
-                    //     println!("can you promote?????? {}", move_promotes);
-                    // }
 
 
                     if move_promotes {
@@ -295,23 +178,12 @@ impl BoardState {
     pub(crate) fn get_pawn_attacks(&self, color: Color) -> Vec<BitMove> {
         let piece = Piece::pawn(color);
         let mut mv_list: Vec<BitMove> = vec![];
-
-        // current position of all pawn pieces of this color on the board
         let mut color_pawns = *self[piece];
-        // println!("{}", Bitboard::from(color_pawns).to_string());
-        // println!("{}", Bitboard::from(self.occupancies[!color]).to_string());
         
         while color_pawns != 0 {
             let src: u32 = color_pawns.trailing_zeros();
             let targets = PIECE_ATTACKS.pawn_attacks[!color][Square::from(src as u64)];            
             let mut captures = targets & self.occupancies[!color];
-
-            // println!("sq is {:?}", Square::from(src as u64));
-            // println!("targets {}", Bitboard::from(targets).to_string());
-            
-            // println!("captures {}", captures.count_ones());
-            // println!("targets {}", targets.count_ones());
-            // println!("------++++------++++------++++------++++------++++------++++");
 
             while captures != 0 {
                 let target: u64 = captures.trailing_zeros() as u64;
@@ -320,10 +192,6 @@ impl BoardState {
                     Color::White => {target >= Square::A8 as u64 && target <= Square::H8 as u64}
                     _ => {target >= Square::A1 as u64 && target <= Square::H1 as u64}
                 };
-
-                // if Square::from(src as u64) == Square::B4 && Square::from(target as u64) == Square::A3 {
-                //     println!("|||||||||||{can_promote:?}")
-                // }
 
                 if can_promote {
                     mv_list.push(BitMove::new(src, target as u32, piece, Some(Piece::bishop(color)), true, false, false, false));
@@ -340,17 +208,8 @@ impl BoardState {
             color_pawns &= color_pawns-1;
         }
 
-
-        // let enpassant = if let Some(enpass) = self.enpassant {enpass as u64 == target} else {false};
-        // color_pawns &= !(1 << src);
-
         if let Some(enpass) = self.enpassant {
             let enpass_mask = 1u64 << u64::from(enpass);
-
-            // confirm that there is nothing on our enpassant
-            // if enpass_mask & self.occupancies[Color::Both] != 0 {
-            //     return mv_list;
-            // }
 
             let (enpass_right_attack, enpass_left_attack) = match color {
                 Color::White => {
@@ -368,30 +227,15 @@ impl BoardState {
             
             // ensures that this exists (not pushed outside the board)
             if enpass_right_attack != 0 {
-                // println!("{}", self[piece].to_string());
-                
-                // let color_pawn_can_attack = enpass_right_attack & *self[piece];
                 if (enpass_right_attack & *self[piece]) != 0 {
                     let source = enpass_right_attack.trailing_zeros();
-                    // println!("rrr src = {:?}", Square::from(source as u64));
-                    // println!("rrr target = {:?}", Square::from(enpass as u64));
-                    // if Square::from(source as u64) == Square::B4 && Square::from(enpass as u64) == Square::A3 {
-                    //     println!("XXXXXXX")
-                    // }
-                    
                     let bmove = BitMove::new(source, enpass as u32, piece, None, true, false, true, false);
                     mv_list.push(bmove);
                 }
             }
             if enpass_left_attack != 0 {
                 if (enpass_left_attack & *self[piece]) != 0 {
-                    let source = enpass_left_attack.trailing_zeros();
-                    // println!("llll src = {:?}", Square::from(source as u64));
-                    // println!("llll target = {:?}", Square::from(enpass));
-                    // if Square::from(source as u64) == Square::B4 && Square::from(enpass as u64) == Square::A3 {
-                    //     println!("<<<|||||||>>>")
-                    // }
-    
+                    let source = enpass_left_attack.trailing_zeros();    
                     let bmove = BitMove::new(source, enpass as u32, piece, None, true, false, true, false);
                     mv_list.push(bmove);
                 }
@@ -402,18 +246,6 @@ impl BoardState {
     }
 
 
-    fn enemy_or_empty(&self, color: Color) -> u64 {
-        match color {
-            Color::White => {
-                return !*self[Piece::WP] & !*self[Piece::WB] & !*self[Piece::WK] & !*self[Piece::WN] & !*self[Piece::WQ] & !*self[Piece::WR]
-            },
-            Color::Black => {
-                return !*self[Piece::BP] & !*self[Piece::BB] & !*self[Piece::BK] & !*self[Piece::BN] & !*self[Piece::BQ] & !*self[Piece::BR]
-            },
-            _ => {0}
-        }
-    }
-
     pub(crate) fn get_castling(&self, color: Color) -> Vec<BitMove> {
         let mut move_list = Vec::with_capacity(2);
 
@@ -421,26 +253,17 @@ impl BoardState {
             Color::White => {
                 if (self.castling_rights & Castling::WHITE_KING) != Castling::NONE {
                     let f1g1_empty = (self.occupancies[Color::Both] & 0x60u64) == 0;
-                    // let e1f1_attacked = self.is_square_attacked(u64::from(Square::E1), !color) || self.is_square_attacked(u64::from(Square::F1), !color);
                     let e1f1g1_attacked = self.is_square_attacked(u64::from(Square::E1), !color) || self.is_square_attacked(u64::from(Square::F1), !color) || self.is_square_attacked(u64::from(Square::G1), !color);
                     
                     if f1g1_empty && !e1f1g1_attacked {
-                    // if f1g1_empty && !e1f1_attacked {
-                        // println!("we are not under attack, so we can create this >>>>>>>>>>>>>>>>>>>> {} {}", self.is_square_attacked(u64::from(Square::F1), !color), u64::from(Square::F1));
-                        // println!("{}", self.to_string());
-                        // println!("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<||||||||||||||||||||>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n\n\n\n\n");
-
                         move_list.push(BitMove::new(Square::E1 as u32, Square::G1 as u32, Piece::WK, None, false, false, false, true));
                     }
                 }
 
                 if (self.castling_rights & Castling::WHITE_QUEEN) != Castling::NONE {
                     let b1c1d1_empty = (self.occupancies[Color::Both] & 0xe_u64) == 0;
-                    // let make sure the king(e1) and d1 squares are not under attack
-                    // let e1d1_attacked = self.is_square_attacked(u64::from(Square::E1), !color) || self.is_square_attacked(u64::from(Square::D1), !color);
                     let e1c1d1_attacked = self.is_square_attacked(u64::from(Square::E1), !color) || self.is_square_attacked(u64::from(Square::C1), !color)  || self.is_square_attacked(u64::from(Square::D1), !color);
 
-                    // if b1c1d1_empty && !e1d1_attacked {
                     if b1c1d1_empty && !e1c1d1_attacked {
                         move_list.push(BitMove::new(Square::E1 as u32, Square::C1 as u32, Piece::WK, None, false, false, false, true));
                     }
@@ -449,26 +272,18 @@ impl BoardState {
             Color::Black => {
                 if (self.castling_rights & Castling::BLACK_KING) != Castling::NONE {
                     let f8g8_empty = (self.occupancies[Color::Both] & 0x6000000000000000u64) == 0;
-                    // let e8f8_attacked = self.is_square_attacked(u64::from(Square::E8), !color) || self.is_square_attacked(u64::from(Square::F8), !color);
                     let e8f8g8_attacked = self.is_square_attacked(u64::from(Square::E8), !color) || self.is_square_attacked(u64::from(Square::F8), !color) || self.is_square_attacked(u64::from(Square::G8), !color);
 
-                    // if f8g8_empty && !e8f8_attacked {
                     if f8g8_empty && !e8f8g8_attacked {
-                        // println!("............................................e8g8............................................................................");
-                        // println!("{}", self.to_string());
-                        // println!("........................................................................................................................\n\n\n\n");
-
                         move_list.push(BitMove::new(Square::E8 as u32, Square::G8 as u32, Piece::BK, None, false, false, false, true));
                     }
                 }
 
                 if (self.castling_rights & Castling::BLACK_QUEEN) != Castling::NONE {
                     let b8c8d8_empty = (self.occupancies[Color::Both] & 0xe00000000000000u64) == 0;
-                    // let e8d8_attacked = self.is_square_attacked(u64::from(Square::E8), !color) || self.is_square_attacked(u64::from(Square::D8), !color);
                     let e8d8c8_attacked = self.is_square_attacked(u64::from(Square::E8), !color) || self.is_square_attacked(u64::from(Square::D8), !color) || self.is_square_attacked(u64::from(Square::C8), !color);
 
                     if b8c8d8_empty && !e8d8c8_attacked {
-                    // if b8c8d8_empty && !e8d8_attacked {
                         move_list.push(BitMove::new(Square::E8 as u32, Square::C8 as u32, Piece::BK, None, false, false, false, true));
                     }
                 }
@@ -481,8 +296,6 @@ impl BoardState {
 
 
     pub(crate) fn get_sliding_and_leaper_moves(&self, color: Color, piece: Piece) -> Vec<BitMove> {
-        // let knight = if color == Color::White {Piece::WN} else {Piece::BN};
-        // println!("{}", self[piece].to_string());
         let mut move_list: Vec<BitMove> = vec![];
         
         let mut pieces_on_board = self[piece];
@@ -492,14 +305,9 @@ impl BoardState {
             pieces_on_board.pop_bit(square);
             let src = Square::from(square);
 
-        //     let bishops_queens =  *self[Piece::bishop(attacker)];
-        // if (PIECE_ATTACKS.nnbishop_attacks(sq_bit, self.occupancies[Color::Both]) & *self[Piece::bishop(attacker)]) != 0 { return true }
         
         // generates a bitboard(u64) where only this index of this square is set
-        let sq_bits = 1u64 << src as u64;
-        // 1u64.shl(Square::E4 as u64)
-            // let xo = Bitboard::from(PIECE_ATTACKS.nnbishop_attacks(1u64.shl(Square::E4 as u64), 0));
-            
+        let sq_bits = 1u64 << src as u64;            
             let (attacks, occupancies) = match piece {
                 Piece::WN | Piece::BN => (PIECE_ATTACKS.knight_attacks[src], !self.occupancies[color]),
                 Piece::WB | Piece::BB => (PIECE_ATTACKS.nnbishop_attacks(sq_bits, self.occupancies[Color::Both]), !self.occupancies[color]),
@@ -516,7 +324,6 @@ impl BoardState {
             // we're getting !self.occupancies[color] because our knight should be able to make both quiet or capture moves (on the opponent)
             let mut targets = Bitboard::from(attacks & occupancies);
 
-            // println!("{}", targets.to_string());
             let source = src as u32;
 
             while targets.not_zero() {
@@ -555,12 +362,6 @@ impl BoardState {
     pub(crate) fn make_move(&self, bit_move: BitMove, move_type: MoveType) -> Option<Self> {
         let mut board = self.clone();
         let turn = board.turn;
-        // board.prev = Some(Arc::new(self));
-        // if bit_move.get_src() == Square::E1 && bit_move.get_target() == Square::C1 {
-        //     println!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        //     println!("{}", board.to_string());
-        //     println!("\n\n");
-        // }
 
         match move_type {
             MoveType::AllMoves => {
@@ -582,9 +383,6 @@ impl BoardState {
                     for p in target_pieces {
                         if board[p].get_bit(to.into()) != 0 {
                             board[p].pop_bit(to.into());
-                            // if let Ok(mut val) = CAPTURES.lock() {
-                            //     *val +=1;
-                            // }
                             break;
                         }
                     }
@@ -594,18 +392,12 @@ impl BoardState {
                 if let Some(promoted_to) = bit_move.get_promotion() { // if this piece is eligible for promotion, the new type it's vying for
                     board[piece].pop_bit(to.into());
                     board[promoted_to].set_bit(to.into());
-                    // if let Ok(mut val) = PROMOTIONS.lock() {
-                    //     *val +=1;
-                    // }
                 }
                 
                 
                 if bit_move.get_enpassant() {
                     let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     board[Piece::pawn(!turn)].pop_bit(enpass_target);
-                    // if let Ok(mut val) = ENPASSANT.lock() {
-                    //     *val +=1;
-                    // }
                 }
 
                 board.enpassant = None;
@@ -616,13 +408,6 @@ impl BoardState {
                 }
 
                 if bit_move.get_castling() {
-                    // if [Square::E8, Square::E1].contains(&from) &&
-                    // [Square::G1, Square::C1, Square::G8, Square::C8].contains(&to) {
-                        
-                    //     // if let Ok(mut val) = CASTLES.lock() {
-                    //     //     *val +=1;
-                    //     // }
-                    // }
                     match to {
                         Square::G1 => { // white castles king side
                             board[Piece::WR].pop_bit(Square::H1.into());
@@ -644,20 +429,9 @@ impl BoardState {
                     }
                 }
 
-                // let castling_rights = board.new_castling_rights(from, to);
-                // board.castling_rights = castling_rights;
                 let castle_one = board.castling_rights.bits() & board.castling_table[from];
                 let castle_two = castle_one & board.castling_table[to];
                 board.castling_rights = Castling::from(castle_two);
-                // board.castling_rights &= board.castling_table[to];
-
-                // if bit_move.get_src() == Square::H8 && bit_move.get_target() == Square::H7 {
-                //     println!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-                //     println!("{}", board.to_string());
-                //     println!("{}", board.castling_rights);
-                //     println!("\n\n");
-                // }
-
 
                 board.occupancies[Color::White] = *board[Piece::WP] | *board[Piece::WB] | *board[Piece::WK] | *board[Piece::WN] | *board[Piece::WQ] | *board[Piece::WR];
                 board.occupancies[Color::Black] = *board[Piece::BP] | *board[Piece::BB] | *board[Piece::BK] | *board[Piece::BN] | *board[Piece::BQ] | *board[Piece::BR];
@@ -667,11 +441,6 @@ impl BoardState {
                 // is this an illegal move?
                 if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !board.turn) {
                     return None;
-                } else {
-                    // if bit_move.get_src() == Square::E1 && bit_move.get_target() == Square::G1 {
-                    //     println!("*****************:::::*****************:::::");
-                    //     println!("{}", board.to_string());
-                    // }
                 }
 
                 board.turn = !board.turn;
