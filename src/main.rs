@@ -29,10 +29,37 @@ use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, c
 
 
 fn main() {
-    Perft::start(2);
-    // println!("{}", BitMove::new(Square::A2, Square::A4, Piece::pawn(Color::White), None, false, true, false, false));
-    // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2QPp/PPPBBP1P/R3K2R b KQkq G2 0 1 ").unwrap();
-    // let plays = board.get_pawn_attacks(Color::Black);
+    // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
+    // println!("{}", board.is_square_attacked(31, Color::Black));
+    // // // println!("{}", BitMove::new(Square::A2, Square::A4, Piece::pawn(Color::White), None, false, true, false, false));
+    // // let double = BitMove::new(Square::A2 as u32, Square::A4 as u32, Piece::WP, None, false, true, false, false);
+    // // let enpass_move = BitMove::new(Square::B4 as u32, Square::A3 as u32, Piece::BP, None, true, false, true, false);
+
+    // // let new_board = board.make_move(double, MoveType::AllMoves).unwrap();
+    // // let new_new_board = new_board.make_move(enpass_move, MoveType::AllMoves).unwrap();
+    // println!("{}", board.to_string());
+    // // println!("{}", new_board.to_string());
+    // // println!("{}", new_new_board.to_string());
+    
+    Perft::start(4);
+    
+    // // let x = 61u64;
+    // // let xb = 1 << x;
+
+
+    // let movess = board.get_pawn_attacks(Color::White);
+    // movess.iter().for_each(|x| {
+    //     println!("{}", x);
+    // });
+
+    // // let plays = board.get_pawn_attacks(Color::Black);
+    // let castles = board.get_castling(Color::White);
+    // println!("{}", board.to_string());
+    // castles.iter().for_each(|x| {
+    //     println!("{}", x);
+    // });
+
+    // println!("{}", Bitboard::from(0x800000).to_string());
 
     // plays.iter().for_each(|x| println!("from={} to={} enpass={} promo={:?}", x.get_src(), x.get_target(), x.get_enpassant(), x.get_promotion()));
 

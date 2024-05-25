@@ -186,6 +186,13 @@ impl Piece {
         ]
     }
 
+    pub(crate) fn all_pieces_for(color: Color) -> [Piece; 6] {
+        if color == Color::White {
+            return [Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK]
+        }
+        [ Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK ]
+    }
+
     pub(crate) fn white_pieces() -> [Piece; 6] {
         [Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK]
     }

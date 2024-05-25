@@ -23,10 +23,12 @@ bitflags! {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct Castling: u8 {
-        const WHITE_KING = WHITE_KING_CASTLING_MASK;
-        const WHITE_QUEEN = WHITE_QUEEN_CASTLING_MASK;
-        const BLACK_KING = BLACK_KING_CASTLING_MASK;
-        const BLACK_QUEEN = BLACK_QUEEN_CASTLING_MASK;
+        const WHITE_KING = WHITE_KING_CASTLING_MASK; // white can castle king side
+        const WHITE_QUEEN = WHITE_QUEEN_CASTLING_MASK; // white can castle queen side
+        const BLACK_KING = BLACK_KING_CASTLING_MASK; // black can castle king side
+        const BLACK_QUEEN = BLACK_QUEEN_CASTLING_MASK; // black can castle queen side
+        const ALL_WHITE = WHITE_KING_CASTLING_MASK | WHITE_QUEEN_CASTLING_MASK;
+        const ALL_BLACK = BLACK_KING_CASTLING_MASK | BLACK_QUEEN_CASTLING_MASK;
         const NONE = 0b0000;
     }
 }

@@ -198,13 +198,31 @@ impl Square {
 
     pub(crate) fn castling_mask(&self) -> u8 {
         match self {
-            Square::H1 => WHITE_KING_CASTLING_MASK,
-            Square::A1 => WHITE_QUEEN_CASTLING_MASK,
-            Square::H8 => BLACK_KING_CASTLING_MASK,
-            Square::A8 => BLACK_QUEEN_CASTLING_MASK,
-            Square::E1 => WHITE_KING_CASTLING_MASK | WHITE_QUEEN_CASTLING_MASK,
-            Square::E8 => WHITE_QUEEN_CASTLING_MASK | BLACK_QUEEN_CASTLING_MASK,
+            // Square::H1 => WHITE_KING_CASTLING_MASK,
+            Square::G1 => WHITE_KING_CASTLING_MASK, // 0b0001
+            Square::C1 => WHITE_QUEEN_CASTLING_MASK, // 0b0010
+            Square::G8 => BLACK_KING_CASTLING_MASK,
+            Square::C8 => BLACK_QUEEN_CASTLING_MASK,
+            Square::E1 => WHITE_KING_CASTLING_MASK | WHITE_QUEEN_CASTLING_MASK, // 0b0001 | 0b0010 = 0b0011
+            Square::E8 => BLACK_KING_CASTLING_MASK | BLACK_QUEEN_CASTLING_MASK, // 0b0100 | 0b1000 = 0b1100
             _ => 0
+
+            // 0b1100 | 
+            // E1 -> G1
+            // 0b0011 | 0b0001 --> 0b0011
+            // 0b1111 & 0b0011 --> 0b0011
+            // 0b1111 & !0b0011 -->> 0b1111 & 0b1100 // new rights
+
+
+            // E1 -> F2
+            // 0b0011 | 0b0000 --> 0b0011
+            // 0b1111 & 0b0011 --> 0b0011
+
+            // G2 -> G3
+            // 0b0000 | 0b0000 --> 0b0000
+            // 0b1111 & 0b0000 --> 0b0000
+            // 0b1111 & !0b0000  -->> 0b1111 & 0b1111
+
         }
     }
 }

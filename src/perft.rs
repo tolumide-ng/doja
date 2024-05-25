@@ -4,8 +4,9 @@ use std::time::Instant;
 use lazy_static::lazy_static;
 
 use crate::bit_move::BitMove;
-use crate::constants::START_POSITION;
+use crate::constants::{POSITION_4, POS_6, START_POSITION};
 use crate::move_type::MoveType;
+use crate::squares::Square;
 use crate::{board::board_state::BoardState, constants::TRICKY_POSITION};
 use crate::board::fen::FEN;
 
@@ -19,7 +20,7 @@ lazy_static! {
     pub static ref KING_CHECKS: Mutex<i16> = Mutex::new(0);
     pub static ref PROMOTIONS: Mutex<i16> = Mutex::new(0);
     pub static ref ENPASSANT: Mutex<i16> = Mutex::new(0);
-    pub static ref CAPTURES: Mutex<i16> = Mutex::new(0);
+    pub static ref CAPTURES: Mutex<i64> = Mutex::new(0);
 }
 
 
@@ -34,6 +35,7 @@ impl Perft {
 
         // println!("{}", board.to_string());
         let move_list =board.gen_movement();
+        // println!("count for mv {}", move_list.count());
 
         for index in 0..move_list.count() {
             // println!("---------------------------------------------------------------------------------2222");
@@ -42,6 +44,32 @@ impl Perft {
             if let Some(new_board) = legal_move {
                 // println!("SRC---->>>> {}        TARGET----->>>>> {}          [[[[[[turn]]]]]] {:?}", bmove.get_src(), bmove.get_target(), board.turn);
                 // println!("  {}", new_board.to_string());
+                
+                if bmove.get_capture() {
+                    if let Ok(mut val) = CAPTURES.lock() {
+                        *val +=1;
+                    }
+                }
+                if bmove.get_promotion().is_some() {
+                    if let Ok(mut val) = PROMOTIONS.lock() {
+                        *val +=1;
+                    }
+                }
+                if bmove.get_enpassant() {
+                    if let Ok(mut val) = ENPASSANT.lock() {
+                        *val +=1;
+                    }
+                }
+                if bmove.get_castling() {
+                    if let Ok(mut val) = CASTLES.lock() {
+                       *val +=1;
+                    }
+                    if depth == 1 {
+                        // println!()
+                        // println!("{}", new_board.to_string());
+                    }
+                }
+                
                 Perft::driver(depth-1, nodes, new_board);
             }
         }
@@ -55,16 +83,31 @@ impl Perft {
         let mut nodes = 0;
         let instant = Instant::now();
         let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
-        Self::test(depth, &mut nodes, board);
+        println!("{}", board.to_string());
+        // Self::test(depth, &mut nodes, board);
         
         // let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
-        // println!("{}", board.to_string());
         // // let lt = BitMove::from(2099086);
         // let bm = BitMove::from(2098696);
         // let xot = BitMove::from(2099086);
+        
+        let b2b3 = BitMove::from(1097);
+        let board_01 = board.make_move(b2b3, MoveType::AllMoves).unwrap();
+        let depth = depth -1;
+        
+        let h3g2 = BitMove::from(1074071);
+        let board_02 = board_01.make_move(h3g2, MoveType::AllMoves).unwrap();
+        let depth = depth -1;
+
+        let a2a3 = BitMove::from(1032);
+        let board_03 = board_02.make_move(a2a3, MoveType::AllMoves).unwrap();
+        let depth = depth -1;
+        
+        println!("{} {}", a2a3.get_src(), a2a3.get_target());
+
+        println!("{}", board_03.to_string());
+        Self::test(depth, &mut nodes, board_03);
         // println!("src={}  target={} \n src={}     target={} \n\n", bm.get_src(), bm.get_target(), xot.get_src(), xot.get_target());
-        // let board = board.make_move(bm, MoveType::AllMoves).unwrap();
-        // Self::test(depth-1, &mut nodes, board);
 
         let elapsed = instant.elapsed();
         println!("\n\n");
@@ -84,22 +127,67 @@ impl Perft {
         // println!("{}", board.to_string());
         let move_list = board.gen_movement();
 
+        // println!("count ----->>>>|||| {}", move_list.count());
+        // for i in 0..move_list.count() {
+        //     let x = move_list.list[i];
+        //     // println!("the board {}", board.to_string());
+        //     println!("piecei={} . src=={} target=={} double={} promotion={:?} enpassant={} castling={} captures={}", x.get_piece(), x.get_src(), x.get_target(), x.get_double_push(), x.get_promotion(), x.get_enpassant(), x.get_castling(), x.get_capture());
+        //     // println!("\n\n\n");
+        //     // print!("{},", x.to_string());
+        // }
+        // println!("the board {}", board.to_string());
 
+
+        // for index in 0..move_list.count() {
         for index in 0..move_list.count() {
-            // println!("------------------------------------------------------------------------------------------------------------1111");
             let bmove = move_list.list[index];
             let legal_move = board.make_move(bmove, MoveType::AllMoves);
             if let Some(new_board) = legal_move {
+                
+                // println!("piecei={} . src=={} target=={} double={} promotion={:?} enpassant={} castling={} captures={}", bmove.get_piece(), bmove.get_src(), bmove.get_target(), bmove.get_double_push(), bmove.get_promotion(), bmove.get_enpassant(), bmove.get_castling(), bmove.get_capture());
+                // if bmove.get_src() == Square::A2 && bmove.get_target() == Square::A3 {
+                //     // println!("{} {}" bmove.get_src() == Square::G2, bmove.get_src() != Square::G2)
+                //     // continue;
+                //     println!("{:?} -->> {}", bmove, bmove.to_string());
+                // }
+                // println!("xxxx {:?}", bmove);
+                // println!("piecei={} . src=={} target=={} double={} promotion={:?} enpassant={} castling={} captures={}", bmove.get_piece(), bmove.get_src(), bmove.get_target(), bmove.get_double_push(), bmove.get_promotion(), bmove.get_enpassant(), bmove.get_castling(), bmove.get_capture());
+                // println!("------------------------------------------------------------------------------------------------------------1111");
+
+                // println!("the board {}", board.to_string());
+                // println!("the board {}", new_board.to_string());
+                // println!("\n\n\n\n");
                 // println!("SRC---->>>> {}        TARGET----->>>>> {}          [[[[[[turn]]]]]] {:?}", bmove.get_src(), bmove.get_target(), board.turn);
                 // println!("{}", new_board.to_string());
+                if bmove.get_capture() {
+                    if let Ok(mut val) = CAPTURES.lock() {
+                        *val +=1;
+                    }
+                }
+                if bmove.get_promotion().is_some() {
+                    if let Ok(mut val) = PROMOTIONS.lock() {
+                        *val +=1;
+                    }
+                }
+                if bmove.get_enpassant() {
+                    if let Ok(mut val) = ENPASSANT.lock() {
+                        *val +=1;
+                    }
+                }
+                if bmove.get_castling() {
+                    if let Ok(mut val) = CASTLES.lock() {
+                       *val +=1;
+                    }
+                }
                 let cummulative_nodes = *nodes;
                 Perft::driver(depth-1, nodes, new_board);
                 let old_nodes = *nodes - cummulative_nodes;
                 if let Some(p) = bmove.get_promotion() {
-                    println!("      move: {}{}{}2     nodes: {:?}", bmove.get_src(), bmove.get_target(), p, old_nodes);
+                    println!("{}{}{}: {:?},", bmove.get_src(), bmove.get_target(), p, old_nodes);
                 } else {
                     // println!("SRC---->>>> {}        TARGET----->>>>> {}          [[[[[[CAPTURE]]]]]] {}", bmove.get_src(), bmove.get_target(), bmove.get_capture());
-                    println!("      move: {}{}     nodes: {:?}", bmove.get_src(), bmove.get_target(), old_nodes);
+                    // println!("      move: {}{}     nodes: {:?}", bmove.get_src(), bmove.get_target(), old_nodes);
+                    println!("{}{}: {:?},", bmove.get_src(), bmove.get_target(), old_nodes);
                 }
             }
             // println!("\n\n\n\n");
