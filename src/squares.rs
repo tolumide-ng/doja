@@ -199,10 +199,10 @@ impl Square {
     pub(crate) fn castling_mask(&self) -> u8 {
         match self {
             // Square::H1 => WHITE_KING_CASTLING_MASK,
-            Square::G1 => WHITE_KING_CASTLING_MASK, // 0b0001
-            Square::C1 => WHITE_QUEEN_CASTLING_MASK, // 0b0010
-            Square::G8 => BLACK_KING_CASTLING_MASK,
-            Square::C8 => BLACK_QUEEN_CASTLING_MASK,
+            Square::G1 | Square::H1 => WHITE_KING_CASTLING_MASK, // 0b0001
+            Square::C1 | Square::A1 => WHITE_QUEEN_CASTLING_MASK, // 0b0010
+            Square::G8 | Square::H8 => BLACK_KING_CASTLING_MASK,
+            Square::C8 | Square::A8 => BLACK_QUEEN_CASTLING_MASK,
             Square::E1 => WHITE_KING_CASTLING_MASK | WHITE_QUEEN_CASTLING_MASK, // 0b0001 | 0b0010 = 0b0011
             Square::E8 => BLACK_KING_CASTLING_MASK | BLACK_QUEEN_CASTLING_MASK, // 0b0100 | 0b1000 = 0b1100
             _ => 0

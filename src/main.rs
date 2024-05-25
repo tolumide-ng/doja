@@ -30,6 +30,9 @@ use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, c
 
 fn main() {
     // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
+    // let mv = BitMove::new(Square::D2 as u32, Square::C1 as u32, Piece::WB, None, false, false, false, false);
+    // let dd = board.make_move(mv, MoveType::AllMoves).unwrap();
+    // println!("{}", dd.to_string());
     // println!("{}", board.is_square_attacked(31, Color::Black));
     // // // println!("{}", BitMove::new(Square::A2, Square::A4, Piece::pawn(Color::White), None, false, true, false, false));
     // // let double = BitMove::new(Square::A2 as u32, Square::A4 as u32, Piece::WP, None, false, true, false, false);
@@ -41,7 +44,7 @@ fn main() {
     // // println!("{}", new_board.to_string());
     // // println!("{}", new_new_board.to_string());
     
-    Perft::start(3);
+    Perft::start(7);
     
     // // let x = 61u64;
     // // let xb = 1 << x;

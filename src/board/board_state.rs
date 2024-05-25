@@ -2,7 +2,7 @@ use std::{fmt::Display, ops::{BitAnd, BitXor, Deref, DerefMut}, sync::Arc};
 
 use bitflags::Flags;
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{A1_E1_IS_FILLED, A8_E8_IS_FILLED, BLACK_KING_CASTLING_CELLS, BLACK_QUEEN_CASTLING_CELLS, E1_F1_FILLED, E8_F8_IS_FILLED, NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_1, RANK_4, RANK_5, RANK_8, SQUARES, WHITE_KING_CASTLING_CELLS, WHITE_QUEEN_CASTLING_CELLS}, move_type::{self, MoveType}, moves::Moves, perft::{CAPTURES, CASTLES, ENPASSANT, PROMOTIONS}, piece_attacks, squares::Square, Bitboard};
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{A1_E1_IS_FILLED, A8_E8_IS_FILLED, BLACK_KING_CASTLING_CELLS, BLACK_QUEEN_CASTLING_CELLS, CASTLING_TABLE, E1_F1_FILLED, E8_F8_IS_FILLED, NOT_A_FILE, NOT_H_FILE, OCCUPANCIES, PIECE_ATTACKS, RANK_1, RANK_4, RANK_5, RANK_8, SQUARES, WHITE_KING_CASTLING_CELLS, WHITE_QUEEN_CASTLING_CELLS}, move_type::{self, MoveType}, moves::Moves, perft::{CAPTURES, CASTLES, ENPASSANT, PROMOTIONS}, piece_attacks, squares::Square, Bitboard};
 
 use super::{castling::Castling, fen::FEN, piece::{self, Piece}};
 
@@ -11,9 +11,10 @@ use super::{castling::Castling, fen::FEN, piece::{self, Piece}};
 pub struct BoardState {
     pub(crate) turn: Color,
     pub board: Board,
-    castling_rights: Castling,
+    pub(crate) castling_rights: Castling,
     enpassant: Option<Square>,
     occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
+    castling_table: [u8; SQUARES],
     // prev: Option<Arc<BoardState>>
 }
 
@@ -22,7 +23,9 @@ const PROMOTABLE_TARGETS: usize = 4;
 
 impl BoardState {
     pub fn new() -> BoardState {
-        Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), occupancies: [0; OCCUPANCIES] }
+        Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
+            occupancies: [0; OCCUPANCIES], castling_table: CASTLING_TABLE 
+        }
     }
 
     pub(crate) fn set_turn(&mut self, turn: Color) {
@@ -454,6 +457,10 @@ impl BoardState {
 
                     // if f8g8_empty && !e8f8_attacked {
                     if f8g8_empty && !e8f8g8_attacked {
+                        // println!("............................................e8g8............................................................................");
+                        // println!("{}", self.to_string());
+                        // println!("........................................................................................................................\n\n\n\n");
+
                         move_list.push(BitMove::new(Square::E8 as u32, Square::G8 as u32, Piece::BK, None, false, false, false, true));
                     }
                 }
@@ -533,32 +540,9 @@ impl BoardState {
 
         let mut move_list = Moves::new();
 
-        let spush = self.get_pawn_attacks(color);
-        let dbattacks = self.get_pawn_movement(color, true);
-        let sattacks = self.get_pawn_movement(color, false);
-        let castlings = self.get_castling(color);
-
-        let knights = self.get_sliding_and_leaper_moves(color, Piece::knight(color));
-        let bishops = self.get_sliding_and_leaper_moves(color, Piece::bishop(color));
-        let rooks = self.get_sliding_and_leaper_moves(color, Piece::rook(color));
-        let queens = self.get_sliding_and_leaper_moves(color, Piece::queen(color));
-        let kings = self.get_sliding_and_leaper_moves(color, Piece::king(color));
-
-
-
-        spush.iter().for_each(|s| {if s.get_src() == Square::A1 && s.get_target() == Square::A1 {println!("found is spush")}});
-        dbattacks.iter().for_each(|s| {if s.get_src() == Square::A1 && s.get_target() == Square::A1 {println!("{:?} found is dbattacks", s)}});
-        sattacks.iter().for_each(|s| {if s.get_src() == Square::A1 && s.get_target() == Square::A1 {println!("{} found is sattacks", s)}});
-        castlings.iter().for_each(|s| {if s.get_src() == Square::A1 && s.get_target() == Square::A1 {println!("{} found is castlings", s)}});
-        knights.iter().for_each(|s| {if s.get_src() == Square::A1 && s.get_target() == Square::A1 {println!("{} found is knights", s)}});
-        bishops.iter().for_each(|s| {if s.get_src() == Square::A1 && s.get_target() == Square::A1 {println!("{} found is bishops", s)}});
-        rooks.iter().for_each(|s| {if s.get_src() == Square::A1 && s.get_target() == Square::A1 {println!("{} found is rooks", s)}});
-        queens.iter().for_each(|s| {if s.get_src() == Square::A1 && s.get_target() == Square::A1 {println!("{} found is queens", s)}});
-        kings.iter().for_each(|s| {if s.get_src() == Square::A1 && s.get_target() == Square::A1 {println!("{} found is kings", s)}});
-
-        move_list.add_many(&spush);
-        move_list.add_many(&dbattacks);
-        move_list.add_many(&sattacks);
+        move_list.add_many(&self.get_pawn_attacks(color));
+        move_list.add_many(&self.get_pawn_movement(color, true));
+        move_list.add_many(&self.get_pawn_movement(color, false));
         move_list.add_many(&self.get_castling(color));
         move_list.add_many(&self.get_sliding_and_leaper_moves(color, Piece::knight(color)));
         move_list.add_many(&self.get_sliding_and_leaper_moves(color, Piece::bishop(color)));
@@ -566,11 +550,6 @@ impl BoardState {
         move_list.add_many(&self.get_sliding_and_leaper_moves(color, Piece::queen(color)));
         move_list.add_many(&self.get_sliding_and_leaper_moves(color, Piece::king(color)));
 
-        // println!("{}", move_list.)
-
-        // move_list.list.setle
-
-        // generate knight squares
 
         move_list
     }
@@ -580,7 +559,7 @@ impl BoardState {
         let mut board = self.clone();
         let turn = board.turn;
         // board.prev = Some(Arc::new(self));
-        // if bit_move.get_src() == Square::E1 && bit_move.get_target() == Square::G1 {
+        // if bit_move.get_src() == Square::E1 && bit_move.get_target() == Square::C1 {
         //     println!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
         //     println!("{}", board.to_string());
         //     println!("\n\n");
@@ -640,13 +619,13 @@ impl BoardState {
                 }
 
                 if bit_move.get_castling() {
-                    if [Square::E8, Square::E1].contains(&from) &&
-                    [Square::G1, Square::C1, Square::G8, Square::C8].contains(&to) {
+                    // if [Square::E8, Square::E1].contains(&from) &&
+                    // [Square::G1, Square::C1, Square::G8, Square::C8].contains(&to) {
                         
-                        // if let Ok(mut val) = CASTLES.lock() {
-                        //     *val +=1;
-                        // }
-                    }
+                    //     // if let Ok(mut val) = CASTLES.lock() {
+                    //     //     *val +=1;
+                    //     // }
+                    // }
                     match to {
                         Square::G1 => { // white castles king side
                             board[Piece::WR].pop_bit(Square::H1.into());
@@ -668,8 +647,19 @@ impl BoardState {
                     }
                 }
 
-                let castling_rights = board.new_castling_rights(from, to);
-                board.castling_rights = castling_rights;
+                // let castling_rights = board.new_castling_rights(from, to);
+                // board.castling_rights = castling_rights;
+                let castle_one = board.castling_rights.bits() & board.castling_table[from];
+                let castle_two = castle_one & board.castling_table[to];
+                board.castling_rights = Castling::from(castle_two);
+                // board.castling_rights &= board.castling_table[to];
+
+                // if bit_move.get_src() == Square::H8 && bit_move.get_target() == Square::H7 {
+                //     println!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+                //     println!("{}", board.to_string());
+                //     println!("{}", board.castling_rights);
+                //     println!("\n\n");
+                // }
 
 
                 board.occupancies[Color::White] = *board[Piece::WP] | *board[Piece::WB] | *board[Piece::WK] | *board[Piece::WN] | *board[Piece::WQ] | *board[Piece::WR];
@@ -699,10 +689,21 @@ impl BoardState {
 
 
     pub(crate) fn new_castling_rights(&mut self, from: Square, to: Square) -> Castling {
+        // if from == Square::D2 && to == Square::C1 {
+        //     println!("*****************:::::*****************:::::");
+        //     println!("{}", self.to_string());
+        // }
+
         let new_mask = from.castling_mask() | to.castling_mask();
         let existing_rights = self.castling_rights.bits() & new_mask;
         let new_rights = self.castling_rights.bits().bitand(!existing_rights);
-        Castling::from(new_rights)
+        let nr  = Castling::from(new_rights);
+        // if from == Square::D2 && to == Square::C1 {
+        //     println!("*****************:::****************************::*****************:::::");
+        //     println!("{}", nr);
+        // }
+
+        return nr
     }
 
 }
