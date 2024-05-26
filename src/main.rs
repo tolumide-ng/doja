@@ -3,6 +3,7 @@ mod squares;
 mod color;
 mod shift;
 mod board;
+mod command;
 mod constants;
 // mod magic;
 mod moves;
@@ -34,11 +35,13 @@ fn main() {
 
     let board = BoardState::parse_fen("r3k2r/pPppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
 
-    if let Some(n_board) = UCI::parse(&board, String::from("b7b8q")) {
-        println!("move works");
-        println!("{}", n_board.to_string());
-    } else {
-        println!("Illegal move");
-    }
+    // if let Some(n_board) = UCI::parse(&board, String::from("b7b8q")) {
+    //     println!("move works");
+    //     println!("{}", n_board.to_string());
+    // } else {
+    //     println!("Illegal move");
+    // }
+
+    UCI::reader();
 }
 
