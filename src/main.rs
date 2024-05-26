@@ -42,6 +42,6 @@ fn main() {
     //     println!("Illegal move");
     // }
 
-    UCI::reader();
+    let _ = UCI::reader();
 }
 
