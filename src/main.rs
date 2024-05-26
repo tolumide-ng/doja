@@ -17,7 +17,7 @@ mod perft;
  mod uci;
 
 
-use bit_move::BitMove;
+use bit_move::BitMove;   
 use bitboard::Bitboard;
 use board::{board_state::BoardState, fen::FEN, piece::Piece};
 use constants::{START_POSITION, TRICKY_POSITION};
@@ -35,7 +35,9 @@ fn main() {
     // println!("{}", Bitboard::from(0xf0000).to_string())
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
-    let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
+    let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
+
+    println!("{}", board.to_string());
 
     let score = Evaluation::evaluate(&board);
 

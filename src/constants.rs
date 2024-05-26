@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 
-use crate::{piece_attacks::PieceAttacks, shift::ShiftData};
+use crate::{piece_attacks::PieceAttacks, shift::ShiftData, squares::Square};
 
 ///  ----NOT_A_FILE----
 /// 8   0  1  1  1  1  1  1  1 \
@@ -167,4 +167,167 @@ pub(crate) const CASTLING_TABLE: [u8; 64] = [
     15, 15, 15, 15, 15, 15, 15, 15,
     15, 15, 15, 15, 15, 15, 15, 15,
     7, 15, 15, 15,  3, 15, 15, 11,
+];
+
+
+
+
+
+/// thanks to CodeMonkeyKing for this
+/// https://www.youtube.com/watch?v=E2JzRNI1ODI&list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs&index=49
+///  Pawn Positional Score
+pub(crate) const CMK_PAWN_SCORE: [i16; 64] = [
+    90,  90,  90,  90,  90,  90,  90,  90,
+    30,  30,  30,  40,  40,  30,  30,  30,
+    20,  20,  20,  30,  30,  30,  20,  20,
+    10,  10,  10,  20,  20,  10,  10,  10,
+     5,   5,  10,  20,  20,   5,   5,   5,
+     0,   0,   0,   5,   5,   0,   0,   0,
+     0,   0,   0, -10, -10,   0,   0,   0,
+     0,   0,   0,   0,   0,   0,   0,   0
+];
+/// Knight Positional Score
+pub(crate) const CMK_KNIGHT_SCORE: [i16; 64] = [
+    -5,   0,   0,   0,   0,   0,   0,  -5,
+    -5,   0,   0,  10,  10,   0,   0,  -5,
+    -5,   5,  20,  20,  20,  20,   5,  -5,
+    -5,  10,  20,  30,  30,  20,  10,  -5,
+    -5,  10,  20,  30,  30,  20,  10,  -5,
+    -5,   5,  20,  10,  10,  20,   5,  -5,
+    -5,   0,   0,   0,   0,   0,   0,  -5,
+    -5, -10,   0,   0,   0,   0, -10,  -5
+];
+/// Bishop Positional Score
+pub(crate) const CMK_BISHOP_SCORE: [i16; 64] = [
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,  10,  10,   0,   0,   0,
+    0,   0,  10,  20,  20,  10,   0,   0,
+    0,   0,  10,  20,  20,  10,   0,   0,
+    0,  10,   0,   0,   0,   0,  10,   0,
+    0,  30,   0,   0,   0,   0,  30,   0,
+    0,   0, -10,   0,   0, -10,   0,   0
+];
+/// Rook Positional Score
+pub(crate) const CMK_ROOK_SCORE: [i16; 64]= [
+     50,  50,  50,  50,  50,  50,  50,  50,
+     50,  50,  50,  50,  50,  50,  50,  50,
+     0,   0,  10,  20,  20,  10,   0,   0,
+     0,   0,  10,  20,  20,  10,   0,   0,
+     0,   0,  10,  20,  20,  10,   0,   0,
+     0,   0,  10,  20,  20,  10,   0,   0,
+     0,   0,  10,  20,  20,  10,   0,   0,
+     0,   0,   0,  20,  20,   0,   0,   0
+];
+/// King Positional Score
+pub(crate) const CMK_KING_SCORE: [i16; 64] = [
+     0,   0,   0,   0,   0,   0,   0,   0,
+     0,   0,   5,   5,   5,   5,   0,   0,
+     0,   5,   5,  10,  10,   5,   5,   0,
+     0,   5,  10,  20,  20,  10,   5,   0,
+     0,   5,  10,  20,  20,  10,   5,   0,
+     0,   0,   5,  10,  10,   5,   0,   0,
+     0,   5,   5,  -5,  -5,   0,   5,   0,
+     0,   0,   5,   0, -15,   0,  10,   0
+];
+pub(crate) const MIRROR_SCORE: [Square; 64] = [
+    Square::A8, Square::B8, Square::C8, Square::D8, Square::E8, Square::F8, Square::G8, Square::H8, 
+    Square::A7, Square::B7, Square::C7, Square::D7, Square::E7, Square::F7, Square::G7, Square::H7,
+    Square::A6, Square::B6, Square::C6, Square::D6, Square::E6, Square::F6, Square::G6, Square::H6,
+    Square::A5, Square::B5, Square::C5, Square::D5, Square::E5, Square::F5, Square::G5, Square::H5,
+    Square::A4, Square::B4, Square::C4, Square::D4, Square::E4, Square::F4, Square::G4, Square::H4,
+    Square::A3, Square::B3, Square::C3, Square::D3, Square::E3, Square::F3, Square::G3, Square::H3,
+    Square::A2, Square::B2, Square::C2, Square::D2, Square::E2, Square::F2, Square::G2, Square::H2,
+    Square::A1, Square::B1, Square::C1, Square::D1, Square::E1, Square::F1, Square::G1, Square::H1,
+];
+// pub(crate) const MIRROR_SCORE: [Square; 64] = [
+//     Square::H8, Square::G8, Square::F8, Square::E8, Square::D8, Square::C8, Square::B8, Square::A8, 
+//     Square::H7, Square::G7, Square::F7, Square::E7, Square::D7, Square::C7, Square::B7, Square::A7, 
+//     Square::H6, Square::G6, Square::F6, Square::E6, Square::D6, Square::C6, Square::B6, Square::A6, 
+//     Square::H5, Square::G5, Square::F5, Square::E5, Square::D5, Square::C5, Square::B5, Square::A5, 
+//     Square::H4, Square::G4, Square::F4, Square::E4, Square::D4, Square::C4, Square::B4, Square::A4, 
+//     Square::H3, Square::G3, Square::F3, Square::E3, Square::D3, Square::C3, Square::B3, Square::A3, 
+//     Square::H2, Square::G2, Square::F2, Square::E2, Square::D2, Square::C2, Square::B2, Square::A2, 
+//     Square::H1, Square::G1, Square::F1, Square::E1, Square::D1, Square::C1, Square::B1, Square::A1, 
+// ];
+
+
+
+
+/// Piece Square Tables
+pub(crate) const PAWN_SCORES: [i8; 64] = [
+    0,  0,  0,  0,  0,  0,  0,  0,
+    50, 50, 50, 50, 50, 50, 50, 50,
+    10, 10, 20, 30, 30, 20, 10, 10,
+    5,  5, 10, 25, 25, 10,  5,  5,
+    0,  0,  0, 20, 20,  0,  0,  0,
+    5, -5,-10,  0,  0,-10, -5,  5,
+    5, 10, 10,-20,-20, 10, 10,  5,
+    0,  0,  0,  0,  0,  0,  0,  0
+];
+
+pub(crate) const KNIGHT_SCORES: [i8; 64] = [
+    -50,-40,-30,-30,-30,-30,-40,-50,
+    -40,-20,  0,  0,  0,  0,-20,-40,
+    -30,  0, 10, 15, 15, 10,  0,-30,
+    -30,  5, 15, 20, 20, 15,  5,-30,
+    -30,  0, 15, 20, 20, 15,  0,-30,
+    -30,  5, 10, 15, 15, 10,  5,-30,
+    -40,-20,  0,  5,  5,  0,-20,-40,
+    -50,-40,-30,-30,-30,-30,-40,-50,
+];
+
+pub(crate) const BISHOP_SCORES: [i8; 64] = [
+    -20,-10,-10,-10,-10,-10,-10,-20,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -10,  0,  5, 10, 10,  5,  0,-10,
+    -10,  5,  5, 10, 10,  5,  5,-10,
+    -10,  0, 10, 10, 10, 10,  0,-10,
+    -10, 10, 10, 10, 10, 10, 10,-10,
+    -10,  5,  0,  0,  0,  0,  5,-10,
+    -20,-10,-10,-10,-10,-10,-10,-20,
+];
+
+pub(crate) const ROOKS_SCORES: [i8; 64] = [
+  0,  0,  0,  0,  0,  0,  0,  0,
+  5, 10, 10, 10, 10, 10, 10,  5,
+ -5,  0,  0,  0,  0,  0,  0, -5,
+ -5,  0,  0,  0,  0,  0,  0, -5,
+ -5,  0,  0,  0,  0,  0,  0, -5,
+ -5,  0,  0,  0,  0,  0,  0, -5,
+ -5,  0,  0,  0,  0,  0,  0, -5,
+  0,  0,  0,  5,  5,  0,  0,  0
+];
+
+pub(crate) const QUEENS_SCORES: [i8; 64] = [
+    -20,-10,-10, -5, -5,-10,-10,-20,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -10,  0,  5,  5,  5,  5,  0,-10,
+     -5,  0,  5,  5,  5,  5,  0, -5,
+      0,  0,  5,  5,  5,  5,  0, -5,
+    -10,  5,  5,  5,  5,  5,  0,-10,
+    -10,  0,  5,  0,  0,  0,  0,-10,
+    -20,-10,-10, -5, -5,-10,-10,-20
+];
+
+pub(crate) const KING_SCORES_MIDDLE: [i8; 64] = [
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -20,-30,-30,-40,-40,-30,-30,-20,
+    -10,-20,-20,-20,-20,-20,-20,-10,
+     20, 20,  0,  0,  0,  0, 20, 20,
+     20, 30, 10,  0,  0, 10, 30, 20  
+];
+
+pub(crate) const KING_SCORES_END: [i8; 64] = [
+    -50,-40,-30,-20,-20,-30,-40,-50,
+    -30,-20,-10,  0,  0,-10,-20,-30,
+    -30,-10, 20, 30, 30, 20,-10,-30,
+    -30,-10, 30, 40, 40, 30,-10,-30,
+    -30,-10, 30, 40, 40, 30,-10,-30,
+    -30,-10, 20, 30, 30, 20,-10,-30,
+    -30,-30,  0,  0,  0,  0,-30,-30,
+    -50,-30,-30,-30,-30,-30,-30,-50
 ];
