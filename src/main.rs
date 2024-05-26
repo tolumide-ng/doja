@@ -1,6 +1,7 @@
 mod bitboard;
 mod squares;
 mod color;
+mod search;
 mod shift;
 mod board;
 mod command;
@@ -21,6 +22,7 @@ use bitboard::Bitboard;
 use board::{board_state::BoardState, fen::FEN, piece::Piece};
 use constants::{START_POSITION, TRICKY_POSITION};
 use perft::Perft;
+use search::evaluation::Evaluation;
 use squares::Square;
 use uci::UCI;
 
@@ -33,7 +35,11 @@ fn main() {
     // println!("{}", Bitboard::from(0xf0000).to_string())
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
-    let board = BoardState::parse_fen("r3k2r/pPppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
+    let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
+
+    let score = Evaluation::evaluate(&board);
+
+    println!("score is {score}");
 
     // if let Some(n_board) = UCI::parse(&board, String::from("b7b8q")) {
     //     println!("move works");
@@ -42,6 +48,6 @@ fn main() {
     //     println!("Illegal move");
     // }
 
-    let _ = UCI::reader();
+    // let _ = UCI::reader();
 }
 

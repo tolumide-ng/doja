@@ -230,4 +230,31 @@ impl Piece {
         if color == Color::Black { return Piece::BK }
         return Piece::WK;
     }
+
+    /// https://www.chessprogramming.org/Point_Value
+    /// Alan Turing (1953)
+    pub(crate) fn material_score(&self) -> i16 {
+        match self {
+            Self::WP => 100,    // white pawn
+            Self::WN=> 300,    // whte knight
+            Self::WB => 350,    // white bishop
+            Self::WR => 500,    
+            Self::WQ => 1000,
+            Self::WK => 0,      // white king (a king has no score but we need this for easy indexing with piece)
+            Self::BP => -100,
+            Self::BN => -300,
+            Self::BB => -350,
+            Self::BR => -500,
+            Self::BQ => -1000, 
+            Self::BK => 0,
+        }
+    }
+}
+
+
+
+/// Position evaluation
+fn evaluate() {
+    let score = 0;
+    // let 
 }
