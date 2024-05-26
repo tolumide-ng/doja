@@ -93,9 +93,15 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let src = self.get_src().to_string();
         let target = self.get_target().to_string();
-        let promotion = self.get_promotion().map(|x| x.to_string().to_lowercase()).or(Some(String::from(" ")));
+        let promotion = self.get_promotion().map(|x| x.to_string().to_lowercase());
+        // let promotion = self.get_promotion().map(|x| x.to_string().to_lowercase()).or(Some(String::from(" ")));
 
-        writeln!(f, "{src}{target}{}", promotion.unwrap())
+        if let Some(promoted_to) = promotion {
+            return writeln!(f, "{src}{target}{}", promoted_to);
+        }
+
+        return writeln!(f, "{src}{target}");
+
     }
  }
 

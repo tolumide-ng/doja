@@ -1,8 +1,10 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::Deref};
 
 use crate::{bit_move::BitMove, board::piece::Piece};
 
 
+
+#[derive(Debug, Clone, Copy)]
 pub struct Moves {
     pub(crate) list: [BitMove; 256],
     count: usize,
@@ -41,18 +43,18 @@ impl Moves {
 }
 
 
-// impl Iterator for Moves {
-//     type Item = BitMove;
+impl Iterator for Moves {
+    type Item = BitMove;
 
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.at < self.count {
-//             let result = Some(&self.list[self.at]);
-//             self.at += 1;
-//             return result;
-//         }
-//         return None
-//     }
-// }
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.at < self.count {
+            let current = Some(&self.list[self.at]);
+            self.at += 1;
+            return current.copied();
+        }
+        return None
+    }
+}
 
 
 impl Display for Moves {
@@ -74,7 +76,6 @@ impl Display for Moves {
         Ok(())
     }
 }
-
 
 
 // pub(crate) struct MoveIterator {
