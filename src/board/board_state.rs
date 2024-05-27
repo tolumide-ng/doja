@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::{BitAnd, Deref, DerefMut}};
+use std::{borrow::Cow, fmt::Display, ops::{BitAnd, Deref, DerefMut}, sync::{Arc, Mutex}};
 
 use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5,SQUARES}, move_type::MoveType, moves::Moves, squares::Square};
 
@@ -14,14 +14,16 @@ pub struct BoardState {
     enpassant: Option<Square>,
     occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
     castling_table: [u8; SQUARES],
-    // prev: Option<Arc<BoardState>>
+    // // this is made this way without a mutex because editing the prev would not result in this same state again
+    // prev: Arc<Option<BoardState>>,
 }
 
 
 impl BoardState {
     pub fn new() -> BoardState {
         Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
-            occupancies: [0; OCCUPANCIES], castling_table: CASTLING_TABLE 
+            occupancies: [0; OCCUPANCIES], castling_table: CASTLING_TABLE,
+            //  prev: Arc::new(None)
         }
     }
 
@@ -449,6 +451,8 @@ impl BoardState {
 
             MoveType::CapturesOnly => {}
         }
+
+        // board.prev = Arc::new(Some(self.clone()));
 
         Some(board)
     }

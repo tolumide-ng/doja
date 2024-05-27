@@ -2,7 +2,7 @@ use std::{cell::RefCell, io::{self, stdout, Stdout, Write}, rc::Rc, str::SplitWh
 
 use thiserror::Error;
 
-use crate::{bit_move::BitMove, board::{board_state::BoardState, fen::FEN}, constants::START_POSITION, move_type::MoveType};
+use crate::{bit_move::BitMove, board::{board_state::BoardState, fen::FEN}, constants::START_POSITION, move_type::MoveType, search::{negamax::NegaMax, zerosum::ZeroSum}};
 
 
 // #[derive(Debug, Error)]
@@ -98,7 +98,7 @@ impl UCI {
         b
     }
 
-    pub(crate) fn parse_move(board: &BoardState, mv: &str) -> Option<BitMove> {
+    fn parse_move(board: &BoardState, mv: &str) -> Option<BitMove> {
         let board_moves = board.gen_movement();
 
         for bmove in board_moves {
@@ -161,4 +161,10 @@ impl UCI {
         }
         Ok(None)
     }
+
+
+    fn search_position(depth: u16, board: &BoardState) {
+        let score = ZeroSum::negamax(-50000, 50000, 0, 0, depth, board);
+    }
+
 }
