@@ -54,7 +54,7 @@ impl UCI {
                 }
                 Some("go") => {
                     if let Some(c_board) = global_board.borrow_mut().as_mut() {
-                        match Self::parse_go(c_board, input) {
+                        match Self::parse_go(c_board.clone(), input) {
                             Ok(result) => {
                                 if let Some(board) = result {
                                     write!(stdout(), "{}", board.to_string())?;
@@ -74,6 +74,7 @@ impl UCI {
                         writeln!(stdout(), "{}", data)?;
                     }
                 }
+                Some("d") => {writeln!(stdout(), "{}", global_board.as_ref().borrow().as_ref().unwrap().to_string())?;}
                 _ => {}
             };
         }
@@ -151,10 +152,22 @@ impl UCI {
     }
 
 
-    fn parse_go(board: &BoardState, mut input: SplitWhitespace) -> Result<Option<BoardState>, UciError> {
+    fn parse_go(board: BoardState, mut input: SplitWhitespace) -> Result<Option<BoardState>, UciError> {
         match input.next() {
             Some("searchmoves") => {},
             Some("perft") | Some("depth") => {
+                match input.next() {
+                    Some(depth_value) => {
+                        if let Ok(depth) = u16::from_str_radix(depth_value, 10) {
+                            Self::search_position(depth, &board);
+                        }
+                    }
+                    _ => {}
+                };
+                if let Some("depth") = input.next() {
+                    // return Ok(Some(Self::apply_moves_to_board(board, input)))
+                    // let depth = input.next()
+                }
                 return Ok(Some(board.clone())) // to be changed
             },
             _ => {}
@@ -163,8 +176,11 @@ impl UCI {
     }
 
 
-    fn search_position(depth: u16, board: &BoardState) {
-        let score = ZeroSum::negamax(-50000, 50000, 0, 0, depth, board);
+    pub(crate) fn search_position(depth: u16, board: &BoardState) {
+        let mut best_move: Option<BitMove> = None;
+        let result = ZeroSum::negamax(-50000, 50000, 0, 0, depth, board);
+
+        println!("the returned best move is {}{}", result.1.unwrap().get_src(), result.1.unwrap().get_target());
     }
 
 }

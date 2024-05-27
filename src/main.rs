@@ -26,6 +26,8 @@ use search::evaluation::Evaluation;
 use squares::Square;
 use uci::UCI;
 
+use crate::search::{negamax::NegaMax, zerosum::ZeroSum};
+
 
 
 
@@ -37,11 +39,13 @@ fn main() {
 
     let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
 
-    println!("{}", board.to_string());
+    // println!("{}", board.to_string());
+    // UCI::search_position(2, &board);
 
-    let score = Evaluation::evaluate(&board);
+    // let score = Evaluation::evaluate(&board);
 
-    println!("score is {score}");
+    // println!("score is {score}");
+    
 
     // if let Some(n_board) = UCI::parse(&board, String::from("b7b8q")) {
     //     println!("move works");
@@ -50,6 +54,6 @@ fn main() {
     //     println!("Illegal move");
     // }
 
-    // let _ = UCI::reader();
+    let _ = UCI::reader();
 }
 
