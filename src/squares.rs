@@ -1,5 +1,7 @@
 use std::{fmt::Display, ops::Index};
 
+
+// todo! square should have u8 values not u64
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Square {
     NoSquare=64,
@@ -25,6 +27,7 @@ impl Display for Square {
         write!(f, "{square}")
     }
 }
+
 
 impl<T> Index<Square> for [T] {
     type Output = T;

@@ -1,25 +1,56 @@
-use crate::{bit_move::BitMove, board::board_state::BoardState, move_type::MoveType};
+use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, move_type::MoveType};
 
 use super::evaluation::Evaluation;
 
 
 /// this trait can be implemented by the planed search generic/struct
 pub(crate) trait NegaMax {
+    /// https://www.chessprogramming.org/Quiescence_Search
+    fn quiescence(mut alpha: i32, beta: i32, mut nodes: u16, board: &BoardState) -> i32 {
+        nodes += 1;
+        // evaluate position
+        let evaluation = Evaluation::evaluate(board) as i32;
+        // fail head beta cutoff
+        if evaluation >= beta {
+            // node (move) fails high
+            return beta;
+        }
+        if evaluation > alpha { // found a better score
+            alpha = evaluation;
+        }
+
+        for mv in board.gen_movement().into_iter() {
+            if let Some(new_board) = board.make_move(mv, MoveType::AllMoves) {
+                let score = -Self::quiescence(-beta, -alpha, nodes,&new_board);
+                
+                if score >= beta { return beta }
+                if score > alpha { alpha = score; }
+            }
+        }
+
+        return alpha
+    }
+
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
     fn negamax(mut alpha: i32, beta: i32, mut played: i32, nodes: u16, depth: u16, board: &BoardState) -> (i32, Option<BitMove>) {
         if depth == 0 {
-            return (Evaluation::evaluate(board) as i32, None);
+            return (Self::quiescence(alpha, beta, nodes, board), None);
         }
 
         // let mut best_move_so_far = None;
         let mut best_move = None;
         let old_alpha = alpha;
 
-        // generate moves
-        let moves = board.gen_movement();
+        let king_square = u64::from(board[Piece::king(board.turn)].trailing_zeros());
+        // is king in check
+        let king_in_check = board.is_square_attacked(king_square, !board.turn);
+        let mut legal_moves = 0;
+
+        // legal moves counter
+
 
         // loop through hte moves
-        for mv in moves.into_iter() {
+        for mv in board.gen_movement().into_iter() {
             played +=1;
 
 
@@ -30,6 +61,7 @@ pub(crate) trait NegaMax {
             }
 
             if let Some(new_board) = board.make_move(mv, MoveType::AllMoves) {
+                legal_moves +=1 ;
                 let (score, _best_move) = Self::negamax(-beta, -alpha, played, nodes+1, depth-1, &new_board);
                 let score = -score;
                 
@@ -52,6 +84,16 @@ pub(crate) trait NegaMax {
                     }
                 }
             }
+        }
+
+        // we don't have any legal moves to make in the current position
+        if legal_moves == 0 {
+            // is king in check
+            if king_in_check {
+                return (-49_000 + played, None);
+            }
+            // king is not in check and there are not legal moves
+            return (0, None) // stalemate | draw
         }
 
         // println!("alpha -- {alpha}, old_alpha -- {old_alpha}");

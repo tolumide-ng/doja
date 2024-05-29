@@ -37,7 +37,15 @@ fn main() {
     // println!("{}", Bitboard::from(0xf0000).to_string())
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
-    let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
+    let board = BoardState::parse_fen("r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 1 ").unwrap();
+
+    println!("{}", board.to_string());
+
+    for k in board.gen_movement() {
+        if k.get_capture() {
+            println!("move: {} and score is: {}", k, board.score_move(k))
+        }
+    }
 
     // println!("{}", board.to_string());
     // UCI::search_position(2, &board);

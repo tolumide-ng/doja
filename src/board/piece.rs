@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use crate::color::Color;
+use crate::{color::Color, constants::{MVV_LVA, PLAYER_PIECES}};
 
 #[derive(Debug, Clone, Copy, derive_more::Display, PartialEq, Eq)]
 pub enum Piece {
@@ -226,6 +226,14 @@ impl Piece {
         return Piece::WP;
     }
 
+    pub(crate) fn color(&self) -> Color {
+        let value = *self as u64;
+        match value {
+            0..=5 => Color::White,
+            6.. => Color::Black,
+        }
+    }
+
     pub(crate) fn king(color: Color) -> Piece {
         if color == Color::Black { return Piece::BK }
         return Piece::WK;
@@ -255,6 +263,14 @@ impl Piece {
             // Q = 900
             // K = 20000
         }
+    }
+
+    pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> u32 {
+        let attacker = *self as usize;
+        let victim = *victim as usize;
+
+        let index = ((attacker % PLAYER_PIECES) * PLAYER_PIECES) + (victim % PLAYER_PIECES);
+        return MVV_LVA[index];
     }
 }
 

@@ -14,6 +14,8 @@ use crate::{board::piece::Piece, squares::Square};
  * 0100 0000 0000 0000 0000 0000    enpassant           0x400000
  * 1000 0000 0000 0000 0000 0000    castling flag       0x800000
  * 
+ * 
+ * TODO! CHANGE THIS TO 64bits, SO THAT WE CAN STORE THE CAPTURED PIECE TOO
  */
 
 const SOURCE_SQUARE: u32 = 0b0000_0000_0000_0011_1111;
@@ -84,6 +86,16 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
     pub(crate) fn get_castling(&self) -> bool {
         **self & CATSLING != 0
     }
+
+    pub(crate) fn get_move_capture(&self) -> bool {
+        false
+    }
+
+    pub(crate) fn score_move(&self) {
+        if self.get_move_capture() {
+            // 
+        }
+    }
  }
 
 
@@ -97,10 +109,10 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
         // let promotion = self.get_promotion().map(|x| x.to_string().to_lowercase()).or(Some(String::from(" ")));
 
         if let Some(promoted_to) = promotion {
-            return writeln!(f, "{src}{target}{}", promoted_to);
+            return write!(f, "{src}{target}{}", promoted_to);
         }
 
-        return writeln!(f, "{src}{target}");
+        return write!(f, "{src}{target}");
 
     }
  }

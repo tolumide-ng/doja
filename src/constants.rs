@@ -230,6 +230,7 @@ pub(crate) const CMK_KING_SCORE: [i16; 64] = [
      0,   5,   5,  -5,  -5,   0,   5,   0,
      0,   0,   5,   0, -15,   0,  10,   0
 ];
+
 pub(crate) const MIRROR_SCORE: [Square; 64] = [
     Square::A8, Square::B8, Square::C8, Square::D8, Square::E8, Square::F8, Square::G8, Square::H8, 
     Square::A7, Square::B7, Square::C7, Square::D7, Square::E7, Square::F7, Square::G7, Square::H7,
@@ -252,6 +253,38 @@ pub(crate) const MIRROR_SCORE: [Square; 64] = [
 // ];
 
 
+
+/// Most Valuable victim & Less valuable attacker
+/// (Victims)    Pawn    Knight  Bishop  Rook  Queen  King
+/// (Attackers)  
+///     Pawn      105     205    305     405    505    605
+///   Knight      104     204    304     404    504    604
+///   Bishop      103     203    303     403    503    603
+///     Rook      102     202    302     402    502    602
+///    Queen      101     201    301     401    501    601
+///     King      100     200    300     400    500    600
+///
+/// In order to get this claculation
+/// simply do this:
+/// to get the index of the attacker or victim regardless of their color (e.g. black or white)
+/// so a modulo 6(number of pieces per color) to get the index (irresepctive of the color)
+/// e.g where a white rook is attacking a black bishop, we would have
+/// whiteRook=3, blackBishop=8
+/// a_val ATTACKER -->> whiteRook(3) % 6 = 3
+/// v_val VICTIM --->> blackBishop(8) % 6 = 2
+/// To get the value of MVV_LVA, you must:
+/// Multiply the a_val by 6, and then add v_val
+/// hence, (a_val * 6) + v_val
+/// in this example we would have ((3%6)*6) + (8%6) = 20
+/// so all we need to do is look at index 20 mvv_lvv[20] = 302
+pub(crate) const MVV_LVA:  [u32; 36] = [
+    105, 205, 305, 405, 505, 605,   // pawn
+    104, 204, 304, 404, 504, 604,   // knight
+    103, 203, 303, 403, 503, 603,   // bishop
+    102, 202, 302, 402, 502, 602,   // rook
+    101, 201, 301, 401, 501, 601,   // queen
+    100, 200, 300, 400, 500, 600,   // king
+];
 
 
 /// Piece Square Tables

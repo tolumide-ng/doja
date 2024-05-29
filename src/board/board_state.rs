@@ -379,7 +379,7 @@ impl BoardState {
 
                 // Removes the captured piece from the the captured piece bitboard
                 if bit_move.get_capture() {
-                    // there would usually only be a maximum of 2 captures each, consider unrolling this for loop
+                    // there would usually only be a maximum of 2 captures each, consider unrolling this for loop (what did I mean here by 2???????)
                     let target_pieces = Piece::all_pieces_for(!turn);
     
                     for p in target_pieces {
@@ -457,6 +457,47 @@ impl BoardState {
         Some(board)
     }
 
+    fn get_piece_at(&self, sq: Square, color: Color) -> Option<Piece> {
+        let target_pieces = Piece::all_pieces_for(color);
+        for p in target_pieces {
+            if self.board[p].get_bit(sq.into()) != 0 {
+                return Some(p);
+            }
+        }
+        None
+    }
+
+    fn get_move_capture(&self, mv: BitMove, color: Color) -> Option<Piece> {
+        let target = mv.get_target();
+        if mv.get_enpassant() {
+            let victim = Square::from(match self.turn {Color::Black => target as u64 + 8, _ => target as u64 -  8});
+            return self.get_piece_at(victim, color)
+        }
+        if mv.get_capture() {
+            return self.get_piece_at(mv.get_target(), color)
+        }
+        None
+    }
+
+    /// mv: Move
+    pub(crate) fn score_move(&self, mv: BitMove) -> u32 {
+        if let Some(victim) = self.get_move_capture(mv, !self.turn) {
+            // score move by MVV LVA lookup
+            // println!("captured piece is {}", victim.to_string())
+            let attacker = mv.get_piece();
+            let score = attacker.get_mvv_lva(&victim);
+            return score;
+        }
+
+        0
+    }
+
+    /// todo! add target on the BitMove, so that this cmp method can be implenented directly on Moves(MvList), that way
+    /// we wouldn't need this one anymore
+    pub(crate) fn sort_moves(mv_list: Moves) {
+        let sorted_moves: Vec<BitMove> = Vec::with_capacity(mv_list.count());
+        
+    }
 }
 
 
