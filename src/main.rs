@@ -17,6 +17,8 @@ mod perft;
  mod uci;
 
 
+use std::time::Instant;
+
 use bit_move::BitMove;   
 use bitboard::Bitboard;
 use board::{board_state::BoardState, fen::FEN, piece::Piece};
@@ -26,7 +28,7 @@ use search::evaluation::Evaluation;
 use squares::Square;
 use uci::UCI;
 
-use crate::search::{negamax::NegaMax, zerosum::ZeroSum};
+use crate::{constants::CMK_POSITION, search::{negamax::NegaMax, zerosum::ZeroSum}};
 
 
 
@@ -37,18 +39,15 @@ fn main() {
     // println!("{}", Bitboard::from(0xf0000).to_string())
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
-    let board = BoardState::parse_fen("r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 1 ").unwrap();
-
+    let board = BoardState::parse_fen(CMK_POSITION).unwrap();
+    // let bb = Evaluation::evaluate(&board);
+    // println!("BBBBBB {}", bb);
     println!("{}", board.to_string());
-
-    for k in board.gen_movement() {
-        if k.get_capture() {
-            println!("move: {} and score is: {}", k, board.score_move(k))
-        }
-    }
-
-    // println!("{}", board.to_string());
-    // UCI::search_position(2, &board);
+    let instant = Instant::now();
+    // UCI::search_position(5, &board);
+    UCI::search_position(6, &board);
+    let elapsed = instant.elapsed();
+    println!("      Time: {}ms", elapsed.as_millis());
 
     // let score = Evaluation::evaluate(&board);
 

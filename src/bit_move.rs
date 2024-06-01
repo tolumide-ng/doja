@@ -86,16 +86,6 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
     pub(crate) fn get_castling(&self) -> bool {
         **self & CATSLING != 0
     }
-
-    pub(crate) fn get_move_capture(&self) -> bool {
-        false
-    }
-
-    pub(crate) fn score_move(&self) {
-        if self.get_move_capture() {
-            // 
-        }
-    }
  }
 
 

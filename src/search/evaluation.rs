@@ -38,7 +38,7 @@ impl Evaluation {
 
         match board.turn {
             Color::White => score,
-            _ => score
+            _ => -score
         }
     }
 }

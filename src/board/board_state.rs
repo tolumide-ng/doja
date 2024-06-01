@@ -22,7 +22,8 @@ pub struct BoardState {
 impl BoardState {
     pub fn new() -> BoardState {
         Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
-            occupancies: [0; OCCUPANCIES], castling_table: CASTLING_TABLE,
+            occupancies: [0; OCCUPANCIES], castling_table: CASTLING_TABLE, 
+            // killer_moves: [[9; 64]; 2], history_moves: [[0; 64]; 12]
             //  prev: Arc::new(None)
         }
     }
@@ -467,7 +468,8 @@ impl BoardState {
         None
     }
 
-    fn get_move_capture(&self, mv: BitMove, color: Color) -> Option<Piece> {
+    /// color: your opponent's/target's color
+    pub(crate) fn get_move_capture(&self, mv: BitMove, color: Color) -> Option<Piece> {
         let target = mv.get_target();
         if mv.get_enpassant() {
             let victim = Square::from(match self.turn {Color::Black => target as u64 + 8, _ => target as u64 -  8});
@@ -477,26 +479,6 @@ impl BoardState {
             return self.get_piece_at(mv.get_target(), color)
         }
         None
-    }
-
-    /// mv: Move
-    pub(crate) fn score_move(&self, mv: BitMove) -> u32 {
-        if let Some(victim) = self.get_move_capture(mv, !self.turn) {
-            // score move by MVV LVA lookup
-            // println!("captured piece is {}", victim.to_string())
-            let attacker = mv.get_piece();
-            let score = attacker.get_mvv_lva(&victim);
-            return score;
-        }
-
-        0
-    }
-
-    /// todo! add target on the BitMove, so that this cmp method can be implenented directly on Moves(MvList), that way
-    /// we wouldn't need this one anymore
-    pub(crate) fn sort_moves(mv_list: Moves) {
-        let sorted_moves: Vec<BitMove> = Vec::with_capacity(mv_list.count());
-        
     }
 }
 

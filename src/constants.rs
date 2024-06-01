@@ -110,6 +110,7 @@ pub(crate) const OCCUPANCIES: usize = 3; // white, black, and both colors
 pub(crate) const RANK: usize = 8;
 pub(crate) const FILE: usize = 8;
 pub(crate) const SQUARES: usize = 64;
+pub(crate) const MAX_PLY: usize = 64;
 
 pub(crate) const RANK_4: u64 = 0x0000_0000_FF00_0000;
 pub(crate) const RANK_5: u64 = 0x0000_00FF_0000_0000;

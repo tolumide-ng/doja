@@ -2,7 +2,7 @@ use std::{cell::RefCell, io::{self, stdout, Stdout, Write}, rc::Rc, str::SplitWh
 
 use thiserror::Error;
 
-use crate::{bit_move::BitMove, board::{board_state::BoardState, fen::FEN}, constants::START_POSITION, move_type::MoveType, search::{negamax::NegaMax, zerosum::ZeroSum}};
+use crate::{bit_move::BitMove, board::{board_state::BoardState, fen::FEN}, constants::START_POSITION, move_type::MoveType, search::negamax::NegaMax};
 
 
 // #[derive(Debug, Error)]
@@ -158,7 +158,7 @@ impl UCI {
             Some("perft") | Some("depth") => {
                 match input.next() {
                     Some(depth_value) => {
-                        if let Ok(depth) = u16::from_str_radix(depth_value, 10) {
+                        if let Ok(depth) = usize::from_str_radix(depth_value, 10) {
                             Self::search_position(depth, &board);
                         }
                     }
@@ -176,11 +176,11 @@ impl UCI {
     }
 
 
-    pub(crate) fn search_position(depth: u16, board: &BoardState) {
-        let mut best_move: Option<BitMove> = None;
-        let result = ZeroSum::negamax(-50000, 50000, 0, 0, depth, board);
+    pub(crate) fn search_position(depth: usize, board: &BoardState) {
+        // let mut best_move: Option<BitMove> = None;
+        let r = NegaMax::run(-50000, 50000, depth, board);
 
-        println!("the returned best move is {}{}", result.1.unwrap().get_src(), result.1.unwrap().get_target());
+        // println!("the returned best move is {}{}", mv.unwrap().get_src(), mv.unwrap().get_target());
     }
 
 }
