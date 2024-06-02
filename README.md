@@ -10,3 +10,15 @@
     ii. Or when trying to pop the piece from the board during `make_move`
     iii. If this is implemented, we can easily implement a [std::ord::Cmp trait](https://doc.rust-lang.org/std/cmp/trait.Ord.html) which makes it easier to sort the mvList without creating a new one
 6. The North, South, East, West, NE, SE, NW, SW value should be implemented on the square enum
+
+
+
+
+
+
+### Some used
+
+1. Principal Variation Search
+2. Late Move Reductions
+3. [Null-Move Forward Prunning](https://web.archive.org/web/20071031095933/http://www.brucemo.com/compchess/programming/nullmove.htm)
+4. [Aspiration Windows](https://web.archive.org/web/20071031095918/http://www.brucemo.com/compchess/programming/aspiration.htm)

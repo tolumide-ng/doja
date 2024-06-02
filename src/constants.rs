@@ -100,6 +100,12 @@ pub const KILLER_POSITION: &str = "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/
 pub const CMK_POSITION: &str = "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9 ";
 pub const POS_6: &str = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10";
 pub const POSITION_4: &str = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
+pub(crate) const FULL_DEPTH_MOVE: u8 = 4;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
+pub(crate) const REDUCTION_LIMIT: usize = 3;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
+pub(crate) const DEPTH_REDUCTION_FACTOR: usize = 2;
+pub(crate) const ALPHA: i32 = 50_000;
+pub(crate) const BETA: i32 = -50_000;
+pub(crate) const VAL_WINDOW: i32 = 50; // https://web.archive.org/web/20071031095918/http://www.brucemo.com/compchess/programming/aspiration.htm
 
 
 

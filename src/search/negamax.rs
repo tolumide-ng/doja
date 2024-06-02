@@ -1,6 +1,6 @@
 use std::ops::Neg;
 
-use crate::{bit_move::BitMove, board::{board::Board, board_state::BoardState, piece::Piece}, constants::{MAX_PLY, SQUARES, TOTAL_PIECES}, move_type::MoveType, moves::Moves};
+use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MAX_PLY, REDUCTION_LIMIT, SQUARES, TOTAL_PIECES, VAL_WINDOW}, move_type::MoveType, moves::Moves};
 
 use super::evaluation::Evaluation;
 
@@ -20,22 +20,35 @@ pub struct NegaMax {
 impl NegaMax {
     fn new() -> Self {
         Self {
-            killer_moves: [[9; 64]; 2], history_moves: [[0; 64]; 12], pv_length: [0; 64], pv_table: [[0; 64]; 64], nodes: 0, ply: 0, follow_pv: false, score_pv: 0
+            killer_moves: [[9; 64]; 2], history_moves: [[0; 64]; 12], pv_length: [0; 64], pv_table: [[0; 64]; 64], nodes: 0, ply: 0, follow_pv: false, score_pv: 0,
         }
     }
 
     fn iterative_deepening(&mut self, limit: usize, alpha: i32, beta: i32, board: &BoardState) {
+        let mut alpha = alpha;
+        let mut beta = beta;
+
         for depth in 1..=limit {
             self.follow_pv = true;
-            self.negamax(alpha, beta, depth, board);
+            println!("************************************************************depth is {depth}");
+            let score = self.negamax(alpha, beta, depth, board);
+            if (score <= alpha) || (score >= beta) {
+                alpha = ALPHA; // We fell outside the window, so try again with a
+                beta = BETA; //  full-width window (and the same depth).
+                continue;
+            }
+            
+            alpha = score - VAL_WINDOW;
+            beta = score + VAL_WINDOW;
+            // println!("at depth {depth}, with alpha as {alpha}, and bet as {beta}");
         }
     }
     
     pub(crate) fn run(alpha: i32, beta: i32, depth: usize, board: &BoardState) {
         let mut negamax = Self::new();
         negamax.iterative_deepening(depth, alpha, beta, board);
-        println!("I am now done >>>>>");
-        // println!("{:?}", negamax.pv_table[0]);
+        println!("{:?}", negamax.pv_table[0]);
+        println!("{:?}\n\n", negamax.pv_length);
         // let rr = Self::iterative_deepening(&mut self, limit, alpha, beta, board);
 
         for count in 0..negamax.pv_length[0] as usize {
@@ -112,6 +125,7 @@ impl NegaMax {
     /// https://www.chessprogramming.org/Quiescence_Search
     fn quiescence(&mut self, mut alpha: i32, beta: i32, board: &BoardState) -> i32 {
         self.nodes += 1;
+        // println!("NODES====== {:?}", self.nodes);
         
         // evaluate position
         let evaluation = Evaluation::evaluate(board) as i32;
@@ -129,8 +143,10 @@ impl NegaMax {
         for mv in sorted_moves {
             if let Some(new_board) = board.make_move(mv, MoveType::AllMoves) {
                 self.ply += 1;
+                // print!("{}, ", self.ply);
                 let score = -self.quiescence(-beta, -alpha, &new_board);
                 self.ply -=1;
+                // print!("back to {}, ", self.ply);
                 
                 if score >= beta { return beta }
                 if score > alpha { alpha = score; }
@@ -140,16 +156,17 @@ impl NegaMax {
         return alpha
     }
 
+
     
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
     fn negamax(&mut self, mut alpha: i32, beta: i32, depth: usize, board: &BoardState) -> i32 {
-        // println!("original depth is {}", depth);
+        println!("ply is {}", self.ply);
         self.pv_length[self.ply] = self.ply;
         if depth == 0 {
             return self.quiescence(alpha, beta, board);
         }
 
-        if self.ply > MAX_PLY -1{
+        if self.ply > MAX_PLY -1 {
             return Evaluation::evaluate(board) as i32;
         }
 
@@ -158,7 +175,24 @@ impl NegaMax {
         let king_square = u64::from(board[Piece::king(board.turn)].trailing_zeros());
         // is king in check
         let king_in_check = board.is_square_attacked(king_square, !board.turn);
+        let depth = if king_in_check {depth +1} else {depth};
         let mut legal_moves = 0;
+
+        // Null-Move Forward Pruning
+        let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR+1) && !king_in_check && self.ply> 0;
+        // added 1 to the depth_reduction factor to be sure, there is atleast one more depth that would be checked
+        if null_move_forward_pruning_conditions {
+            let mut nmfp_board = board.clone();
+
+            nmfp_board.set_turn(!board.turn);
+            nmfp_board.set_enpassant(None);
+            println!("null move forward pruning depth is {}", depth-1-DEPTH_REDUCTION_FACTOR);
+            let score = self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board);
+            // let score = self.negamax(-beta, -beta-1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board); // reduces the number of nodes by a lot
+            if score >= beta {
+                return beta
+            }
+        }
 
         let moves = board.gen_movement().into_iter();
         if self.follow_pv {
@@ -167,37 +201,57 @@ impl NegaMax {
         let generated_moves = self.sort_moves(board, moves);
 
         // https://www.chessprogramming.org/Principal_Variation_Search#Pseudo_Code
-        let mut b_search_pv = true;
+        // let mut b_search_pv = true;
+        let mut moves_searched = 0;
 
         // loop through hte moves
         for mv in generated_moves {
-            self.ply +=1;
+            legal_moves += 1;
+            let play_moves = board.make_move(mv, MoveType::AllMoves);
+            
+            if let Some(new_board) = play_moves {
+                self.ply +=1;
 
 
-            let play_move = board.make_move(mv, MoveType::AllMoves);
-            if play_move.is_none() {
-                self.ply -=1;
-                continue;
-            }
-
-            if let Some(new_board) = play_move {
-                legal_moves += 1;
+                // Null-move forward pruning is a step you perform prior to searching any of the moves.  You ask the question, "If I do nothing here, can the opponent do anything?"
 
 
-                let score = match b_search_pv {
-                    true => -self.negamax(-beta, -alpha, depth-1, &new_board),
-                    false => {
-                        let mut score = -self.negamax(-alpha-1, -alpha, depth-1, &new_board);
-                        if score > alpha && score < beta {
-                            score = -self.negamax(-beta, -alpha, depth-1, &new_board);
+                // https://www.chessprogramming.org/Principal_Variation_Search#Pseudo_Code
+                let score = match moves_searched {
+                    0 => {
+                        println!("MOVES SEARCHED 000000000000000000000000000000 depth is {}", depth-1);
+                        -self.negamax(-beta, -alpha, depth-1, &new_board)
+                    },
+                    _ => {
+                        // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
+                        let ok_to_reduce = !king_in_check && mv.get_promotion().is_none() && !mv.get_capture();
+                        let mut value = if (moves_searched >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && ok_to_reduce
+                         {
+                            println!("moves searched more than 1 is {}", depth-2);
+                            -self.negamax(-alpha - 1, -alpha, depth-2, &new_board)
+                        } else {
+                            alpha +1
+                        };
+
+                        if value > alpha {
+                            // value = -self.negamax(alpha, beta, depth, board)
+                            // let mut value = -self.negamax(-alpha-1, -alpha, depth-1, &new_board);
+                            println!("moves >>>>>>>>>>>>>>> {}", depth-1);
+                            value = -self.negamax(-alpha - 1, -alpha, depth-1, &new_board);
+                            if (value > alpha) && (value < beta) {
+                                println!("[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]] {}", depth-1);
+                                value = self.negamax(-beta, -alpha, depth-1, &new_board);
+                            }
                         }
-                        score
+                        return value
                     }
                 };
 
                 
                 self.ply -=1;
-        
+                moves_searched += 1;
+
+                
                 // fail-hard beta cutoff
                 if score >= beta {
                     if !mv.get_capture() { // quiet move (non-capturing quiet move that beats the opponent)
@@ -207,7 +261,7 @@ impl NegaMax {
                     // node/move fails high
                     return beta
                 }
-
+                
                 // best score so far
                 if score > alpha {
                     // store history moces
@@ -216,19 +270,25 @@ impl NegaMax {
                             *history_move += depth as u32;
                         }
                     }
-
+                    
                     alpha = score; // alpha acts like max in Minimax
-
+                    
+                    
+                    println!("depth is >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {depth} \n");
                     self.pv_table[self.ply][self.ply] =  *mv as i32;
+                    println!("and now, ply is {}", self.ply);
+                    println!("{:?} \n\n", self.pv_length);
                     for next_ply in (self.ply+1)..self.pv_length[self.ply+1] {
                         // copy move from deeper ply into current ply's line
                         self.pv_table[self.ply][next_ply] = self.pv_table[self.ply+1][next_ply];
+                        // print!("|||||||||{next_ply}, ");
                     }
 
-                    self.pv_length[self.ply] = self.pv_length[self.ply + 1];
+                    self.pv_length[self.ply] = self.pv_length[self.ply + 1] + 1;
 
-                    b_search_pv = false;
+                    // b_search_pv = false;
                 }
+
             }
 
         }
@@ -246,5 +306,8 @@ impl NegaMax {
 
         return alpha
     }
+
+
+
 
 }

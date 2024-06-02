@@ -39,7 +39,7 @@ fn main() {
     // println!("{}", Bitboard::from(0xf0000).to_string())
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
-    let board = BoardState::parse_fen(CMK_POSITION).unwrap();
+    let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
     // let bb = Evaluation::evaluate(&board);
     // println!("BBBBBB {}", bb);
     println!("{}", board.to_string());
@@ -61,6 +61,6 @@ fn main() {
     //     println!("Illegal move");
     // }
 
-    let _ = UCI::reader();
+    // let _ = UCI::reader();
 }
 
