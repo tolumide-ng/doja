@@ -45,7 +45,7 @@ fn main() {
     println!("{}", board.to_string());
     let instant = Instant::now();
     // UCI::search_position(5, &board);
-    UCI::search_position(6, &board);
+    UCI::search_position(7, &board);
     let elapsed = instant.elapsed();
     println!("      Time: {}ms", elapsed.as_millis());
 
