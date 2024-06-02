@@ -103,8 +103,8 @@ pub const POSITION_4: &str = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1
 pub(crate) const FULL_DEPTH_MOVE: u8 = 4;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
 pub(crate) const REDUCTION_LIMIT: usize = 3;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
 pub(crate) const DEPTH_REDUCTION_FACTOR: usize = 2;
-pub(crate) const ALPHA: i32 = 50_000;
-pub(crate) const BETA: i32 = -50_000;
+pub(crate) const ALPHA: i32 = -50_000;
+pub(crate) const BETA: i32 = 50_000;
 pub(crate) const VAL_WINDOW: i32 = 50; // https://web.archive.org/web/20071031095918/http://www.brucemo.com/compchess/programming/aspiration.htm
 
 

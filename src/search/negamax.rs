@@ -13,14 +13,14 @@ pub struct NegaMax {
     /// ply: is the distance to the root, see: https://www.chessprogramming.org/Root
     ply: usize,
     follow_pv: bool,
-    score_pv: u32,
+    score_pv: bool,
 }
 
 
 impl NegaMax {
     fn new() -> Self {
         Self {
-            killer_moves: [[9; 64]; 2], history_moves: [[0; 64]; 12], pv_length: [0; 64], pv_table: [[0; 64]; 64], nodes: 0, ply: 0, follow_pv: false, score_pv: 0,
+            killer_moves: [[9; 64]; 2], history_moves: [[0; 64]; 12], pv_length: [0; 64], pv_table: [[0; 64]; 64], nodes: 0, ply: 0, follow_pv: false, score_pv: false,
         }
     }
 
@@ -67,7 +67,7 @@ impl NegaMax {
         for mv in moves .into_iter(){
             if self.pv_table[0][self.ply] == (*mv) as i32 {
                 // enable scoring
-                self.score_pv = 1;
+                self.score_pv = true;
                 // enable following pv
                 self.follow_pv = true;
             }
@@ -77,9 +77,9 @@ impl NegaMax {
 
       /// mv: Move (please remove the mut later, and find a abtter way to write this)
     pub(crate) fn score_move(&mut self, board: &BoardState, mv: BitMove) -> u32 {
-        if self.score_pv != 0 {
+        if self.score_pv {
             if self.pv_table[0][self.ply] == (*mv) as i32 {
-                self.score_pv = 0;
+                self.score_pv = false;
                 return 20_000;
             }
         }
@@ -177,7 +177,7 @@ impl NegaMax {
         let king_square = u64::from(board[Piece::king(board.turn)].trailing_zeros());
         // is king in check
         let king_in_check = board.is_square_attacked(king_square, !board.turn);
-        // let depth = if king_in_check {depth +1} else {depth};
+        let depth = if king_in_check {depth +1} else {depth};
         let mut legal_moves = 0;
 
         // Null-Move Forward Pruning
@@ -189,8 +189,8 @@ impl NegaMax {
             nmfp_board.set_turn(!board.turn);
             nmfp_board.set_enpassant(None);
             // println!("null move forward pruning depth is {}", depth-1-DEPTH_REDUCTION_FACTOR);
-            let score = self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board);
-            // let score = self.negamax(-beta, -beta-1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board); // reduces the number of nodes by a lot
+            let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board);
+            // let score = -self.negamax(-beta, -beta-1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board); // reduces the number of nodes by a lot
             if score >= beta {
                 return beta
             }
@@ -200,19 +200,19 @@ impl NegaMax {
         if self.follow_pv {
             self.enable_pv_scoring(&moves);
         }
-        let generated_moves = self.sort_moves(board, moves);
+        let sorted_moves = self.sort_moves(board, moves);
 
         // https://www.chessprogramming.org/Principal_Variation_Search#Pseudo_Code
         // let mut b_search_pv = true;
         let mut moves_searched = 0;
 
         // loop through hte moves
-        for mv in generated_moves {
-            legal_moves += 1;
+        for mv in sorted_moves {
             let play_moves = board.make_move(mv, MoveType::AllMoves);
             
             if let Some(new_board) = play_moves {
                 self.ply +=1;
+                legal_moves += 1;
 
 
                 // Null-move forward pruning is a step you perform prior to searching any of the moves.  You ask the question, "If I do nothing here, can the opponent do anything?"
@@ -221,22 +221,24 @@ impl NegaMax {
                 // https://www.chessprogramming.org/Principal_Variation_Search#Pseudo_Code
                 let score = match moves_searched {
                     0 => {
-
+                        // full depth search
                         -self.negamax(-beta, -alpha, depth-1, &new_board)
                     },
                     _ => {
-                        // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
+                        // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
+                        // condition for Late Move Reduction
                         let ok_to_reduce = !king_in_check && mv.get_promotion().is_none() && !mv.get_capture();
+
                         let mut value =  if (moves_searched >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && ok_to_reduce {
-                            -self.negamax(-(alpha + 1), -alpha, depth-2, &new_board)
-                            // -self.negamax(-alpha - 1, -alpha, depth-2, &new_board)
+                            -self.negamax(-alpha - 1, -alpha, depth-2, &new_board)
+                            // -self.negamax(-(alpha + 1), -alpha, depth-2, &new_board)
                         } else {
                             alpha +1
                         };
 
                         if value > alpha {
-                            value = -self.negamax(-(alpha+1), -alpha, depth-1, &new_board);
-                            // value = -self.negamax(-alpha-1, -alpha, depth-1, &new_board);
+                            value = -self.negamax(-alpha-1, -alpha, depth-1, &new_board);
+                            // value = -self.negamax(-(alpha+1), -alpha, depth-1, &new_board);
                             if (value > alpha) && (value < beta) {
                                 value = -self.negamax(-beta, -alpha, depth-1, &new_board);
                             }
