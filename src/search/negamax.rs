@@ -1,6 +1,6 @@
 use std::{ops::Neg, sync::{Arc, Mutex}};
 
-use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, SQUARES, TOTAL_PIECES, VAL_WINDOW}, move_type::MoveType, moves::Moves, search::control};
+use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_SQUARES, TOTAL_PIECES, VAL_WINDOW}, move_type::MoveType, moves::Moves, search::control};
 
 use super::{evaluation::Evaluation, time_control::TimeControl};
 
@@ -8,7 +8,7 @@ use super::{evaluation::Evaluation, time_control::TimeControl};
 #[derive(Debug, Clone)]
 pub struct NegaMax<T: TimeControl> {
     killer_moves: [[u32; 64]; 2],
-    history_moves: [[u32; SQUARES]; TOTAL_PIECES],
+    history_moves: [[u32; TOTAL_SQUARES]; TOTAL_PIECES],
     pv_length: [usize; 64],
     pv_table: [[i32; 64]; MAX_PLY],
     nodes: u32,

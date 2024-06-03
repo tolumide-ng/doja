@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fmt::Display, ops::{BitAnd, Deref, DerefMut}, sync::{Arc, Mutex}};
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5,SQUARES}, move_type::MoveType, moves::Moves, squares::Square};
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5,TOTAL_SQUARES}, move_type::MoveType, moves::Moves, squares::Square};
 
 use super::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
@@ -13,7 +13,7 @@ pub struct BoardState {
     pub(crate) castling_rights: Castling,
     enpassant: Option<Square>,
     occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
-    castling_table: [u8; SQUARES],
+    castling_table: [u8; TOTAL_SQUARES],
     // // this is made this way without a mutex because editing the prev would not result in this same state again
     // prev: Arc<Option<BoardState>>,
 }

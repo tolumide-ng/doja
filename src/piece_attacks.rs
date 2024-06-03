@@ -1,24 +1,24 @@
-use crate::{color::Color, constants::{NOT_AB_FILE, NOT_A_FILE, NOT_GH_FILE, NOT_H_FILE, PLAYERS_COUNT, SQUARES}, kogge_stone::KoggeStone, shift::Shift, squares::{BISHOP_MAGIC_NUMBERS, BISHOP_RELEVANT_BITS, ROOK_MAGIC_NUMBERS, ROOK_RELEVANT_BITS}, bitboard::Bitboard};
+use crate::{color::Color, constants::{NOT_AB_FILE, NOT_A_FILE, NOT_GH_FILE, NOT_H_FILE, PLAYERS_COUNT, TOTAL_SQUARES}, kogge_stone::KoggeStone, shift::Shift, squares::{BISHOP_MAGIC_NUMBERS, BISHOP_RELEVANT_BITS, ROOK_MAGIC_NUMBERS, ROOK_RELEVANT_BITS}, bitboard::Bitboard};
 
 pub struct PieceAttacks {
-    pub(crate) king_attacks: [u64; SQUARES],
-    pub(crate) knight_attacks: [u64; SQUARES],
-    pub(crate) bishop_masks: [u64; SQUARES],
-    pub(crate) rook_masks: [u64; SQUARES],
+    pub(crate) king_attacks: [u64; TOTAL_SQUARES],
+    pub(crate) knight_attacks: [u64; TOTAL_SQUARES],
+    pub(crate) bishop_masks: [u64; TOTAL_SQUARES],
+    pub(crate) rook_masks: [u64; TOTAL_SQUARES],
     /// this returns the squares that an sq of this color can ATTACK! as pawn (CORRECT) \
     /// another loose but incomplete definition is where it can be attacked from by other pawns (this is incomplete or partially wrong)
-    pub(crate) pawn_attacks: [[u64; SQUARES]; PLAYERS_COUNT]
+    pub(crate) pawn_attacks: [[u64; TOTAL_SQUARES]; PLAYERS_COUNT]
 }
 
 
 impl PieceAttacks {
     // Generates all the possible piece attacks, which are then accessible from the struct
     pub(crate) fn new() -> Self {
-        let mut king_attacks: [u64; SQUARES] = [0; SQUARES];
-        let mut knight_attacks: [u64; SQUARES] = [0; SQUARES];
-        let mut bishop_masks: [u64; SQUARES] = [0; SQUARES];
-        let mut rook_masks: [u64; SQUARES] = [0; SQUARES];
-        let mut pawn_attacks: [[u64; SQUARES]; PLAYERS_COUNT] = [[0; SQUARES]; PLAYERS_COUNT];
+        let mut king_attacks: [u64; TOTAL_SQUARES] = [0; TOTAL_SQUARES];
+        let mut knight_attacks: [u64; TOTAL_SQUARES] = [0; TOTAL_SQUARES];
+        let mut bishop_masks: [u64; TOTAL_SQUARES] = [0; TOTAL_SQUARES];
+        let mut rook_masks: [u64; TOTAL_SQUARES] = [0; TOTAL_SQUARES];
+        let mut pawn_attacks: [[u64; TOTAL_SQUARES]; PLAYERS_COUNT] = [[0; TOTAL_SQUARES]; PLAYERS_COUNT];
 
 
         for sq in 0..64u64 {
