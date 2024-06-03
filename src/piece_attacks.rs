@@ -32,14 +32,6 @@ impl PieceAttacks {
         }
 
 
-        // println!("king::::::::     {king_attacks:?}");
-        // println!("knight::::::::   {knight_attacks:?}");
-        // println!("king::::::::     {bishop_masks:?}");
-        // println!("king::::::::     {rook_masks:?}");
-        // println!("king::::::::     {pawn_attacks:?}");
-
-
-
         Self { king_attacks, knight_attacks, bishop_masks, pawn_attacks, rook_masks }
     }
 

@@ -1,5 +1,7 @@
 mod bitboard;
+mod utils;
 mod squares;
+mod zobrist;
 mod color;
 mod search;
 mod shift;
@@ -24,11 +26,12 @@ use std::thread;
 use bit_move::BitMove;   
 use bitboard::Bitboard;
 use board::{board_state::BoardState, fen::FEN, piece::Piece};
-use constants::{START_POSITION, TRICKY_POSITION};
+use constants::{START_POSITION, TRICKY_POSITION, ZOBRIST};
 use perft::Perft;
 use search::evaluation::Evaluation;
 use squares::Square;
 use uci::UCI;
+use zobrist::Zobrist;
 
 use crate::{constants::CMK_POSITION, search::{negamax::NegaMax, zerosum::ZeroSum}};
 
@@ -53,39 +56,15 @@ fn main() {
     // UCI::search_position(7, &board);
     // let elapsed = instant.elapsed();
     // println!("      Time: {}ms", elapsed.as_millis());
-    let _ = UCI::default().reader();
+    
+    
+    // let _ = UCI::default().reader();
+    // Zobrist::init_zobrist();
+    // get_random_u64_number();
 
+    // for k in ZOBRIST.piece_keys[2] {
+    //     println!("{0:x}", k);
 
-
-    // let (sender, receiver) = mpsc::channel();
-
-    // // Spawn a thread to read from stdin
-    // thread::spawn(move || {
-    //     // Read from stdin
-    //     let mut input = String::new();
-    //     if let Err(err) = std::io::stdin().read_line(&mut input) {
-    //         // Send an error message to the main thread
-    //         println!("||||||||||");
-    //         sender.send(Err(err)).expect("Failed to send error");
-    //         return;
-    //     }
-    //         println!("||||||||||");
-
-    //     // Send the input to the main thread
-    //     sender.send(Ok(input)).expect("Failed to send input");
-    // });
-
-    // // Receive the input from the stdin thread
-    // match receiver.recv() {
-    //     Ok(Ok(input)) => {
-    //         println!("Input: {}", input);
-    //     }
-    //     Ok(Err(err)) => {
-    //         eprintln!("Error reading from stdin: {}", err);
-    //     }
-    //     Err(_) => {
-    //         println!("No input provided.");
-    //     }
     // }
-}
 
+}

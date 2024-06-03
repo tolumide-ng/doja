@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 
-use crate::{piece_attacks::PieceAttacks, shift::ShiftData, squares::Square};
+use crate::{piece_attacks::PieceAttacks, shift::ShiftData, squares::Square, zobrist::Zobrist};
 
 ///  ----NOT_A_FILE----
 /// 8   0  1  1  1  1  1  1  1 \
@@ -119,6 +119,9 @@ pub(crate) const FILE: usize = 8;
 pub(crate) const TOTAL_SQUARES: usize = 64;
 pub(crate) const MAX_PLY: usize = 64;
 
+
+pub(crate) const RANDOM_STATE_SEED: u32 = 1804289383;
+
 pub(crate) const RANK_4: u64 = 0x0000_0000_FF00_0000;
 pub(crate) const RANK_5: u64 = 0x0000_00FF_0000_0000;
 pub(crate) const RANK_8: u64 = 0xff00_0000_0000_0000; // RANK 8 IS FILLED
@@ -148,6 +151,8 @@ pub(crate)const BLACK_QUEEN_CASTLING_MASK: u8 = 0b1000;
 
 lazy_static! {
     pub static ref PIECE_ATTACKS: PieceAttacks = PieceAttacks::new();
+    #[derive(Debug)]
+    pub static ref ZOBRIST: Zobrist = Zobrist::init_zobrist();
 }
 
 
