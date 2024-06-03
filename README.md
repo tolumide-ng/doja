@@ -18,7 +18,13 @@
 
 ### Some used
 
-1. Principal Variation Search
+1. [Principal Variation Search](https://www.chessprogramming.org/Principal_Variation_Search#Pseudo_Code)
 2. Late Move Reductions
 3. [Null-Move Forward Prunning](https://web.archive.org/web/20071031095933/http://www.brucemo.com/compchess/programming/nullmove.htm)
 4. [Aspiration Windows](https://web.archive.org/web/20071031095918/http://www.brucemo.com/compchess/programming/aspiration.htm)
+
+
+
+### References
+1. [A port of Maksim Korzh's work](https://www.youtube.com/playlist?list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs)
+2. [BlueFever Software](https://www.youtube.com/playlist?list=PLZ1QII7yudbc-Ky058TEaOstZHVbT-2hg)

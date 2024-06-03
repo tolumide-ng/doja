@@ -1,10 +1,12 @@
-use std::ops::Neg;
+use std::{ops::Neg, sync::{Arc, Mutex}};
 
-use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MAX_PLY, REDUCTION_LIMIT, SQUARES, TOTAL_PIECES, VAL_WINDOW}, move_type::MoveType, moves::Moves};
+use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, SQUARES, TOTAL_PIECES, VAL_WINDOW}, move_type::MoveType, moves::Moves, search::control};
 
-use super::evaluation::Evaluation;
+use super::{evaluation::Evaluation, time_control::TimeControl};
 
-pub struct NegaMax {
+
+#[derive(Debug, Clone)]
+pub struct NegaMax<T: TimeControl> {
     killer_moves: [[u32; 64]; 2],
     history_moves: [[u32; SQUARES]; TOTAL_PIECES],
     pv_length: [usize; 64],
@@ -14,23 +16,31 @@ pub struct NegaMax {
     ply: usize,
     follow_pv: bool,
     score_pv: bool,
+    controller: Arc<Mutex<T>>,
 }
 
 
-impl NegaMax {
-    fn new() -> Self {
+impl<T> NegaMax<T> where T: TimeControl {
+    fn new(controller: Arc<Mutex<T>>) -> Self {
         Self {
-            killer_moves: [[9; 64]; 2], history_moves: [[0; 64]; 12], pv_length: [0; 64], pv_table: [[0; 64]; 64], nodes: 0, ply: 0, follow_pv: false, score_pv: false,
+            killer_moves: [[9; 64]; 2], 
+            history_moves: [[0; 64]; 12], 
+            pv_length: [0; 64], 
+            pv_table: [[0; 64]; 64], 
+            nodes: 0, ply: 0, follow_pv: false, score_pv: false, controller
         }
     }
 
-    fn iterative_deepening(&mut self, limit: usize, alpha: i32, beta: i32, board: &BoardState) {
+    fn iterative_deepening(&mut self, limit: u8, alpha: i32, beta: i32, board: &BoardState) {
         let mut alpha = alpha;
         let mut beta = beta;
 
-        for depth in 1..=limit {
+        for depth in 1..=(limit as usize) {
+            // return 0 if time is up
+            if self.controller.as_ref().lock().unwrap().stopped() { break; }
+
             self.follow_pv = true;
-            println!("************************************************************depth is {depth}");
+            // println!("************************************************************depth is {depth}");
             let score = self.negamax(alpha, beta, depth, board);
             if (score <= alpha) || (score >= beta) {
                 alpha = ALPHA; // We fell outside the window, so try again with a
@@ -46,8 +56,9 @@ impl NegaMax {
         println!("{:?} \n\n", self.pv_length);
     }
     
-    pub(crate) fn run(alpha: i32, beta: i32, depth: usize, board: &BoardState) {
-        let mut negamax = Self::new();
+    pub(crate) fn run(controller: Arc<Mutex<T>>, alpha: i32, beta: i32, depth: u8, board: &BoardState) {
+
+        let mut negamax = Self::new(controller);
         negamax.iterative_deepening(depth, alpha, beta, board);
         println!("{:?}", negamax.pv_table[0]);
         println!("{:?}\n\n", negamax.pv_length);
@@ -56,10 +67,14 @@ impl NegaMax {
         for count in 0..negamax.pv_length[0] as usize {
             println!("PV TABLE {}", BitMove::from(negamax.pv_table[0][count] as u32))
         }
+        if negamax.pv_length[0] == 0 {
+            println!("PV table is none");
+        }
         println!("number of nodes is {}", negamax.nodes)
         // (r.0, Some(BitMove::from(nega_max.pv_table[0][0]as u32)))
     }
 
+    
     fn enable_pv_scoring(&mut self, moves: &Moves) {
         // disable following pv
         self.follow_pv = false;
@@ -75,7 +90,7 @@ impl NegaMax {
     }
 
 
-      /// mv: Move (please remove the mut later, and find a abtter way to write this)
+    /// mv: Move (please remove the mut later, and find a abtter way to write this)
     pub(crate) fn score_move(&mut self, board: &BoardState, mv: BitMove) -> u32 {
         if self.score_pv {
             if self.pv_table[0][self.ply] == (*mv) as i32 {
@@ -120,12 +135,17 @@ impl NegaMax {
         sorted_moves.sort_by(|b, a| self.score_move(board, *a).cmp(&self.score_move(board, *b)));
         return sorted_moves
     }
-}
 
-/// this trait can be implemented by the planed search generic/struct
-impl NegaMax {
-    /// https://www.chessprogramming.org/Quiescence_Search
+
+
+
+  /// https://www.chessprogramming.org/Quiescence_Search
     fn quiescence(&mut self, mut alpha: i32, beta: i32, board: &BoardState) -> i32 {
+        // this action will be performed every 2048 nodes
+        if (self.nodes & NODES_2047) == 0 {
+            self.controller.as_ref().lock().unwrap().communicate();
+        }
+
         self.nodes += 1;
         // println!("NODES====== {:?}", self.nodes);
         
@@ -148,7 +168,9 @@ impl NegaMax {
                 // print!("{}, ", self.ply);
                 let score = -self.quiescence(-beta, -alpha, &new_board);
                 self.ply -=1;
-                // print!("back to {}, ", self.ply);
+
+                // return 0 if time is up
+                if self.controller.as_ref().lock().unwrap().stopped() { return 0}
                 
                 if score >= beta { return beta }
                 if score > alpha { alpha = score; }
@@ -162,6 +184,11 @@ impl NegaMax {
     
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
     fn negamax(&mut self, mut alpha: i32, beta: i32, depth: usize, board: &BoardState) -> i32 {
+        // this action will be performed every 2048 nodes
+        if (self.nodes & NODES_2047) == 0 {
+            println!(":::::::");
+            self.controller.as_ref().lock().unwrap().communicate();
+        }
         // println!("ply is {}", self.ply);
         self.pv_length[self.ply] = self.ply;
         if depth == 0 {
@@ -191,6 +218,10 @@ impl NegaMax {
             // println!("null move forward pruning depth is {}", depth-1-DEPTH_REDUCTION_FACTOR);
             let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board);
             // let score = -self.negamax(-beta, -beta-1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board); // reduces the number of nodes by a lot
+
+            // return 0 if time is up
+            if self.controller.as_ref().lock().unwrap().stopped() { return 0}
+
             if score >= beta {
                 return beta
             }
@@ -201,9 +232,7 @@ impl NegaMax {
             self.enable_pv_scoring(&moves);
         }
         let sorted_moves = self.sort_moves(board, moves);
-
         // https://www.chessprogramming.org/Principal_Variation_Search#Pseudo_Code
-        // let mut b_search_pv = true;
         let mut moves_searched = 0;
 
         // loop through hte moves
@@ -251,6 +280,8 @@ impl NegaMax {
                 
                 self.ply -=1;
                 moves_searched += 1;
+                // return 0 if time is up
+                if self.controller.as_ref().lock().unwrap().stopped() { return 0}
 
                 
                 // fail-hard beta cutoff
@@ -303,6 +334,10 @@ impl NegaMax {
 
         return alpha
     }
+
+
+
+
 
 
 

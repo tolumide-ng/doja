@@ -106,6 +106,7 @@ pub(crate) const DEPTH_REDUCTION_FACTOR: usize = 2;
 pub(crate) const ALPHA: i32 = -50_000;
 pub(crate) const BETA: i32 = 50_000;
 pub(crate) const VAL_WINDOW: i32 = 50; // https://web.archive.org/web/20071031095918/http://www.brucemo.com/compchess/programming/aspiration.htm
+pub(crate) const NODES_2047: u32 = 2047;
 
 
 
