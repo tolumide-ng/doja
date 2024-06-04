@@ -29,6 +29,7 @@ impl Perft {
     // pub(crate) fn cummulative_nodes() {}
 
 
+    // this is still really slow for a depth of 5 and 6. NEED TO IMPROVE
     pub(crate) fn start(depth: usize) {
         println!("STARTED!!");
         let mut nodes = 0;

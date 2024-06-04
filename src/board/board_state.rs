@@ -398,23 +398,28 @@ impl BoardState {
                 
                 if let Some(promoted_to) = bit_move.get_promotion() { // if this piece is eligible for promotion, the new type it's vying for
                     board[piece].pop_bit(to.into());
-                    // board.hash_key ^= ZOBRIST.piece_keys[piece][to];
+                    board.hash_key ^= ZOBRIST.piece_keys[piece][to];
                     board[promoted_to].set_bit(to.into());
-                    // board.hash_key ^= ZOBRIST.piece_keys[promoted_to][to];
+                    board.hash_key ^= ZOBRIST.piece_keys[promoted_to][to];
                 }
                 
                 
                 if bit_move.get_enpassant() {
                     let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     board[Piece::pawn(!turn)].pop_bit(enpass_target);
-                    // board.hash_key ^= ZOBRIST.enpassant_keys[enpass_target as usize];
+                    board.hash_key ^= ZOBRIST.piece_keys[Piece::pawn(!turn)][enpass_target as usize];
                 }
 
+                if let Some(enpass) = board.enpassant {
+                    // remove the enpassant from the zobrist_hash if it was there before (this move definitely resulted in an existing enpassant been removed)
+                    board.hash_key ^= ZOBRIST.enpassant_keys[enpass as usize];
+                }
                 board.enpassant = None;
 
                 if bit_move.get_double_push() {
                     let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     board.enpassant = Some(enpass_target.into());
+                    // double move results in an enpassant, add it to the hash key
                     board.hash_key ^= ZOBRIST.enpassant_keys[enpass_target as usize];
                 }
 

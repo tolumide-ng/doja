@@ -48,7 +48,7 @@ fn main() {
     // println!("{}", Bitboard::from(0xf0000).to_string())
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
-    let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
+    let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPpP/R3K2R w KQkq - 0 1 ").unwrap();
 
     // let mvs = board.get_castling(Color::White);
     // for x in mvs {
@@ -56,10 +56,19 @@ fn main() {
     // }
     
     
-    let mv = BitMove::new(Square::E1 as u32, Square::C1 as u32, Piece::WK, None, false, false, false, true);
+    // let mv = BitMove::new(Square::A2 as u32, Square::A4 as u32, Piece::WP, None, false, true, false, false);
+    // let new_board = board.make_move(mv, MoveType::AllMoves).unwrap();
+    // println!("{}", new_board.to_string());
+    // let enpass_mv = BitMove::new(Square::B4 as u32, Square::A3 as u32, Piece::BP, None, false, false, true, false);
+    // let new_board = new_board.make_move(enpass_mv, MoveType::AllMoves).unwrap();
+    // let nmv = BitMove::new(Square::A1 as u32, Square::A3 as u32, Piece::WR, None, true, false, false, false);
+    // let new_board = new_board.make_move(nmv, MoveType::AllMoves).unwrap();
+    // let nmv = BitMove::new(Square::G2 as u32, Square::G1 as u32, Piece::BP, Some(Piece::BQ), true, false, false, false);
+    // let new_board = new_board.make_move(nmv, MoveType::AllMoves).unwrap();
+    // println!("the new key should be {0:x}", new_board.hash_key());
+
     // let mv = BitMove::from(8409220);
     // println!("src={}, target={}, castling={}, piece={}, promotion={:?}", mv.get_src(), mv.get_target(), mv.get_castling(), mv.get_piece(), mv.get_promotion());
-    let new_board = board.make_move(mv, MoveType::AllMoves).unwrap();
     // let new_board = board.clone();
 
 
@@ -83,15 +92,15 @@ fn main() {
     
     // let _ = UCI::default().reader();
 
-    let result = Perft::start(1);
+    Perft::start(6);
 
 
     // let mut hash_key = 0u64;
     // hash_key ^= ZOBRIST.piece_keys[Piece::WP][Square::A2];
 
-    println!("{}", board.to_string());
-    println!("{}", new_board.to_string());
-    println!("the new key should be {0:x}", new_board.hash_key());
+    // println!("{}", board.to_string());
+    // println!("{}", new_board.to_string());
+    // println!("the new key should be {0:x}", new_board.hash_key());
 
     // board.hash_key();
 
