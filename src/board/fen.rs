@@ -124,6 +124,8 @@ pub trait FEN {
         board.set_turn(color);
         board.set_enpassant(enpass);
         board.set_castling(rights);
+        let zobrist_key = board.hash_key();
+        board.set_zobrist(zobrist_key);
 
         
         Ok(board)

@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fmt::Display, ops::{BitAnd, Deref, DerefMut}, sync::{Arc, Mutex}};
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5,TOTAL_SQUARES}, move_type::MoveType, moves::Moves, squares::Square};
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5,TOTAL_SQUARES, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::{Zobrist, START_POSITION_ZOBRIST}};
 
 use super::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
@@ -11,9 +11,10 @@ pub struct BoardState {
     pub(crate) turn: Color,
     pub board: Board,
     pub(crate) castling_rights: Castling,
-    enpassant: Option<Square>,
+    pub(crate) enpassant: Option<Square>,
     occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
     castling_table: [u8; TOTAL_SQUARES],
+    hash_key: u64,
     // // this is made this way without a mutex because editing the prev would not result in this same state again
     // prev: Arc<Option<BoardState>>,
 }
@@ -22,9 +23,7 @@ pub struct BoardState {
 impl BoardState {
     pub fn new() -> BoardState {
         Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
-            occupancies: [0; OCCUPANCIES], castling_table: CASTLING_TABLE, 
-            // killer_moves: [[9; 64]; 2], history_moves: [[0; 64]; 12]
-            //  prev: Arc::new(None)
+            occupancies: [0; OCCUPANCIES], castling_table: CASTLING_TABLE, hash_key: START_POSITION_ZOBRIST
         }
     }
 
@@ -480,6 +479,36 @@ impl BoardState {
         }
         None
     }
+
+    pub(crate) fn set_zobrist(&mut self, key: u64) {
+        self.hash_key = key;
+    }
+
+
+    /// Generates the zobrist hash for this board
+    pub(crate) fn hash_key(&self) -> u64 {
+        let mut final_key = 0u64;
+
+         for piece in Piece::ascii_pieces() {
+            // bitboard containing all pieces of this type
+            let mut bitboard = *self[piece];
+
+            while bitboard != 0 {
+                let sq = Square::from(u64::from(bitboard.trailing_zeros()));
+                final_key ^= ZOBRIST.piece_keys[piece][sq];
+
+                // pop LS1B
+                bitboard &= bitboard -1;
+            }
+        }
+
+        let index = usize::from_str_radix(&self.castling_rights.bits().to_string(), 10).unwrap();
+        final_key ^= ZOBRIST.castle_keys[index];
+
+        if self.turn == Color::Black {final_key ^= ZOBRIST.side_key};
+
+        final_key
+    }
 }
 
 
@@ -502,11 +531,10 @@ impl DerefMut for BoardState {
 
 impl Display for BoardState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        println!("{}", self.board.to_string());
-        println!("    Side:       {:?}", self.turn);
-        println!("    Enpass:     {:?}", self.enpassant);
-        println!("    Castling:   {}", self.castling_rights.to_string());
-
-        writeln!(f, "")
+        write!(f, "{}", self.board.to_string())?;
+        writeln!(f, "    Side:       {:?}", self.turn)?;
+        writeln!(f, "    Enpass:     {:?}", self.enpassant)?;
+        writeln!(f, "    Castling:   {}", self.castling_rights.to_string())?;
+        writeln!(f, "    Hashkey:    {0:x}", self.hash_key())
     }
 }

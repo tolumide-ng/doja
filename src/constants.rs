@@ -117,6 +117,14 @@ pub(crate) const OCCUPANCIES: usize = 3; // white, black, and both colors
 pub(crate) const RANK: usize = 8;
 pub(crate) const FILE: usize = 8;
 pub(crate) const TOTAL_SQUARES: usize = 64;
+/// Castling rights:
+/// e.g for player black:
+/// 1. Player black has no castling right
+/// 2. Player black can only castle king
+/// 3. Player black can only castle queen
+/// 4. Player black can castle both king and queen
+/// (for white and black player) = 4 * 4 = 16
+pub(crate) const TOTAL_CASTLING_RIGHTS: usize = 16;
 pub(crate) const MAX_PLY: usize = 64;
 
 

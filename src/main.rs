@@ -46,7 +46,7 @@ fn main() {
     // println!("{}", Bitboard::from(0xf0000).to_string())
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
-    // let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
+    let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
     // UCI::search_position(5, &board);
 
     // // let bb = Evaluation::evaluate(&board);
@@ -59,12 +59,15 @@ fn main() {
     
     
     // let _ = UCI::default().reader();
-    // Zobrist::init_zobrist();
-    // get_random_u64_number();
 
-    // for k in ZOBRIST.piece_keys[2] {
-    //     println!("{0:x}", k);
+    // Perft::start(1);
 
-    // }
+
+    // let mut hash_key = 0u64;
+    // hash_key ^= ZOBRIST.piece_keys[Piece::WP][Square::A2];
+
+    println!("{}", board.to_string());
+
+    // board.hash_key();
 
 }
