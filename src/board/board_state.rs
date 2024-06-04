@@ -438,6 +438,7 @@ impl BoardState {
                 board.occupancies[Color::White] = *board[Piece::WP] | *board[Piece::WB] | *board[Piece::WK] | *board[Piece::WN] | *board[Piece::WQ] | *board[Piece::WR];
                 board.occupancies[Color::Black] = *board[Piece::BP] | *board[Piece::BB] | *board[Piece::BK] | *board[Piece::BN] | *board[Piece::BQ] | *board[Piece::BR];
                 board.occupancies[Color::Both] = board.occupancies[Color::White] | board.occupancies[Color::Black];
+                board.hash_key ^= ZOBRIST.side_key;
 
                 
                 // is this an illegal move?
