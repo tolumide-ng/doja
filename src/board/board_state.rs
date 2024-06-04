@@ -1,5 +1,7 @@
 use std::{borrow::Cow, fmt::Display, ops::{BitAnd, Deref, DerefMut}, sync::{Arc, Mutex}};
 
+use bitflags::Flags;
+
 use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5,TOTAL_SQUARES, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::{Zobrist, START_POSITION_ZOBRIST}};
 
 use super::{castling::Castling, fen::FEN, piece::Piece};
@@ -14,7 +16,7 @@ pub struct BoardState {
     pub(crate) enpassant: Option<Square>,
     occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
     castling_table: [u8; TOTAL_SQUARES],
-    hash_key: u64,
+    pub(crate) hash_key: u64,
     // // this is made this way without a mutex because editing the prev would not result in this same state again
     // prev: Arc<Option<BoardState>>,
 }
@@ -375,6 +377,8 @@ impl BoardState {
                 // move piece
                 board[piece].pop_bit(from.into());
                 board[piece].set_bit(to.into());
+                board.hash_key ^= ZOBRIST.piece_keys[piece][from];
+                board.hash_key ^= ZOBRIST.piece_keys[piece][to];
 
 
                 // Removes the captured piece from the the captured piece bitboard
@@ -385,6 +389,7 @@ impl BoardState {
                     for p in target_pieces {
                         if board[p].get_bit(to.into()) != 0 {
                             board[p].pop_bit(to.into());
+                            board.hash_key ^= ZOBRIST.piece_keys[p][to];
                             break;
                         }
                     }
@@ -393,13 +398,16 @@ impl BoardState {
                 
                 if let Some(promoted_to) = bit_move.get_promotion() { // if this piece is eligible for promotion, the new type it's vying for
                     board[piece].pop_bit(to.into());
+                    // board.hash_key ^= ZOBRIST.piece_keys[piece][to];
                     board[promoted_to].set_bit(to.into());
+                    // board.hash_key ^= ZOBRIST.piece_keys[promoted_to][to];
                 }
                 
                 
                 if bit_move.get_enpassant() {
                     let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     board[Piece::pawn(!turn)].pop_bit(enpass_target);
+                    // board.hash_key ^= ZOBRIST.enpassant_keys[enpass_target as usize];
                 }
 
                 board.enpassant = None;
@@ -407,6 +415,7 @@ impl BoardState {
                 if bit_move.get_double_push() {
                     let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     board.enpassant = Some(enpass_target.into());
+                    board.hash_key ^= ZOBRIST.enpassant_keys[enpass_target as usize];
                 }
 
                 if bit_move.get_castling() {
@@ -414,39 +423,51 @@ impl BoardState {
                         Square::G1 => { // white castles king side
                             board[Piece::WR].pop_bit(Square::H1.into());
                             board[Piece::WR].set_bit(Square::F1.into());
+                            board.hash_key ^= ZOBRIST.piece_keys[Piece::WR][Square::H1 as usize];
+                            board.hash_key ^= ZOBRIST.piece_keys[Piece::WR][Square::F1 as usize];
                         }
                         Square::G8 => { // black castles king side
                             board[Piece::BR].pop_bit(Square::H8.into());
                             board[Piece::BR].set_bit(Square::F8.into());
+                            board.hash_key ^= ZOBRIST.piece_keys[Piece::BR][Square::H8 as usize];
+                            board.hash_key ^= ZOBRIST.piece_keys[Piece::BR][Square::F8 as usize];
                         }
                         Square::C1 => { // white castles queen side
                             board[Piece::WR].pop_bit(Square::A1.into());
                             board[Piece::WR].set_bit(Square::D1.into());
+                            board.hash_key ^= ZOBRIST.piece_keys[Piece::WR][Square::A1 as usize];
+                            board.hash_key ^= ZOBRIST.piece_keys[Piece::WR][Square::D1 as usize];
                         }
                         Square::C8 => { // black castles queen side
                             board[Piece::BR].pop_bit(Square::A8.into());
                             board[Piece::BR].set_bit(Square::D8.into());
+                            board.hash_key ^= ZOBRIST.piece_keys[Piece::BR][Square::A8 as usize];
+                            board.hash_key ^= ZOBRIST.piece_keys[Piece::BR][Square::D8 as usize];
                         }
                         x => unreachable!("Not a valid castling target {x}")
                     }
                 }
 
+                let old_castling = usize::from_str_radix(&board.castling_rights.bits().to_string(), 10).unwrap();
+                board.hash_key ^= ZOBRIST.castle_keys[old_castling];
                 let castle_one = board.castling_rights.bits() & board.castling_table[from];
                 let castle_two = castle_one & board.castling_table[to];
                 board.castling_rights = Castling::from(castle_two);
+                let new_castling = usize::from_str_radix(&board.castling_rights.bits().to_string(), 10).unwrap();
+                board.hash_key ^= ZOBRIST.castle_keys[new_castling];
 
                 board.occupancies[Color::White] = *board[Piece::WP] | *board[Piece::WB] | *board[Piece::WK] | *board[Piece::WN] | *board[Piece::WQ] | *board[Piece::WR];
                 board.occupancies[Color::Black] = *board[Piece::BP] | *board[Piece::BB] | *board[Piece::BK] | *board[Piece::BN] | *board[Piece::BQ] | *board[Piece::BR];
                 board.occupancies[Color::Both] = board.occupancies[Color::White] | board.occupancies[Color::Black];
-                board.hash_key ^= ZOBRIST.side_key;
-
+                
                 
                 // is this an illegal move?
                 if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !board.turn) {
                     return None;
                 }
-
+                
                 board.turn = !board.turn;
+                board.hash_key ^= ZOBRIST.side_key;
 
             }
 
@@ -503,6 +524,11 @@ impl BoardState {
             }
         }
 
+        if let Some(enpass) = self.enpassant {
+            final_key ^= ZOBRIST.enpassant_keys[enpass];
+            // println!("I see {}", enpass as usize);
+        }
+
         let index = usize::from_str_radix(&self.castling_rights.bits().to_string(), 10).unwrap();
         final_key ^= ZOBRIST.castle_keys[index];
 
@@ -536,6 +562,6 @@ impl Display for BoardState {
         writeln!(f, "    Side:       {:?}", self.turn)?;
         writeln!(f, "    Enpass:     {:?}", self.enpassant)?;
         writeln!(f, "    Castling:   {}", self.castling_rights.to_string())?;
-        writeln!(f, "    Hashkey:    {0:x}", self.hash_key())
+        writeln!(f, "    Hashkey:    {0:x}", self.hash_key)
     }
 }

@@ -25,7 +25,7 @@ impl Zobrist {
         
         let mut rand = PRNG::new(RANDOM_STATE_SEED);
         for piece in Piece::ascii_pieces() {
-            for sq in (0..TOTAL_SQUARES).rev() {
+            for sq in 0..TOTAL_SQUARES {
                 // fill a table of random numbers/bitstrings   
                 piece_keys[piece][sq] = rand.get_random_u64();
             }
