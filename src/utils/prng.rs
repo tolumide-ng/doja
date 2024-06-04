@@ -1,14 +1,15 @@
 use std::ops::Deref;
 
-pub(crate) struct Rand(u32);
+// Pseudo-Random Number Generator (PRNG)
+pub(crate) struct PRNG(u32);
 
-impl Deref for Rand {
+impl Deref for PRNG {
     type Target = u32;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl Rand {
+impl PRNG {
     pub(crate) fn new(seed: u32) -> Self {Self(seed)}
 
     fn get_random_u32(&mut self) -> u32 {

@@ -1,7 +1,6 @@
 use bitflags::Flags;
 
-use crate::{board::{board_state::BoardState, piece::Piece}, color::Color, constants::{RANDOM_STATE_SEED, TOTAL_PIECES, TOTAL_SQUARES}, squares::Square};
-use crate::utils::rand::Rand;
+use crate::{board::{board_state::BoardState, piece::Piece}, color::Color, constants::{RANDOM_STATE_SEED, TOTAL_PIECES, TOTAL_SQUARES}, squares::Square, utils::prng::PRNG};
 
 
 type PieceKeys = [[u64; TOTAL_SQUARES]; TOTAL_PIECES];
@@ -24,7 +23,7 @@ impl Zobrist {
     pub(crate) fn init_zobrist() -> Self {
         let mut piece_keys: PieceKeys = [[0; TOTAL_SQUARES]; TOTAL_PIECES];
         
-        let mut rand = Rand::new(RANDOM_STATE_SEED);
+        let mut rand = PRNG::new(RANDOM_STATE_SEED);
         for piece in Piece::ascii_pieces() {
             for sq in (0..TOTAL_SQUARES).rev() {
                 // fill a table of random numbers/bitstrings   
