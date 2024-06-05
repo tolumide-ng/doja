@@ -15,13 +15,14 @@ mod piece_attacks;
 mod bit_move;
 mod move_type;
 mod perft;
- mod kogge_stone;
- mod uci;
+mod kogge_stone;
+mod uci;
+mod tt;
 
 
 use std::io::Read;
 use std::{sync::mpsc, time::Instant};
-use std::thread;
+use std::{ptr, thread};
 
 use bit_move::BitMove;   
 use bitboard::Bitboard;
@@ -32,6 +33,7 @@ use move_type::MoveType;
 use perft::Perft;
 use search::evaluation::Evaluation;
 use squares::Square;
+use tt::{NodeType, TTable, TT};
 use uci::UCI;
 use zobrist::Zobrist;
 
@@ -92,7 +94,7 @@ fn main() {
     
     // let _ = UCI::default().reader();
 
-    Perft::start(6);
+    // Perft::start(6);
 
 
     // let mut hash_key = 0u64;
@@ -103,5 +105,17 @@ fn main() {
     // println!("the new key should be {0:x}", new_board.hash_key());
 
     // board.hash_key();
+    // println!("mbs {}", HASH_SIZE);
 
+    let mut rtt = TTable::default();
+    // rtt.set(0x2938, BitMove::from(0), 0, 12, NodeType::Exact);
+    let result = rtt.get(0, 0, 10, -10);
+    println!("the result is {:?}", result);
 }
+
+// 8|4|2|1|
+// 0|0|1|0|
+// 1|0|0|1|
+// 0|0|1|1|
+// 1|0|0|0|
+  

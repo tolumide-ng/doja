@@ -44,35 +44,5 @@ impl Zobrist {
         let side_key = rand.get_random_u64();
 
         Self {piece_keys, enpassant_keys, castle_keys, side_key}
-    }    
-
-
-    // pub(crate) fn hash_key(&self, board: &BoardState) -> u64 {
-    //     let mut final_key = 0u64;
-
-    //      for piece in Piece::ascii_pieces() {
-    //         // bitboard containing all pieces of this type
-    //         let mut bitboard = *board[piece];
-
-    //         while bitboard != 0 {
-    //             let sq = Square::from(u64::from(bitboard.trailing_zeros()));
-    //             final_key ^= self.piece_keys[piece][sq];
-
-    //             // pop LS1B
-    //             bitboard &= bitboard -1;
-    //         }
-    //     }
-    //     println!("before >>>>>>>>> {0:x}", final_key);
-
-    //     let index = usize::from_str_radix(&board.castling_rights.bits().to_string(), 10).unwrap();
-    //     final_key ^= self.castle_keys[index];
-
-    //     println!("before color||| {0:x}", final_key);
-
-    //     if board.turn == Color::Black {final_key ^= self.side_key};
-
-    //     println!("{0:x}", final_key);
-
-    //     final_key
-    // }
+    }
 }

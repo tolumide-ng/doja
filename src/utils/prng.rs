@@ -1,6 +1,7 @@
 use std::ops::Deref;
 
 // Pseudo-Random Number Generator (PRNG)
+#[repr(transparent)]
 pub(crate) struct PRNG(u32);
 
 impl Deref for PRNG {
