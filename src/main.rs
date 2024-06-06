@@ -56,7 +56,7 @@ fn main() {
     let board = BoardState::parse_fen(START_POSITION).unwrap();
     println!("{}", board.to_string());
     let controller = Control::new();
-    NegaMax::run(Arc::new(Mutex::new(controller)), ALPHA, BETA, 8, &board);
+    NegaMax::run(Arc::new(Mutex::new(controller)), ALPHA, BETA, 9, &board);
 
     // let mvs = board.get_castling(Color::White);
     // for x in mvs {

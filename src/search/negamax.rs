@@ -173,8 +173,10 @@ impl<T> NegaMax<T> where T: TimeControl {
                 // return 0 if time is up
                 if self.controller.as_ref().lock().unwrap().stopped() { return 0}
                 
-                if score >= beta { return beta }
-                if score > alpha { alpha = score; }
+                if score > alpha { 
+                    alpha = score; 
+                    if score >= beta { return beta }
+                }
             }
         }
 
@@ -188,8 +190,10 @@ impl<T> NegaMax<T> where T: TimeControl {
         let mut hash_flag = HashFlag::UpperBound;
 
         // if we had cached the score for this move before, we return it
-        if let Some(score) =  self.tt.probe(board.hash_key, depth, alpha, beta) {
-            return score
+        if self.ply > 0 {
+            if let Some(score) =  self.tt.probe(board.hash_key, depth, alpha, beta) {
+                return score
+            }
         }
         // this action will be performed every 2048 nodes
         if (self.nodes & NODES_2047) == 0 {
@@ -298,38 +302,45 @@ impl<T> NegaMax<T> where T: TimeControl {
                 // return 0 if time is up
                 if self.controller.as_ref().lock().unwrap().stopped() { return 0}
 
-                
+
                 // fail-hard beta cutoff
                 if score >= beta {
+                    self.tt.record(board.hash_key, depth, beta, HashFlag::LowerBound);
+                    // println!("ply @3 is {}", self.ply);
                     if !mv.get_capture() { // quiet move (non-capturing quiet move that beats the opponent)
                         self.killer_moves[1][self.ply] = self.killer_moves[0][self.ply];
                         self.killer_moves[0][self.ply] = *mv;
                     }
-                    self.tt.record(board.hash_key, depth, beta, HashFlag::LowerBound);
                     // node/move fails high
                     return beta
                 }
                 
                 // best score so far
                 if score > alpha {
-                    // store history moces
-                    if !mv.get_capture() {
-                        let history_move = self.history_moves[mv.get_piece()].get_mut(mv.get_target() as usize).unwrap();
-                        *history_move += depth as u32;
-                    }
-                    
+
+
                     hash_flag = HashFlag::Exact;
-                    alpha = score; // alpha acts like max in Minimax
-                    // Write PV move
+                    
+                    if !mv.get_capture() {
+                        // store history moves
+                        *self.history_moves[mv.get_piece()].get_mut(mv.get_target() as usize).unwrap() += depth as u32;
+                    }
+                    alpha = score; // PV move (position)
+
+                    // println!("ply @2 is {}", self.ply);
+                    // write PV move
                     self.pv_table[self.ply][self.ply] =  *mv as i32;
 
                     for next_ply in (self.ply+1)..self.pv_length[self.ply+1] {
                         // copy move from deeper ply into current ply's line
                         self.pv_table[self.ply][next_ply] = self.pv_table[self.ply+1][next_ply];
                     }
-
                     self.pv_length[self.ply] = self.pv_length[self.ply + 1];
-                }
+                    
+
+                   
+                } 
+
 
             }
 
