@@ -1,6 +1,6 @@
 use std::{ops::Neg, sync::{Arc, Mutex}};
 
-use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_SQUARES, TOTAL_PIECES, VAL_WINDOW}, move_type::MoveType, moves::Moves, search::control};
+use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
 
 use super::{evaluation::Evaluation, time_control::TimeControl};
 
@@ -17,6 +17,8 @@ pub struct NegaMax<T: TimeControl> {
     follow_pv: bool,
     score_pv: bool,
     controller: Arc<Mutex<T>>,
+    /// Transposition table
+    tt: TTable,
 }
 
 
@@ -27,7 +29,8 @@ impl<T> NegaMax<T> where T: TimeControl {
             history_moves: [[0; 64]; 12], 
             pv_length: [0; 64], 
             pv_table: [[0; 64]; 64], 
-            nodes: 0, ply: 0, follow_pv: false, score_pv: false, controller
+            nodes: 0, ply: 0, follow_pv: false, score_pv: false, controller,
+            tt: TTable::default()
         }
     }
 
@@ -35,7 +38,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         let mut alpha = alpha;
         let mut beta = beta;
 
-        for depth in 1..=(limit as usize) {
+        for depth in 1..=(limit) {
             // return 0 if time is up
             if self.controller.as_ref().lock().unwrap().stopped() { break; }
 
@@ -148,7 +151,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
 
 
-        self.nodes+= 1;
+        self.nodes+=1;
         // println!("NODES====== {:?}", self.nodes);
         
         // evaluate position
@@ -180,16 +183,23 @@ impl<T> NegaMax<T> where T: TimeControl {
 
     
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
-    fn negamax(&mut self, mut alpha: i32, beta: i32, depth: usize, board: &BoardState) -> i32 {
+    fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &BoardState) -> i32 {
+        let mut hash_flag = HashFlag::UpperBound;
+
+        // if we had cached the score for this move before, we return it
+        if let Some(score) =  self.tt.probe(board.hash_key, depth, alpha, beta) {
+            return score
+        }
         // this action will be performed every 2048 nodes
         if (self.nodes & NODES_2047) == 0 {
-            println!("::::::: {depth}");
+            // println!("::::::: {depth}");
             self.controller.as_ref().lock().unwrap().communicate();
         }
         // println!("ply is {}", self.ply);
         self.pv_length[self.ply] = self.ply;
         if depth == 0 {
-            return self.quiescence(alpha, beta, board);
+            let score = self.quiescence(alpha, beta, board);
+            return score;
         }
 
         if self.ply > MAX_PLY -1 {
@@ -212,9 +222,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
             nmfp_board.set_turn(!board.turn);
             nmfp_board.set_enpassant(None);
-            // println!("null move forward pruning depth is {}", depth-1-DEPTH_REDUCTION_FACTOR);
             let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board);
-            // let score = -self.negamax(-beta, -beta-1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board); // reduces the number of nodes by a lot
 
             // return 0 if time is up
             if self.controller.as_ref().lock().unwrap().stopped() { return 0}
@@ -287,6 +295,7 @@ impl<T> NegaMax<T> where T: TimeControl {
                         self.killer_moves[1][self.ply] = self.killer_moves[0][self.ply];
                         self.killer_moves[0][self.ply] = *mv;
                     }
+                    self.tt.record(board.hash_key, depth, beta, HashFlag::LowerBound);
                     // node/move fails high
                     return beta
                 }
@@ -299,6 +308,7 @@ impl<T> NegaMax<T> where T: TimeControl {
                         *history_move += depth as u32;
                     }
                     
+                    hash_flag = HashFlag::Exact;
                     alpha = score; // alpha acts like max in Minimax
                     // Write PV move
                     self.pv_table[self.ply][self.ply] =  *mv as i32;
@@ -309,8 +319,6 @@ impl<T> NegaMax<T> where T: TimeControl {
                     }
 
                     self.pv_length[self.ply] = self.pv_length[self.ply + 1];
-
-                    // b_search_pv = false;
                 }
 
             }
@@ -328,6 +336,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             return 0 // stalemate | draw
         }
 
+        self.tt.record(board.hash_key, depth, alpha, hash_flag);
         return alpha
     }
 

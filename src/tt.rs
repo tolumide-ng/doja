@@ -19,7 +19,7 @@ use crate::bit_move::BitMove;
 
  #[derive(Debug, Default, Clone, Copy)]
  #[repr(u8)]
-pub(crate) enum NodeType {
+pub(crate) enum HashFlag {
     /// PV-nodes: have scores inside the window i.e. alpha < score < beta
     #[default]
     Exact = 0,
@@ -30,17 +30,19 @@ pub(crate) enum NodeType {
 }
  
 
+
+/// Transposition table
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct TT {
     /// "almost" unique chess position identifier
     key: u64,
     /// current search depth
-    depth: u16,
+    depth: u8,
     /// type of the node (e.g. Failed-low/Failed-high/PV)
-    flag: NodeType,
+    flag: HashFlag,
     /// Score (alpha/beta/PV)
     score: i32,
-    best: BitMove,
+    // best: BitMove,
     // age: u16 // todo! readup papers on transposition table repalcement schemes
  }
 
@@ -70,10 +72,10 @@ impl DerefMut for TTable {
 }
 
 impl TTable {
-    pub(crate) fn probe(&self, zobrist_key: u64, depth: u16, alpha: i32, beta: i32) -> Option<i32> {
+    pub(crate) fn probe(&self, zobrist_key: u64, depth: u8, alpha: i32, beta: i32) -> Option<i32> {
         let index = zobrist_key as usize % HASH_SIZE;
         let ptr = self.as_ptr();
-        println!("retrieving from {}", index);
+        // println!("retrieving from {}", index);
 
         
         unsafe {
@@ -83,17 +85,17 @@ impl TTable {
             if phahse.key == zobrist_key { 
                 if phahse.depth == depth {
                     match phahse.flag {
-                        NodeType::Exact => {
+                        HashFlag::Exact => {
                             // matches exact (PVNode)
                             return Some(phahse.score)
                         }
-                        NodeType::UpperBound => {
+                        HashFlag::UpperBound => {
                             if phahse.score <= alpha {
                                 // matches (Fail-low) node
                                 return Some(alpha);
                             }
                         }
-                        NodeType::LowerBound => {
+                        HashFlag::LowerBound => {
                             if  phahse.score >= beta {
                                 // matches (Fail-high) node
                                 return Some(beta);
@@ -106,15 +108,15 @@ impl TTable {
         None
     }
 
-    pub(crate) fn set(&mut self, zobrist_key: u64, best: BitMove, depth: u16, score: i32, flag: NodeType) {
+    pub(crate) fn record(&mut self, zobrist_key: u64, depth: u8, score: i32, flag: HashFlag) {
         let index = zobrist_key as usize % HASH_SIZE;
         let ptr = self.as_mut_ptr();
 
         unsafe {
-            println!("the index is {index}");
+            // println!("the index is {index}");
             // let mut x = ptr.add(index);
             (*ptr.add(index)).key = zobrist_key;
-            (*ptr.add(index)).best = best;
+            // (*ptr.add(index)).best = best;
             (*ptr.add(index)).score = score;
             (*ptr.add(index)).flag = flag;
             (*ptr.add(index)).depth = depth;

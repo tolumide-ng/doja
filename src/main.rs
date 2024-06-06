@@ -35,7 +35,7 @@ use perft::Perft;
 use search::control::Control;
 use search::evaluation::Evaluation;
 use squares::Square;
-use tt::{NodeType, TTable, TT};
+use tt::{HashFlag, TTable, TT};
 use uci::UCI;
 use zobrist::Zobrist;
 
@@ -52,7 +52,7 @@ fn main() {
     // println!("{}", Bitboard::from(0xf0000).to_string())
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
-    let board = BoardState::parse_fen(START_POSITION).unwrap();
+    let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
     let controller = Control::new();
     NegaMax::run(Arc::new(Mutex::new(controller)), ALPHA, BETA, 7, &board);
 
@@ -112,7 +112,7 @@ fn main() {
     // println!("mbs {}", HASH_SIZE);
 
     // let mut rtt = TTable::default();
-    // // rtt.set(0x2938, BitMove::from(0), 0, 12, NodeType::Exact);
+    // // rtt.set(0x2938, BitMove::from(0), 0, 12, HashFlag::Exact);
     // let result = rtt.probe(0, 0, 10, -10);
     // println!("the result is {:?}", result);
 
