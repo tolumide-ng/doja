@@ -52,9 +52,11 @@ fn main() {
     // println!("{}", Bitboard::from(0xf0000).to_string())
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
-    let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
+    // let board = BoardState::parse_fen("4k3/Q7/8/4K3/8/8/8/8 w - - ").unwrap();
+    let board = BoardState::parse_fen(START_POSITION).unwrap();
+    println!("{}", board.to_string());
     let controller = Control::new();
-    NegaMax::run(Arc::new(Mutex::new(controller)), ALPHA, BETA, 7, &board);
+    NegaMax::run(Arc::new(Mutex::new(controller)), ALPHA, BETA, 8, &board);
 
     // let mvs = board.get_castling(Color::White);
     // for x in mvs {

@@ -59,6 +59,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         println!("{:?} \n\n", self.pv_length);
     }
     
+    // This method is currently VERY SLOW once the depth starts approaching 8, please work to improve it
     pub(crate) fn run(controller: Arc<Mutex<T>>, alpha: i32, beta: i32, depth: u8, board: &BoardState) {
 
         let mut negamax = Self::new(controller);
@@ -192,7 +193,6 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
         // this action will be performed every 2048 nodes
         if (self.nodes & NODES_2047) == 0 {
-            // println!("::::::: {depth}");
             self.controller.as_ref().lock().unwrap().communicate();
         }
         // println!("ply is {}", self.ply);
@@ -207,6 +207,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
 
         self.nodes+=1;
+        // println!("::::::: {depth}");
 
         let king_square = u64::from(board[Piece::king(board.turn)].trailing_zeros());
         // is king in check
@@ -219,6 +220,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         // added 1 to the depth_reduction factor to be sure, there is atleast one more depth that would be checked
         if null_move_forward_pruning_conditions {
             let mut nmfp_board = board.clone();
+            self.ply += 1;
 
             // update the zobrist hash accordingly, since this mutating actions do not direcly update the zobrist hash
             if let Some(enpass_sq) = nmfp_board.enpassant {
@@ -229,6 +231,8 @@ impl<T> NegaMax<T> where T: TimeControl {
             nmfp_board.set_enpassant(None);
             nmfp_board.hash_key ^= ZOBRIST.side_key;
             let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board);
+
+            self.ply -= 1;
 
             // return 0 if time is up
             if self.controller.as_ref().lock().unwrap().stopped() { return 0}
