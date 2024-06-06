@@ -130,9 +130,10 @@ impl<T> NegaMax<T> where T: TimeControl {
     /// todo! add target on the BitMove, so that this cmp method can be implenented directly on Moves(MvList), that way
     /// we wouldn't need this one anymore
     pub(crate) fn sort_moves(&mut self, board: &BoardState, mv_list: Moves) -> Vec<BitMove> {
-        let mut sorted_moves: Vec<BitMove> = Vec::with_capacity(mv_list.count());
-        sorted_moves.extend_from_slice(&mv_list.list[..mv_list.count()]);
-        sorted_moves.sort_by(|b, a| self.score_move(board, *a).cmp(&self.score_move(board, *b)));
+        let mut sorted_moves: Vec<BitMove> = Vec::with_capacity(mv_list.count_mvs());
+        // println!("the count is {}", mv_list.count_mvs());
+        sorted_moves.extend_from_slice(&mv_list.list[..mv_list.count_mvs()]);
+        sorted_moves.sort_by(|a, b| self.score_move(board, *b).cmp(&self.score_move(board, *a)));
         return sorted_moves
     }
 
@@ -146,24 +147,20 @@ impl<T> NegaMax<T> where T: TimeControl {
             self.controller.as_ref().lock().unwrap().communicate();
         }
 
-        self.nodes += 1;
+
+        self.nodes+= 1;
         // println!("NODES====== {:?}", self.nodes);
         
         // evaluate position
         let evaluation = Evaluation::evaluate(board) as i32;
         // fail head beta cutoff
-        if evaluation >= beta {
-            // node (move) fails high
-            return beta;
-        }
-        if evaluation > alpha { // found a better score
-            alpha = evaluation;
-        }
+        if evaluation >= beta { return beta; } // node (move) fails high
+        if evaluation > alpha { alpha = evaluation; } // found a better score
 
         let sorted_moves = self.sort_moves(board, board.gen_movement().into_iter());
 
         for mv in sorted_moves {
-            if let Some(new_board) = board.make_move(mv, MoveType::AllMoves) {
+            if let Some(new_board) = board.make_move(mv, MoveType::CapturesOnly) {
                 self.ply += 1;
                 // print!("{}, ", self.ply);
                 let score = -self.quiescence(-beta, -alpha, &new_board);
@@ -186,7 +183,7 @@ impl<T> NegaMax<T> where T: TimeControl {
     fn negamax(&mut self, mut alpha: i32, beta: i32, depth: usize, board: &BoardState) -> i32 {
         // this action will be performed every 2048 nodes
         if (self.nodes & NODES_2047) == 0 {
-            println!(":::::::");
+            println!("::::::: {depth}");
             self.controller.as_ref().lock().unwrap().communicate();
         }
         // println!("ply is {}", self.ply);
@@ -208,7 +205,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         let mut legal_moves = 0;
 
         // Null-Move Forward Pruning
-        let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR+1) && !king_in_check && self.ply> 0;
+        let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !king_in_check && self.ply> 0;
         // added 1 to the depth_reduction factor to be sure, there is atleast one more depth that would be checked
         if null_move_forward_pruning_conditions {
             let mut nmfp_board = board.clone();
@@ -298,15 +295,14 @@ impl<T> NegaMax<T> where T: TimeControl {
                 if score > alpha {
                     // store history moces
                     if !mv.get_capture() {
-                        if let Some(history_move) = self.history_moves[mv.get_piece()].get_mut(mv.get_target() as usize) {
-                            *history_move += depth as u32;
-                        }
+                        let history_move = self.history_moves[mv.get_piece()].get_mut(mv.get_target() as usize).unwrap();
+                        *history_move += depth as u32;
                     }
                     
                     alpha = score; // alpha acts like max in Minimax
-                    
-                    
+                    // Write PV move
                     self.pv_table[self.ply][self.ply] =  *mv as i32;
+
                     for next_ply in (self.ply+1)..self.pv_length[self.ply+1] {
                         // copy move from deeper ply into current ply's line
                         self.pv_table[self.ply][next_ply] = self.pv_table[self.ply+1][next_ply];

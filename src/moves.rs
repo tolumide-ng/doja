@@ -30,7 +30,7 @@ impl Moves {
         self.count+=1;
     }
 
-    pub(crate) fn count(&self) -> usize {self.count}
+    pub(crate) fn count_mvs(&self) -> usize {self.count}
 
     pub(crate) fn add_many(&mut self, m: &[BitMove]) {
         unsafe {

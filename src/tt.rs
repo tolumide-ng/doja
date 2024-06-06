@@ -18,7 +18,7 @@ use crate::bit_move::BitMove;
 
 
  #[derive(Debug, Default, Clone, Copy)]
-//  #[repr(u8)]
+ #[repr(u8)]
 pub(crate) enum NodeType {
     /// PV-nodes: have scores inside the window i.e. alpha < score < beta
     #[default]
@@ -41,7 +41,7 @@ pub(crate) struct TT {
     /// Score (alpha/beta/PV)
     score: i32,
     best: BitMove,
-    times: u16
+    // age: u16 // todo! readup papers on transposition table repalcement schemes
  }
 
 
@@ -70,7 +70,7 @@ impl DerefMut for TTable {
 }
 
 impl TTable {
-    pub(crate) fn get(&self, zobrist_key: u64, depth: u16, alpha: i32, beta: i32) -> Option<i32> {
+    pub(crate) fn probe(&self, zobrist_key: u64, depth: u16, alpha: i32, beta: i32) -> Option<i32> {
         let index = zobrist_key as usize % HASH_SIZE;
         let ptr = self.as_ptr();
         println!("retrieving from {}", index);
@@ -80,7 +80,7 @@ impl TTable {
             let phahse = *ptr.add(index);
             // we can turst the #[default] implementation to work without any issue because the default key is 0,
             // and that would likely not match any zobtist key
-            if phahse.key == zobrist_key && phahse.times > 0 { 
+            if phahse.key == zobrist_key { 
                 if phahse.depth == depth {
                     match phahse.flag {
                         NodeType::Exact => {

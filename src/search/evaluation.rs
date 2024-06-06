@@ -36,6 +36,8 @@ impl Evaluation {
 
         }
 
+        // println!("::::scoring >>> {score}");
+
         match board.turn {
             Color::White => score,
             _ => -score

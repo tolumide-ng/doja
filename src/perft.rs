@@ -17,7 +17,7 @@ impl Perft {
 
         let move_list =board.gen_movement();
 
-        for index in 0..move_list.count() {
+        for index in 0..move_list.count_mvs() {
             let bmove = move_list.list[index];
             let legal_move = board.make_move(bmove, MoveType::AllMoves);
             if let Some(new_board) = legal_move {                
@@ -51,7 +51,7 @@ impl Perft {
     pub(crate) fn test(depth: usize, nodes: &mut usize, board: BoardState) {
         let move_list = board.gen_movement();
 
-        for index in 0..move_list.count() {
+        for index in 0..move_list.count_mvs() {
             let bmove = move_list.list[index];
             let legal_move = board.make_move(bmove, MoveType::AllMoves);
             if let Some(new_board) = legal_move {

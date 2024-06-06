@@ -474,14 +474,21 @@ impl BoardState {
                 board.turn = !board.turn;
                 board.hash_key ^= ZOBRIST.side_key;
 
+                Some(board)
             }
 
-            MoveType::CapturesOnly => {}
+            MoveType::CapturesOnly => {
+                if bit_move.get_capture() {
+                    return self.make_move(bit_move, MoveType::AllMoves);
+                } else {
+                    return None;
+                }
+            }
         }
 
         // board.prev = Arc::new(Some(self.clone()));
 
-        Some(board)
+        // Some(board)
     }
 
     fn get_piece_at(&self, sq: Square, color: Color) -> Option<Piece> {

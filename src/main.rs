@@ -21,6 +21,7 @@ mod tt;
 
 
 use std::io::Read;
+use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, time::Instant};
 use std::{ptr, thread};
 
@@ -28,9 +29,10 @@ use bit_move::BitMove;
 use bitboard::Bitboard;
 use board::{board_state::BoardState, fen::FEN, piece::Piece};
 use color::Color;
-use constants::{START_POSITION, TRICKY_POSITION, ZOBRIST};
+use constants::{ALPHA, BETA, START_POSITION, TRICKY_POSITION, ZOBRIST};
 use move_type::MoveType;
 use perft::Perft;
+use search::control::Control;
 use search::evaluation::Evaluation;
 use squares::Square;
 use tt::{NodeType, TTable, TT};
@@ -50,7 +52,9 @@ fn main() {
     // println!("{}", Bitboard::from(0xf0000).to_string())
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
-    let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPpP/R3K2R w KQkq - 0 1 ").unwrap();
+    let board = BoardState::parse_fen(START_POSITION).unwrap();
+    let controller = Control::new();
+    NegaMax::run(Arc::new(Mutex::new(controller)), ALPHA, BETA, 7, &board);
 
     // let mvs = board.get_castling(Color::White);
     // for x in mvs {
@@ -107,10 +111,14 @@ fn main() {
     // board.hash_key();
     // println!("mbs {}", HASH_SIZE);
 
-    let mut rtt = TTable::default();
-    // rtt.set(0x2938, BitMove::from(0), 0, 12, NodeType::Exact);
-    let result = rtt.get(0, 0, 10, -10);
-    println!("the result is {:?}", result);
+    // let mut rtt = TTable::default();
+    // // rtt.set(0x2938, BitMove::from(0), 0, 12, NodeType::Exact);
+    // let result = rtt.probe(0, 0, 10, -10);
+    // println!("the result is {:?}", result);
+
+    // let mut x: u8 = 254;
+    // let xx = x.wrapping_shr(100);
+    // println!("{}", xx);
 }
 
 // 8|4|2|1|

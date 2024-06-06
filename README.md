@@ -28,3 +28,10 @@
 ### References
 1. [A port of Maksim Korzh's work](https://www.youtube.com/playlist?list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs)
 2. [BlueFever Software](https://www.youtube.com/playlist?list=PLZ1QII7yudbc-Ky058TEaOstZHVbT-2hg)
+
+
+
+### TO Read/Re-read
+1. [Umko Chess Program](https://ev.fe.uni-lj.si/3-2011/Boskovic.pdf)
+2. [Fully Distributed Chess Program](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=6b75facdf4608cbd798092ec6eb5436b2209e361)
+3. 
