@@ -1,6 +1,6 @@
 use std::{ops::Neg, sync::{Arc, Mutex}};
 
-use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
+use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}, zobrist::Zobrist};
 
 use super::{evaluation::Evaluation, time_control::TimeControl};
 
@@ -220,8 +220,14 @@ impl<T> NegaMax<T> where T: TimeControl {
         if null_move_forward_pruning_conditions {
             let mut nmfp_board = board.clone();
 
+            // update the zobrist hash accordingly, since this mutating actions do not direcly update the zobrist hash
+            if let Some(enpass_sq) = nmfp_board.enpassant {
+                // we know that we're going to remove the enpass if it's available (see 4 lines below), so we remove it from the hashkey if it exists here
+                nmfp_board.hash_key ^= ZOBRIST.enpassant_keys[enpass_sq];
+            }
             nmfp_board.set_turn(!board.turn);
             nmfp_board.set_enpassant(None);
+            nmfp_board.hash_key ^= ZOBRIST.side_key;
             let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board);
 
             // return 0 if time is up
