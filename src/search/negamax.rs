@@ -1,6 +1,6 @@
-use std::{ops::Neg, sync::{Arc, Mutex}};
+use std::{ops::Neg, sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}, zobrist::Zobrist};
+use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}, zobrist::Zobrist};
 
 use super::{evaluation::Evaluation, time_control::TimeControl};
 
@@ -19,19 +19,25 @@ pub struct NegaMax<T: TimeControl> {
     controller: Arc<Mutex<T>>,
     /// Transposition table
     tt: TTable,
+    repetition_index: usize,
+    repetition_table: [u64; 500],
 }
 
 
 impl<T> NegaMax<T> where T: TimeControl {
     fn new(controller: Arc<Mutex<T>>) -> Self {
-        Self {
+        let x = Self {
             killer_moves: [[9; 64]; 2], 
             history_moves: [[0; 64]; 12], 
             pv_length: [0; 64], 
             pv_table: [[0; 64]; 64], 
             nodes: 0, ply: 0, follow_pv: false, score_pv: false, controller,
-            tt: TTable::default()
-        }
+            tt: TTable::default(),
+            repetition_index: 0,
+            repetition_table: [0; 500],
+        };
+
+        x
     }
 
     fn iterative_deepening(&mut self, limit: u8, alpha: i32, beta: i32, board: &BoardState) {
@@ -39,11 +45,12 @@ impl<T> NegaMax<T> where T: TimeControl {
         let mut beta = beta;
 
         for depth in 1..=(limit) {
+            let start_time = Instant::now();
             // return 0 if time is up
             if self.controller.as_ref().lock().unwrap().stopped() { break; }
 
             self.follow_pv = true;
-            // println!("************************************************************depth is {depth}");
+            println!("************************************************************depth is {depth}");
             let score = self.negamax(alpha, beta, depth, board);
             if (score <= alpha) || (score >= beta) {
                 alpha = ALPHA; // We fell outside the window, so try again with a
@@ -54,27 +61,41 @@ impl<T> NegaMax<T> where T: TimeControl {
             alpha = score - VAL_WINDOW;
             beta = score + VAL_WINDOW;
             // println!("at depth {depth}, with alpha as {alpha}, and bet as {beta}");
+            
+
+            if score > -MATE_VALUE && score < -MATE_SCORE {
+                println!("info score mate {} depth {} nodes {} time {}ms pv", (-(score + MATE_VALUE)/2) -1, depth, self.nodes, start_time.elapsed().as_millis())
+            } else if (score > MATE_SCORE) && score < MATE_VALUE {
+                println!("info score mate {} depth {} nodes {} time {}ms pv", ((MATE_VALUE - score)/2) + 1, depth, self.nodes, start_time.elapsed().as_millis())
+            } else {
+                println!("info score cp {} depth {} nodes {} time {}ms pv", score, depth, self.nodes, start_time.elapsed().as_millis())
+            }
+
+            for count in 0..self.pv_length[0] as usize {
+                print!("{}, ", BitMove::from(self.pv_table[0][count] as u32))
+            }
+            // println!("");
+            println!("\n--------------------------");
         }
-        println!("and now, ply is {}", self.ply);
-        println!("{:?} \n\n", self.pv_length);
+        // println!("and now, ply is {}", self.ply);
+        // println!("{:?} \n\n", self.pv_length);
     }
     
     // This method is currently VERY SLOW once the depth starts approaching 8, please work to improve it
     pub(crate) fn run(controller: Arc<Mutex<T>>, alpha: i32, beta: i32, depth: u8, board: &BoardState) {
-
         let mut negamax = Self::new(controller);
         negamax.iterative_deepening(depth, alpha, beta, board);
-        println!("{:?}", negamax.pv_table[0]);
-        println!("{:?}\n\n", negamax.pv_length);
+        // println!("{:?}", negamax.pv_table[0]);
+        // println!("{:?}\n\n", negamax.pv_length);
         // let rr = Self::iterative_deepening(&mut self, limit, alpha, beta, board);
 
-        for count in 0..negamax.pv_length[0] as usize {
-            println!("PV TABLE {}", BitMove::from(negamax.pv_table[0][count] as u32))
-        }
-        if negamax.pv_length[0] == 0 {
-            println!("PV table is none");
-        }
-        println!("number of nodes is {}", negamax.nodes)
+        // for count in 0..negamax.pv_length[0] as usize {
+        //     println!("PV TABLE {}", BitMove::from(negamax.pv_table[0][count] as u32))
+        // }
+        // if negamax.pv_length[0] == 0 {
+        //     println!("PV table is none");
+        // }
+        // println!("number of nodes is {}", negamax.nodes)
         // (r.0, Some(BitMove::from(nega_max.pv_table[0][0]as u32)))
     }
 
@@ -166,9 +187,12 @@ impl<T> NegaMax<T> where T: TimeControl {
         for mv in sorted_moves {
             if let Some(new_board) = board.make_move(mv, MoveType::CapturesOnly) {
                 self.ply += 1;
+                self.repetition_index+=1;
+                self.repetition_table[self.repetition_index] = new_board.hash_key;
                 // print!("{}, ", self.ply);
                 let score = -self.quiescence(-beta, -alpha, &new_board);
                 self.ply -=1;
+                self.repetition_index-=1;
 
                 // return 0 if time is up
                 if self.controller.as_ref().lock().unwrap().stopped() { return 0}
@@ -183,15 +207,30 @@ impl<T> NegaMax<T> where T: TimeControl {
         return alpha
     }
 
+    fn is_repetition(&self, board: &BoardState) -> bool {
+        for i in 0..self.repetition_index {
+            if self.repetition_table[i] == board.hash_key {
+                return true
+            }
+        }
+        return false;
+    }
+
 
     
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
     fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &BoardState) -> i32 {
         let mut hash_flag = HashFlag::UpperBound;
 
-        // if we had cached the score for this move before, we return it
-        if self.ply > 0 {
-            if let Some(score) =  self.tt.probe(board.hash_key, depth, alpha, beta) {
+        if self.ply > 0 && self.is_repetition(board) {
+            return 0
+        }
+
+        let pv_node = (beta - alpha) > 1;
+        // if we had cached the score for this move before, we return it, and confirm that the current node is not a PV node(principal variation)
+        if (self.ply > 0) && pv_node == false {
+            // read hash entry if we're not in a root ply and hash enret is available and current node is not a principal variation node
+            if let Some(score) =  self.tt.probe(board.hash_key, depth, alpha, beta, self.ply) {
                 return score
             }
         }
@@ -199,6 +238,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         if (self.nodes & NODES_2047) == 0 {
             self.controller.as_ref().lock().unwrap().communicate();
         }
+
         // println!("ply is {}", self.ply);
         self.pv_length[self.ply] = self.ply;
         if depth == 0 {
@@ -225,6 +265,8 @@ impl<T> NegaMax<T> where T: TimeControl {
         if null_move_forward_pruning_conditions {
             let mut nmfp_board = board.clone();
             self.ply += 1;
+            self.repetition_index+=1;
+            self.repetition_table[self.repetition_index] = nmfp_board.hash_key;
 
             // update the zobrist hash accordingly, since this mutating actions do not direcly update the zobrist hash
             if let Some(enpass_sq) = nmfp_board.enpassant {
@@ -237,6 +279,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board);
 
             self.ply -= 1;
+            self.repetition_index-=1;
 
             // return 0 if time is up
             if self.controller.as_ref().lock().unwrap().stopped() { return 0}
@@ -260,6 +303,8 @@ impl<T> NegaMax<T> where T: TimeControl {
             
             if let Some(new_board) = play_moves {
                 self.ply +=1;
+                self.repetition_index+=1;
+                self.repetition_table[self.repetition_index] = new_board.hash_key;
                 legal_moves += 1;
 
 
@@ -298,6 +343,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
                 
                 self.ply -=1;
+                self.repetition_index-=1;
                 moves_searched += 1;
                 // return 0 if time is up
                 if self.controller.as_ref().lock().unwrap().stopped() { return 0}
@@ -305,7 +351,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
                 // fail-hard beta cutoff
                 if score >= beta {
-                    self.tt.record(board.hash_key, depth, beta, HashFlag::LowerBound);
+                    self.tt.record(board.hash_key, depth, beta, self.ply, HashFlag::LowerBound);
                     // println!("ply @3 is {}", self.ply);
                     if !mv.get_capture() { // quiet move (non-capturing quiet move that beats the opponent)
                         self.killer_moves[1][self.ply] = self.killer_moves[0][self.ply];
@@ -351,13 +397,13 @@ impl<T> NegaMax<T> where T: TimeControl {
         if legal_moves == 0 {
             // is king in check
             if king_in_check {
-                return -49_000 + (self.ply) as i32;
+                return -MATE_VALUE + (self.ply) as i32;
             }
             // king is not in check and there are not legal moves
             return 0 // stalemate | draw
         }
 
-        self.tt.record(board.hash_key, depth, alpha, hash_flag);
+        self.tt.record(board.hash_key, depth, alpha, self.ply, hash_flag);
         return alpha
     }
 

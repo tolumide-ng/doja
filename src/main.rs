@@ -29,7 +29,7 @@ use bit_move::BitMove;
 use bitboard::Bitboard;
 use board::{board_state::BoardState, fen::FEN, piece::Piece};
 use color::Color;
-use constants::{ALPHA, BETA, START_POSITION, TRICKY_POSITION, ZOBRIST};
+use constants::{ALPHA, BETA, REPETITIONS, START_POSITION, TRICKY_POSITION, ZOBRIST};
 use move_type::MoveType;
 use perft::Perft;
 use search::control::Control;
@@ -53,10 +53,10 @@ fn main() {
     // let mv = BitMove::new(Square::A1 as u32, Square::B2 as u32, Piece::WB, None, false, false, false, false);
 
     // let board = BoardState::parse_fen("4k3/Q7/8/4K3/8/8/8/8 w - - ").unwrap();
-    let board = BoardState::parse_fen(START_POSITION).unwrap();
-    println!("{}", board.to_string());
-    let controller = Control::new();
-    NegaMax::run(Arc::new(Mutex::new(controller)), ALPHA, BETA, 9, &board);
+    // let board = BoardState::parse_fen(REPETITIONS).unwrap();
+    // println!("{}", board.to_string());
+    // let controller = Control::new();
+    // NegaMax::run(Arc::new(Mutex::new(controller)), ALPHA, BETA, 15, &board);
 
     // let mvs = board.get_castling(Color::White);
     // for x in mvs {
@@ -98,7 +98,7 @@ fn main() {
     // println!("      Time: {}ms", elapsed.as_millis());
     
     
-    // let _ = UCI::default().reader();
+    let _ = UCI::default().reader();
 
     // Perft::start(6);
 

@@ -72,7 +72,7 @@ impl UCI {
                             println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
                             let controller = Arc::clone(&self.controller);
                             let board = self.board.clone().unwrap();
-                            let r = thread::spawn(move || {
+                            thread::spawn(move || {
                                 let depth = controller.lock().unwrap().depth();
                                 NegaMax::run(controller, ALPHA, BETA, depth, &board);
                                 println!("done done >>>>");

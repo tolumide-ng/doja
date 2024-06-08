@@ -35,4 +35,7 @@
 ### TO Read/Re-read
 1. [Umko Chess Program](https://ev.fe.uni-lj.si/3-2011/Boskovic.pdf)
 2. [Fully Distributed Chess Program](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=6b75facdf4608cbd798092ec6eb5436b2209e361)
-3. 
+3. [Computer Chess Indexing](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=02f623a38001a3288281c742f86c4775e446c33f)
+5. [Searchiing for Chess](https://webdocs.cs.ualberta.ca/~tony/TechnicalReports/TR87-6.pdf)
+6. [Genetic Algorithm for optimising chess position scoring](https://cs.uef.fi/pub/Theses/2004_MSc_Aksenov_Petr.pdf)
+7. [Paralle Search of strong ordered game trees](https://dl.acm.org/doi/pdf/10.1145/356893.356895) (*****)
