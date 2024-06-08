@@ -39,3 +39,4 @@
 5. [Searchiing for Chess](https://webdocs.cs.ualberta.ca/~tony/TechnicalReports/TR87-6.pdf)
 6. [Genetic Algorithm for optimising chess position scoring](https://cs.uef.fi/pub/Theses/2004_MSc_Aksenov_Petr.pdf)
 7. [Paralle Search of strong ordered game trees](https://dl.acm.org/doi/pdf/10.1145/356893.356895) (*****)
+8. [Pesto's evaluation table](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)

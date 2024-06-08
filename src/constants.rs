@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 
-use crate::{piece_attacks::PieceAttacks, shift::ShiftData, squares::Square, zobrist::Zobrist};
+use crate::{masks::EvaluationMasks, piece_attacks::PieceAttacks, shift::ShiftData, squares::Square, zobrist::Zobrist};
 
 ///  ----NOT_A_FILE----
 /// 8   0  1  1  1  1  1  1  1 \
@@ -142,6 +142,24 @@ pub(crate) const RANK_4: u64 = 0x0000_0000_FF00_0000;
 pub(crate) const RANK_5: u64 = 0x0000_00FF_0000_0000;
 pub(crate) const RANK_8: u64 = 0xff00_0000_0000_0000; // RANK 8 IS FILLED
 pub(crate) const RANK_1: u64 = 0xff; // RANK 1 IS FILLED
+pub(crate) const RANK_2: u64 = 0xff00; // rank 2 is filled
+pub(crate) const RANK_3: u64 = 0xff0000; // rank 3 is filled
+pub(crate) const RANK_6: u64 = 0xff0000000000; // rank 6 is filled
+pub(crate) const RANK_7: u64 = 0xff000000000000; // rank 7 is filled
+
+
+pub(crate) const A_FILE: u64 = 0x101010101010101;  // A rank is filled
+pub(crate) const B_FILE: u64 = 0x202020202020202;  // B rank is filled
+pub(crate) const C_FILE: u64 = 0x404040404040404;  // C rank is filled
+pub(crate) const D_FILE: u64 = 0x808080808080808;  // D rank is filled
+pub(crate) const E_FILE: u64 = 0x1010101010101010; // E rank is filled
+pub(crate) const F_FILE: u64 = 0x2020202020202020; // F rank is filled
+pub(crate) const G_FILE: u64 = 0x4040404040404040; // G rank is filled
+pub(crate) const H_FILE: u64 = 0x8080808080808080; // H file is filled
+
+
+
+
 pub(crate) const WHITE_KING_CASTLING_CELLS: u64 = 0xf0;
 pub(crate) const E1_F1_FILLED: u64 = 0x90; // out of the white king castling cells only E1 and F1 cells bits are set
 pub(crate) const BLACK_KING_CASTLING_CELLS: u64 = 0xf000000000000000;
@@ -169,10 +187,27 @@ lazy_static! {
     pub static ref PIECE_ATTACKS: PieceAttacks = PieceAttacks::new();
     #[derive(Debug)]
     pub static ref ZOBRIST: Zobrist = Zobrist::init_zobrist();
+    // evaluation masks
+    pub static ref EVAL_MASKS: EvaluationMasks = EvaluationMasks::init();
 }
 
 
-// pub(crate) const DIAGONAL_MASK_EX: [u64; 15] = [0x8040201008040200];
+/// double pawns penalty
+pub(crate) const DOUBLE_PAWN_PENALTY: i16 = -10;
+/// isolated pawns penalty
+pub(crate) const ISOLATED_PAWN_PENALTY: i16 = -10;
+/// passed pawn bonus 
+pub(crate) const PASSED_PAWN_BONUS: [u8; 8] = [0, 5, 10, 20, 35, 60, 100, 200];
+pub(crate) const GET_RANKS: [u8; 64] = [
+    7, 7, 7, 7, 7, 7, 7, 7,
+    6, 6, 6, 6, 6, 6, 6, 6,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    4, 4, 4, 4, 4, 4, 4, 4,
+    3, 3, 3, 3, 3, 3, 3, 3,
+    2, 2, 2, 2, 2, 2, 2, 2,
+    1, 1, 1, 1, 1, 1, 1, 1,
+	0, 0, 0, 0, 0, 0, 0, 0
+];
 
 
 
@@ -393,3 +428,23 @@ pub(crate) const KING_SCORES_END: [i8; 64] = [
     -30,-30,  0,  0,  0,  0,-30,-30,
     -50,-30,-30,-30,-30,-30,-30,-50
 ];
+
+
+
+
+
+//
+//     File mask for         Isolated mask            Passed pawn mask
+//     square f2             for square g2            for square c4
+//  8  0 0 0 0 0 1 0 0    8  0 0 0 0 0 1 0 1       8  0 1 1 1 0 0 0 0
+//  7  0 0 0 0 0 1 0 0    7  0 0 0 0 0 1 0 1       7  0 1 1 1 0 0 0 0
+//  6  0 0 0 0 0 1 0 0    6  0 0 0 0 0 1 0 1       6  0 1 1 1 0 0 0 0
+//  5  0 0 0 0 0 1 0 0    5  0 0 0 0 0 1 0 1       5  0 1 1 1 0 0 0 0
+//  4  0 0 0 0 0 1 0 0    4  0 0 0 0 0 1 0 1       4  0 0 0 0 0 0 0 0
+//  3  0 0 0 0 0 1 0 0    3  0 0 0 0 0 1 0 1       3  0 0 0 0 0 0 0 0
+//  2  0 0 0 0 0 1 0 0    2  0 0 0 0 0 1 0 1       2  0 0 0 0 0 0 0 0
+//  1  0 0 0 0 0 1 0 0    1  0 0 0 0 0 1 0 1       1  0 0 0 0 0 0 0 0
+//     a b c d e f g h       a b c d e f g h          a b c d e f g h
+//  
+
+

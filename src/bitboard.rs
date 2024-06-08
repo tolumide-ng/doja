@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::Deref};
+use std::{fmt::Display, ops::{Deref, DerefMut}};
 
 use crate::{constants::{NOT_A_FILE, NOT_H_FILE}, squares::{Square, BIT_TABLE}};
 
@@ -177,6 +177,51 @@ impl Bitboard {
         occupancy.into()
     }
 
+    pub(crate) fn north_fill(&self) -> u64 {
+        let mut gen = **self;
+        gen |= gen << 8;
+        gen |= gen << 16;
+        gen |= gen << 32;
+        gen
+    }
+
+    pub(crate) fn south_fill(&self) -> u64 {
+        let mut gen = **self;
+        gen |= gen >> 8;
+        gen |= gen >> 16;
+        gen |= 32;
+        gen
+    }
+
+    pub(crate) fn file_fill(&self) -> Self {
+        Self::from(self.north_fill() | self.south_fill())
+    }
+
+    pub(crate) fn east_attack_fill(&self) -> u64 {
+        let file_fill = self.file_fill();
+        file_fill.east()
+    }
+
+    pub(crate) fn west_attack_fill(&self) -> u64 {
+        let file_fill = self.file_fill();
+        file_fill.west()
+    }
+
+
+    /// Ensure that the own set bits in this bitboard are pawns
+    pub(crate) fn no_neighbour_east(&self) -> u64 {
+        **self & !self.west_attack_fill()
+    }
+
+    /// Ensure that the own set bits in this bitboard are pawns
+    pub(crate) fn no_neighbour_west(&self) -> u64 {
+        **self & !self.east_attack_fill()
+    }
+
+    pub(crate) fn isolanis(&self) -> u64 {
+        self.no_neighbour_east() & self.no_neighbour_west()
+    }
+
 }
 
 /// Returns a stringified u64 with all 64 bits being represented.
@@ -248,6 +293,12 @@ impl Deref for Bitboard {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for Bitboard {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
