@@ -198,17 +198,10 @@ pub(crate) const DOUBLE_PAWN_PENALTY: i16 = -10;
 pub(crate) const ISOLATED_PAWN_PENALTY: i16 = -10;
 /// passed pawn bonus 
 pub(crate) const PASSED_PAWN_BONUS: [u8; 8] = [0, 5, 10, 20, 35, 60, 100, 200];
-pub(crate) const GET_RANKS: [u8; 64] = [
-    7, 7, 7, 7, 7, 7, 7, 7,
-    6, 6, 6, 6, 6, 6, 6, 6,
-    5, 5, 5, 5, 5, 5, 5, 5,
-    4, 4, 4, 4, 4, 4, 4, 4,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    2, 2, 2, 2, 2, 2, 2, 2,
-    1, 1, 1, 1, 1, 1, 1, 1,
-	0, 0, 0, 0, 0, 0, 0, 0
-];
-
+/// Semi-open-file: a file on which we do not have a pawn, but the opponent has at least one. It can be used to increase the vertical mobility of the major pieces, to attack weak pawns and to pressure enemy position or to create an outpost.
+pub(crate) const SEMI_OPEN_FILE_SCORE: i16 = 10;
+/// An Open File is a vertical column with no pawns of either color on it
+pub(crate) const OPEN_FILE_SCORE: i16 = 15;
 
 
 ///                             castling    move     in      in

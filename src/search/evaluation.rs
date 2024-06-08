@@ -1,4 +1,4 @@
-use crate::{bitboard::Bitboard, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{CMK_BISHOP_SCORE, CMK_KING_SCORE, CMK_KNIGHT_SCORE, CMK_PAWN_SCORE, CMK_ROOK_SCORE, DOUBLE_PAWN_PENALTY, EVAL_MASKS, ISOLATED_PAWN_PENALTY, MIRROR_SCORE, PASSED_PAWN_BONUS}, masks::EvaluationMasks, squares::Square};
+use crate::{bitboard::Bitboard, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{CMK_BISHOP_SCORE, CMK_KING_SCORE, CMK_KNIGHT_SCORE, CMK_PAWN_SCORE, CMK_ROOK_SCORE, DOUBLE_PAWN_PENALTY, EVAL_MASKS, ISOLATED_PAWN_PENALTY, MIRROR_SCORE, OPEN_FILE_SCORE, PASSED_PAWN_BONUS, SEMI_OPEN_FILE_SCORE}, masks::EvaluationMasks, squares::Square};
 
 pub(crate) struct Evaluation;
 
@@ -37,8 +37,32 @@ impl Evaluation {
                     },
                     Piece::WN => score += CMK_KNIGHT_SCORE[mirror_index],
                     Piece::WB => score += CMK_BISHOP_SCORE[mirror_index],
-                    Piece::WR => score += CMK_ROOK_SCORE[mirror_index],
-                    Piece::WK => score += CMK_KING_SCORE[mirror_index],
+                    Piece::WR => {
+                        // positional score
+                        score += CMK_ROOK_SCORE[mirror_index];
+
+                        // semi open file bonus
+                        if *board[Piece::WP] & EVAL_MASKS.file_masks[mirror_index] == 0 {
+                            score += SEMI_OPEN_FILE_SCORE
+                        }
+                        
+                        // open file bonus
+                        if (*board[Piece::WP] | *board[Piece::BP]) & EVAL_MASKS.file_masks[mirror_index] == 0 {
+                            score += OPEN_FILE_SCORE;
+                        }
+                    },
+                    Piece::WK => {
+                        score += CMK_KING_SCORE[mirror_index];
+                        // semi open file penalty (discourage semi-open files on the king)
+                        if *board[Piece::WP] & EVAL_MASKS.file_masks[mirror_index] == 0 {
+                            score -= SEMI_OPEN_FILE_SCORE
+                        }
+                        
+                        // open file penalty (discourage open files on the king)
+                        if (*board[Piece::WP] | *board[Piece::BP]) & EVAL_MASKS.file_masks[mirror_index] == 0 {
+                            score -= OPEN_FILE_SCORE;
+                        }
+                    },
                     
 
                     Piece::BP => {
@@ -49,6 +73,7 @@ impl Evaluation {
                         if double_pawns > 1 {
                             score -= double_pawns * DOUBLE_PAWN_PENALTY as i16;
                         }
+                        // isolated pawn
                         if *board[Piece::BP] & EVAL_MASKS.isolated_masks[square] == 0 {
                             score -= ISOLATED_PAWN_PENALTY as i16;
                         }
@@ -59,8 +84,31 @@ impl Evaluation {
                     },
                     Piece::BN => score -= CMK_KNIGHT_SCORE[square],
                     Piece::BB => score -= CMK_BISHOP_SCORE[square],
-                    Piece::BR => score -= CMK_ROOK_SCORE[square],
-                    Piece::BK => score -= CMK_KING_SCORE[square],
+                    Piece::BR => {
+                        score -= CMK_ROOK_SCORE[square];
+                        // semi open file bonus
+                        if *board[Piece::BP] & EVAL_MASKS.file_masks[mirror_index] == 0 {
+                            score -= SEMI_OPEN_FILE_SCORE
+                        }
+                        
+                        // open file bonus
+                        if (*board[Piece::WP] | *board[Piece::BP]) & EVAL_MASKS.file_masks[mirror_index] == 0 {
+                            score -= OPEN_FILE_SCORE;
+                        }
+                    },
+                    Piece::BK => {
+                        score -= CMK_KING_SCORE[square];
+
+                         // semi open file penalty (discourage semi-open files on the king)
+                        if *board[Piece::WP] & EVAL_MASKS.file_masks[mirror_index] == 0 {
+                            score += SEMI_OPEN_FILE_SCORE
+                        }
+                        
+                        // open file penalty (discourage open files on the king)
+                        if (*board[Piece::WP] | *board[Piece::BP]) & EVAL_MASKS.file_masks[mirror_index] == 0 {
+                            score += OPEN_FILE_SCORE;
+                        }
+                    },
 
                     _ => {}
                 }

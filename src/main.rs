@@ -72,7 +72,7 @@ fn main() {
     // board.hash_key();
     // println!("mbs {}", HASH_SIZE);
 
-    // let mut rtt = TTable::default();
+    // let mut rtt = TTable::default();r
     // // rtt.set(0x2938, BitMove::from(0), 0, 12, HashFlag::Exact);
     // let result = rtt.probe(0, 0, 10, -10);
     // println!("the result is {:?}", result);
@@ -82,7 +82,7 @@ fn main() {
     // println!("{}", xx);
 
     // let board = BoardState::parse_fen("8/8/8/P1P5/5p1p/8/8/8 w - - ").unwrap();
-    let board = BoardState::parse_fen("8/8/8/P1P5/5p1p/8/8/8 w - - ").unwrap();
+    let board = BoardState::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
     println!("{}", board.to_string());
     let score = Evaluation::evaluate(&board);
     println!("the scoer now ius >>>> {}", score)
