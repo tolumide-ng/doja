@@ -19,13 +19,15 @@ pub struct BoardState {
     pub(crate) hash_key: u64,
     // // this is made this way without a mutex because editing the prev would not result in this same state again
     // prev: Arc<Option<BoardState>>,
+    // fifty move rule counter
+    pub(crate) fifty: u8,
 }
 
 
 impl BoardState {
     pub fn new() -> BoardState {
         Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
-            occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST
+            occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST, fifty: 0,
             //  castling_table: CASTLING_TABLE,
         }
     }
@@ -381,6 +383,10 @@ impl BoardState {
                 board.hash_key ^= ZOBRIST.piece_keys[piece][from];
                 board.hash_key ^= ZOBRIST.piece_keys[piece][to];
 
+                if Piece::WP == bit_move.get_piece() || Piece::BP == bit_move.get_piece() || bit_move.get_capture() {
+                    board.fifty = 0;
+                }
+
 
                 // Removes the captured piece from the the captured piece bitboard
                 if bit_move.get_capture() {
@@ -408,6 +414,7 @@ impl BoardState {
                 if bit_move.get_enpassant() {
                     let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     board[Piece::pawn(!turn)].pop_bit(enpass_target);
+                    board.fifty = 0;
                     board.hash_key ^= ZOBRIST.piece_keys[Piece::pawn(!turn)][enpass_target as usize];
                 }
 

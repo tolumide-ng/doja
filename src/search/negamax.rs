@@ -221,10 +221,11 @@ impl<T> NegaMax<T> where T: TimeControl {
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
     fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &BoardState) -> i32 {
         self.pv_length[self.ply] = self.ply;
+        // let mut best_move: Option<BitMove> = None;
 
         let mut hash_flag = HashFlag::UpperBound;
-        if self.ply > 0 && self.is_repetition(board) {
-            return 0
+        if self.ply > 0 && self.is_repetition(board) || board.fifty >= 100 {
+            return 0 // draw
         }
 
         let pv_node = (beta - alpha) > 1;
