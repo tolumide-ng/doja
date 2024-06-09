@@ -29,6 +29,7 @@
 ### References
 1. [A port of Maksim Korzh's work](https://www.youtube.com/playlist?list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs)
 2. [BlueFever Software](https://www.youtube.com/playlist?list=PLZ1QII7yudbc-Ky058TEaOstZHVbT-2hg)
+3. [PeSTO's Evaluation Function](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
 
 
 
@@ -41,3 +42,4 @@
 7. [Paralle Search of strong ordered game trees](https://dl.acm.org/doi/pdf/10.1145/356893.356895) (*****)
 8. [Pesto's evaluation table](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
 9. [Little Chess Evaluation Compedium](https://www.chessprogramming.org/images/7/70/LittleChessEvaluationCompendium.pdf) (****)
+10. [History Heuristic](https://www.chessprogramming.org/History_Heuristic) (*****)

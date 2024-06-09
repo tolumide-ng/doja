@@ -11,7 +11,7 @@ pub struct NegaMax<T: TimeControl> {
     history_moves: [[u32; TOTAL_SQUARES]; TOTAL_PIECES],
     pv_length: [usize; 64],
     pv_table: [[i32; 64]; MAX_PLY],
-    nodes: u32,
+    nodes: u64,
     /// ply: is the distance to the root, see: https://www.chessprogramming.org/Root
     ply: usize,
     follow_pv: bool,

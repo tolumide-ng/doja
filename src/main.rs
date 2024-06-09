@@ -1,5 +1,6 @@
 mod bitboard;
 mod masks;
+mod pesto;
 mod utils;
 mod squares;
 mod zobrist;
@@ -81,11 +82,14 @@ fn main() {
     // let xx = x.wrapping_shr(100);
     // println!("{}", xx);
 
-    // let board = BoardState::parse_fen("8/8/8/P1P5/5p1p/8/8/8 w - - ").unwrap();
-    let board = BoardState::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
+    // let board = BoardState::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
+    // let board = BoardState::parse_fen("8/8/8/8/8/8/8/8 w - - ").unwrap();
+    let board = BoardState::parse_fen(START_POSITION).unwrap();
     println!("{}", board.to_string());
-    let score = Evaluation::evaluate(&board);
-    println!("the scoer now ius >>>> {}", score)
+    Evaluation::evaluate(&board);
+    Evaluation::get_game_phase_score(&board);
+    // let score = Evaluation::evaluate(&board);
+    // println!("the scoer now ius >>>> {}", score)
     // EvaluationMasks::init();
 
     // println!()

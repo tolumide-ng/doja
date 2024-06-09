@@ -248,13 +248,13 @@ impl Piece {
             Self::WB => 350,    // white bishop
             Self::WR => 500,    
             Self::WQ => 1000,
-            Self::WK => 0,      // white king (a king has no score but we need this for easy indexing with piece)
+            Self::WK => 10000,
             Self::BP => -100,
             Self::BN => -300,
             Self::BB => -350,
             Self::BR => -500,
             Self::BQ => -1000, 
-            Self::BK => 0,
+            Self::BK => -10000,
 
             // P = 100
             // N = 320

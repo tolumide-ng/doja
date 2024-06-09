@@ -24,7 +24,7 @@ impl KoggeStone {
         
         pro &= shift.mask;
 
-        // becnause rust only supports rotate_left and right by u32
+        // because rust only supports rotate_left and right by u32
         gen |= pro & Self::rotate_left(gen, r);
         pro &= Self::rotate_left(pro, r);
         gen |= pro & Self::rotate_left(gen, 2*r);

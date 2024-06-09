@@ -67,7 +67,7 @@ impl Control {
         self.starttime = start;
         if self.time > 0 {
             let mut time = self.time / self.movestogo as u128;
-            time -= 50;
+            if time > 1500 {time -= 50}
             self.time = time;
             self.stoptime = start_ms + time + (self.inc as u128);
             self.timeset = true;

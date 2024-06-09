@@ -15,7 +15,7 @@ pub struct BoardState {
     pub(crate) castling_rights: Castling,
     pub(crate) enpassant: Option<Square>,
     occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
-    castling_table: [u8; TOTAL_SQUARES],
+    // castling_table: [u8; TOTAL_SQUARES],
     pub(crate) hash_key: u64,
     // // this is made this way without a mutex because editing the prev would not result in this same state again
     // prev: Arc<Option<BoardState>>,
@@ -25,7 +25,8 @@ pub struct BoardState {
 impl BoardState {
     pub fn new() -> BoardState {
         Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
-            occupancies: [0; OCCUPANCIES], castling_table: CASTLING_TABLE, hash_key: START_POSITION_ZOBRIST
+            occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST
+            //  castling_table: CASTLING_TABLE,
         }
     }
 
@@ -455,8 +456,8 @@ impl BoardState {
 
                 let old_castling = usize::from_str_radix(&board.castling_rights.bits().to_string(), 10).unwrap();
                 board.hash_key ^= ZOBRIST.castle_keys[old_castling];
-                let castle_one = board.castling_rights.bits() & board.castling_table[from];
-                let castle_two = castle_one & board.castling_table[to];
+                let castle_one = board.castling_rights.bits() & CASTLING_TABLE[from];
+                let castle_two = castle_one & CASTLING_TABLE[to];
                 board.castling_rights = Castling::from(castle_two);
                 let new_castling = usize::from_str_radix(&board.castling_rights.bits().to_string(), 10).unwrap();
                 board.hash_key ^= ZOBRIST.castle_keys[new_castling];
