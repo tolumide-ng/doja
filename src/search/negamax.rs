@@ -220,8 +220,9 @@ impl<T> NegaMax<T> where T: TimeControl {
     
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
     fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &BoardState) -> i32 {
-        let mut hash_flag = HashFlag::UpperBound;
+        self.pv_length[self.ply] = self.ply;
 
+        let mut hash_flag = HashFlag::UpperBound;
         if self.ply > 0 && self.is_repetition(board) {
             return 0
         }
@@ -240,7 +241,6 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
 
         // println!("ply is {}", self.ply);
-        self.pv_length[self.ply] = self.ply;
         if depth == 0 {
             let score = self.quiescence(alpha, beta, board);
             return score;

@@ -192,17 +192,30 @@ lazy_static! {
 }
 
 
-/// double pawns penalty
-pub(crate) const DOUBLE_PAWN_PENALTY: i16 = -10;
+/// double pawns penalty (from CMK (BBC engine))
+pub(crate) const DOUBLE_PAWN_PENALTY_OPENING: i8 = -5;
+pub(crate) const DOUBLE_PAWN_PENALTY_ENDGAME: i8 = -10;
 /// isolated pawns penalty
-pub(crate) const ISOLATED_PAWN_PENALTY: i16 = -10;
+pub(crate) const ISOLATED_PAWN_PENALTY_OPENING: i8 = -5;
+pub(crate) const ISOLATED_PAWN_PENALTY_ENDGAME: i8 = -10;
 /// passed pawn bonus 
 pub(crate) const PASSED_PAWN_BONUS: [u8; 8] = [0, 5, 10, 20, 35, 60, 100, 200];
 /// Semi-open-file: a file on which we do not have a pawn, but the opponent has at least one. It can be used to increase the vertical mobility of the major pieces, to attack weak pawns and to pressure enemy position or to create an outpost.
-pub(crate) const SEMI_OPEN_FILE_SCORE: i16 = 10;
+pub(crate) const SEMI_OPEN_FILE_SCORE: i32 = 10;
 /// An Open File is a vertical column with no pawns of either color on it
-pub(crate) const OPEN_FILE_SCORE: i16 = 15;
-pub(crate) const KING_SHIELD_BONUS: i16 = 5;
+pub(crate) const OPEN_FILE_SCORE: i32 = 15;
+pub(crate) const KING_SHIELD_BONUS: i32 = 5;
+
+
+// mobility units (values from fruit reloaded)
+pub(crate) const BISHOP_UNIT: i32 = 4;
+pub(crate) const QUEEN_UNIT: i32 = 9;
+
+// mobility bonuses (values from engine Fruit reloaded)
+pub(crate) const BISHOP_MOBILITY_OPENING: i32 = 5;
+pub(crate) const BISHOP_MOBILITY_ENDGAME: i32 = 5;
+pub(crate) const QUEEN_MOBILITY_OPENING: i32 = 1;
+pub(crate) const QUEEN_MOBILITY_ENDGAME: i32 = 2;
 
 
 pub(crate) const MATERIAL_SCORE: [[i32; 12]; 2] = [

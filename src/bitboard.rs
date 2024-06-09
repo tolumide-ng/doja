@@ -83,6 +83,8 @@ impl Bitboard {
         self.count_ones()
     }
 
+
+    // 1_u64.wrapping_shl(bits.trailing_zeros()) ??????
     /// Returns the Least Significant first Bit
     /// e.g given 0b00010000
     /// the LSB would be 5
