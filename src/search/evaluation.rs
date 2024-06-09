@@ -44,14 +44,14 @@ impl Evaluation {
                         let double_pawns = (*board[piece] & EVAL_MASKS.file_masks[mirror_index]).count_ones() as i32;
                         // double pawn penalty
                         if double_pawns > 1 {
-                            score_opening += (double_pawns - 1) * DOUBLE_PAWN_PENALTY_OPENING as i32;
-                            score_endgame += (double_pawns - 1) * DOUBLE_PAWN_PENALTY_ENDGAME as i32;
+                            score_opening += (double_pawns - 1) * DOUBLE_PAWN_PENALTY_OPENING;
+                            score_endgame += (double_pawns - 1) * DOUBLE_PAWN_PENALTY_ENDGAME;
                         }
 
                         // isolated pawn
                         if *board[piece] & EVAL_MASKS.isolated_masks[mirror_index] == 0 {
-                            score_opening += ISOLATED_PAWN_PENALTY_OPENING as i32;
-                            score_endgame += ISOLATED_PAWN_PENALTY_ENDGAME as i32;
+                            score_opening += ISOLATED_PAWN_PENALTY_OPENING;
+                            score_endgame += ISOLATED_PAWN_PENALTY_ENDGAME;
                         }
 
                         // passed pawn bonus
@@ -64,40 +64,40 @@ impl Evaluation {
                     },
                     Piece::WN => {},
                     Piece::WB => {
-                        let bishop = (PIECE_ATTACKS.get_bishop_attacks(square.into(), board.get_occupancy(Color::Both)).count_ones() - BISHOP_UNIT as u32) as i32;
+                        let bishop = PIECE_ATTACKS.get_bishop_attacks(square.into(), board.get_occupancy(Color::Both)).count_ones() as i32 - BISHOP_UNIT;
                         // mobility
-                        score_opening += bishop * (BISHOP_MOBILITY_OPENING) as i32;
-                        score_endgame += bishop * (BISHOP_MOBILITY_ENDGAME) as i32;
+                        score_opening += bishop * BISHOP_MOBILITY_OPENING;
+                        score_endgame += bishop * BISHOP_MOBILITY_ENDGAME;
                     },
                     Piece::WR => {
                         // semi open file bonus
                         if *board[Piece::WP] & EVAL_MASKS.file_masks[mirror_index] == 0 {
-                            score_opening += SEMI_OPEN_FILE_SCORE as i32;
-                            score_endgame += SEMI_OPEN_FILE_SCORE as i32;
+                            score_opening += SEMI_OPEN_FILE_SCORE;
+                            score_endgame += SEMI_OPEN_FILE_SCORE;
                         }
                         
                         // open file bonus
                         if (*board[Piece::WP] | *board[Piece::BP]) & EVAL_MASKS.file_masks[mirror_index] == 0 {
-                            score_opening += OPEN_FILE_SCORE as i32;
-                            score_endgame += OPEN_FILE_SCORE as i32;
+                            score_opening += OPEN_FILE_SCORE;
+                            score_endgame += OPEN_FILE_SCORE;
                         }
                     },
                     Piece::WQ => {
                         let queen = PIECE_ATTACKS.get_queen_attacks(square as u64, board.get_occupancy(Color::Both)).count_ones() as i32 - QUEEN_UNIT;
-                        score_opening += queen * QUEEN_MOBILITY_OPENING as i32;
-                        score_endgame += queen * QUEEN_MOBILITY_ENDGAME as i32;
+                        score_opening += queen * QUEEN_MOBILITY_OPENING;
+                        score_endgame += queen * QUEEN_MOBILITY_ENDGAME;
                     }
                     Piece::WK => {
                         // semi open file penalty (discourage semi-open files on the king)
                         if *board[Piece::WP] & EVAL_MASKS.file_masks[mirror_index] == 0 {
-                            score_opening -= SEMI_OPEN_FILE_SCORE as i32;
-                            score_endgame -= SEMI_OPEN_FILE_SCORE as i32;
+                            score_opening -= SEMI_OPEN_FILE_SCORE;
+                            score_endgame -= SEMI_OPEN_FILE_SCORE;
                         }
                         
                         // open file penalty (discourage open files on the king)
                         if (*board[Piece::WP] | *board[Piece::BP]) & EVAL_MASKS.file_masks[mirror_index] == 0 {
-                            score_opening -= OPEN_FILE_SCORE as i32;
-                            score_endgame -= OPEN_FILE_SCORE as i32;
+                            score_opening -= OPEN_FILE_SCORE;
+                            score_endgame -= OPEN_FILE_SCORE;
                         }
 
                         let king_shields = ((PIECE_ATTACKS.king_attacks[square] & board.get_occupancy(Color::White)).count_ones() as i32 * KING_SHIELD_BONUS);
@@ -110,13 +110,13 @@ impl Evaluation {
                         // println!("score before {}", score);
                         let double_pawns = (*board[Piece::BP] & EVAL_MASKS.file_masks[square]).count_ones() as i32;
                         if double_pawns > 1 {
-                            score_opening -= double_pawns * DOUBLE_PAWN_PENALTY_OPENING as i32;
-                            score_endgame -= double_pawns * DOUBLE_PAWN_PENALTY_ENDGAME as i32;
+                            score_opening -= double_pawns * DOUBLE_PAWN_PENALTY_OPENING;
+                            score_endgame -= double_pawns * DOUBLE_PAWN_PENALTY_ENDGAME;
                         }
                         // isolated pawn
                         if *board[Piece::BP] & EVAL_MASKS.isolated_masks[square] == 0 {
-                            score_opening -= ISOLATED_PAWN_PENALTY_OPENING as i32;
-                            score_endgame -= ISOLATED_PAWN_PENALTY_OPENING as i32;
+                            score_opening -= ISOLATED_PAWN_PENALTY_OPENING;
+                            score_endgame -= ISOLATED_PAWN_PENALTY_OPENING;
                         }
                         // passed pawn bonus 
                         if EVAL_MASKS.black_passed_masks[square] & *board[Piece::WP] == 0 {

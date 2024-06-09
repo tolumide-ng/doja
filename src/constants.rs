@@ -193,11 +193,11 @@ lazy_static! {
 
 
 /// double pawns penalty (from CMK (BBC engine))
-pub(crate) const DOUBLE_PAWN_PENALTY_OPENING: i8 = -5;
-pub(crate) const DOUBLE_PAWN_PENALTY_ENDGAME: i8 = -10;
+pub(crate) const DOUBLE_PAWN_PENALTY_OPENING: i32 = -5;
+pub(crate) const DOUBLE_PAWN_PENALTY_ENDGAME: i32 = -10;
 /// isolated pawns penalty
-pub(crate) const ISOLATED_PAWN_PENALTY_OPENING: i8 = -5;
-pub(crate) const ISOLATED_PAWN_PENALTY_ENDGAME: i8 = -10;
+pub(crate) const ISOLATED_PAWN_PENALTY_OPENING: i32 = -5;
+pub(crate) const ISOLATED_PAWN_PENALTY_ENDGAME: i32 = -10;
 /// passed pawn bonus 
 pub(crate) const PASSED_PAWN_BONUS: [u8; 8] = [0, 5, 10, 20, 35, 60, 100, 200];
 /// Semi-open-file: a file on which we do not have a pawn, but the opponent has at least one. It can be used to increase the vertical mobility of the major pieces, to attack weak pawns and to pressure enemy position or to create an outpost.
