@@ -177,7 +177,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         // println!("NODES====== {:?}", self.nodes);
         
         // evaluate position
-        let evaluation = Evaluation::evaluate(board) as i32;
+        let evaluation = Evaluation::evaluate(board);
         // fail head beta cutoff
         if evaluation >= beta { return beta; } // node (move) fails high
         if evaluation > alpha { alpha = evaluation; } // found a better score
@@ -247,7 +247,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
 
         if self.ply > MAX_PLY -1 {
-            return Evaluation::evaluate(board) as i32;
+            return Evaluation::evaluate(board);
         }
 
         self.nodes+=1;

@@ -241,7 +241,7 @@ impl Piece {
 
     /// https://www.chessprogramming.org/Point_Value
     /// Alan Turing (1953)
-    pub(crate) fn material_score(&self) -> i16 {
+    pub(crate) fn material_score(&self) -> i32 {
         match self {
             Self::WP => 100,    // white pawn
             Self::WN=> 300,    // whte knight

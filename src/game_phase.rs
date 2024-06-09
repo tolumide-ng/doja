@@ -1,5 +1,7 @@
 use std::ops::Index;
 
+use crate::constants::{END_PHASE_SCORE, OPENING_PHASE_SCORE};
+
 
 
 #[derive(Debug, Clone, Copy)]
@@ -18,5 +20,17 @@ impl<T> Index<GamePhase> for [T] {
             GamePhase::EndGame => &self[1],
             GamePhase::MiddleGame => &self[2],
         }
+    }
+}
+
+impl From<i32> for GamePhase {
+    fn from(score: i32) -> Self {
+         if score > OPENING_PHASE_SCORE {
+            return GamePhase::Opening
+        } else if score < OPENING_PHASE_SCORE && score < END_PHASE_SCORE {
+            return GamePhase::EndGame
+        }
+
+        return GamePhase::MiddleGame
     }
 }
