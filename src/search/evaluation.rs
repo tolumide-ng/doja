@@ -4,7 +4,8 @@ pub(crate) struct Evaluation;
 
 impl Evaluation {
     pub(crate) fn evaluate(board: &BoardState) -> i32 {
-        let mut score: i32 = 0;
+        let (mut score_opening, mut score_endgame): (i32, i32) = (0, 0);
+
         let game_phase_score = Self::get_game_phase_score(board);
         let game_phase = GamePhase::from(game_phase_score);
 
@@ -14,50 +15,29 @@ impl Evaluation {
             
             while bitboard.not_zero() {
                 let square = Square::from(bitboard.get_lsb1().unwrap());
-                score += piece.material_score();
-
-                match game_phase {
-                    GamePhase::MiddleGame => {
-                        // interpolate scores in middle game
-                        // (score_opening * game_phase_score + score_endgame * (opening_phase_score - game_phase_score))/opening_phase_score
-                        // e.g. the score for pawn on d4 at phase say 5000 would be:
-                        // interpolated_score = (12 * 5000 + (-7) * (6192 - 5000)/6192 = 8,342377261
-                        score += (
-                            (MATERIAL_SCORE[GamePhase::Opening][piece] * game_phase_score) + (MATERIAL_SCORE[GamePhase::EndGame][piece] * (
-                                OPENING_PHASE_SCORE - game_phase_score)
-                            ))/ OPENING_PHASE_SCORE;
-                    }
-                    GamePhase::Opening | GamePhase::EndGame => {
-                        // score material weights with pure scores in opening/ending games
-                        score += MATERIAL_SCORE[game_phase][piece];
-                    }
-                }
-                
                 let mirror_index = MIRROR_SCORE[square];
+
+                // interpolate scores in middle game
+                // (score_opening * game_phase_score + score_endgame * (opening_phase_score - game_phase_score))/opening_phase_score
+                // e.g. the score for pawn on d4 at phase say 5000 would be:
+                // interpolated_score = (12 * 5000 + (-7) * (6192 - 5000)/6192 = 8,342377261
+                let piece_index = (piece as usize) % PLAYER_PIECES;
+
+                score_opening += MATERIAL_SCORE[GamePhase::Opening][piece];
+                score_endgame += MATERIAL_SCORE[GamePhase::EndGame][piece];
+
+
                 match piece {
                     Piece::WP | Piece::WN | Piece::WR | Piece::WB | Piece::WQ | Piece::WK => {
-                        match game_phase {
-                            GamePhase::MiddleGame => {
-                                score += (POSITIONAL_SCORES[GamePhase::Opening][piece][mirror_index] * game_phase_score + POSITIONAL_SCORES[GamePhase::EndGame][piece][mirror_index] * 
-                                    (OPENING_PHASE_SCORE - game_phase_score))/ OPENING_PHASE_SCORE;
-                            }
-                            _ => {
-                                score += POSITIONAL_SCORES[game_phase][piece][mirror_index]
-                            }
-                        }
+                        score_opening += POSITIONAL_SCORES[GamePhase::Opening][piece_index][mirror_index];
+                        score_endgame  += POSITIONAL_SCORES[GamePhase::EndGame][piece_index][mirror_index];
                     }
                     Piece::BP | Piece::BN | Piece::BR | Piece::BB | Piece::BQ | Piece::BK  => {
-                        match game_phase {
-                            GamePhase::MiddleGame => {
-                            score -= (POSITIONAL_SCORES[GamePhase::Opening][(usize::from(piece)) % PLAYER_PIECES][square] * game_phase_score + POSITIONAL_SCORES[GamePhase::EndGame][(usize::from(piece) % PLAYER_PIECES)][square] * 
-                                (OPENING_PHASE_SCORE - game_phase_score))/ OPENING_PHASE_SCORE;
-                            }
-                            _ => {
-                                score -= POSITIONAL_SCORES[game_phase][usize::from(piece) % PLAYER_PIECES][square]
-                            }
-                        }
+                        score_opening -= POSITIONAL_SCORES[GamePhase::Opening][piece_index][square];
+                        score_endgame  -= POSITIONAL_SCORES[GamePhase::EndGame][piece_index][square];
                     }
                 }
+
                 match piece {
                     // we're using this order because our board is inverted i.e. starts from the left --> to right, and then bottom --> up
                     Piece::WP => {
@@ -120,7 +100,7 @@ impl Evaluation {
                     // },
 
                     Piece::BP => {
-                        let pawn_piece = Piece::WP;
+                        // let pawn_piece = Piece::WP;
                         // score -= CMK_PAWN_SCORE[square];
 
                         // // println!("score before {}", score);
@@ -138,7 +118,7 @@ impl Evaluation {
                         // }
                     },
                     Piece::BN => {
-                        let piece = Piece::WN;
+                        // let piece = Piece::WN;
                         // score -= CMK_KNIGHT_SCORE[square];
                     },
                     // Piece::BB => {
@@ -184,7 +164,18 @@ impl Evaluation {
 
         }
 
-        println!("::::scoring >>> {score}");
+        println!("game phase>>>>>> {:?}", game_phase);
+        println!("::::opening >>> {score_opening} :::::endgame >>> {score_endgame}");
+
+        let score = match game_phase {
+            GamePhase::MiddleGame => {
+                (score_opening * game_phase_score + 
+                    score_endgame * (OPENING_PHASE_SCORE - game_phase_score)
+                ) / OPENING_PHASE_SCORE
+            }
+            GamePhase::Opening => score_opening,
+            GamePhase::EndGame => score_endgame
+        };
 
         match board.turn {
             Color::White => score,

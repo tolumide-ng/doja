@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::{ops::{Deref, DerefMut}, ptr};
 
 use crate::{bit_move::BitMove, constants::MATE_SCORE};
 
@@ -12,9 +12,9 @@ use crate::{bit_move::BitMove, constants::MATE_SCORE};
 
 
  /// 4MegaByte
-//  pub(crate) const HASH_SIZE: usize = 0x400000;
-//  pub(crate) const HASH_SIZE: usize = 0x10000; // 1MB
- pub(crate) const HASH_SIZE: usize = 0x10000; // 4MB
+//  pub(crate) const BYTES_PER_MB: usize = 0x400000;
+//  pub(crate) const BYTES_PER_MB: usize = 0x10000; // 1MB
+ pub(crate) const BYTES_PER_MB: usize = 0x10000; // 1MB
 
 
  #[derive(Debug, Default, Clone, Copy)]
@@ -31,9 +31,10 @@ pub(crate) enum HashFlag {
  
 
 
-/// Transposition table
+/// Transposition table Entry
 #[derive(Debug, Default, Clone, Copy)]
-pub(crate) struct TT {
+#[repr(C)]
+pub(crate) struct TTEntry {
     /// "almost" unique chess position identifier
     key: u64,
     /// current search depth
@@ -42,44 +43,44 @@ pub(crate) struct TT {
     flag: HashFlag,
     /// Score (alpha/beta/PV)
     score: i32,
-    // best: BitMove,
     // age: u16 // todo! readup papers on transposition table repalcement schemes
  }
-
-//  impl 
 
 
 
  /// Transposition Table
  #[derive(Debug, Clone)]
-pub(crate) struct TTable(Box<[TT; HASH_SIZE]>);
+pub(crate) struct TTable {
+    table: Box<[TTEntry; BYTES_PER_MB]>, // we need to be able to dynamically allocate this in the future, see CMK's method on Video 88
+    entries: usize,
+}
 
 impl Default for TTable {
     fn default() -> Self {
-        Self(Box::new([TT::default(); HASH_SIZE]))
+        Self {
+            table: Box::new([TTEntry::default(); BYTES_PER_MB]),
+            entries: 0
+        }
     }
 }
 
-impl Deref for TTable {
-    type Target = Box<[TT; HASH_SIZE]>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+// impl Deref for TTable {
+//     type Target = Box<[TT; BYTES_PER_MB]>;
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
 
-impl DerefMut for TTable {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+// impl DerefMut for TTable {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         &mut self.0
+//     }
+// }
 
 impl TTable {
     pub(crate) fn probe(&self, zobrist_key: u64, depth: u8, alpha: i32, beta: i32, ply: usize) -> Option<i32> {
-        let index = zobrist_key as usize % HASH_SIZE;
-        let ptr = self.as_ptr();
-        // println!("retrieving from {}", index);
-
-        
+        let index = zobrist_key as usize % BYTES_PER_MB;
+        let ptr = self.table.as_ptr();
         unsafe {
             let phahse = *ptr.add(index);
             // we can turst the #[default] implementation to work without any issue because the default key is 0,
@@ -113,24 +114,20 @@ impl TTable {
     }
 
     pub(crate) fn record(&mut self, zobrist_key: u64, depth: u8, score: i32, ply: usize, flag: HashFlag) {
-        let index = zobrist_key as usize % HASH_SIZE;
-        let ptr = self.as_mut_ptr();
+        let index = zobrist_key as usize % BYTES_PER_MB;
+        let ptr = self.table.as_mut_ptr();
 
-        let value = if score < -MATE_SCORE { score - (ply as i32)} 
-        else if score > MATE_SCORE  { score + (ply as i32) }
-        else { score };
-
-
+        let value = if score < -MATE_SCORE { score - (ply as i32)} else if score > MATE_SCORE  { score + (ply as i32) } else { score };
 
         unsafe {
             // println!("the index is {index}");
-            // let mut x = ptr.add(index);
             (*ptr.add(index)).key = zobrist_key;
             // (*ptr.add(index)).best = best;
             (*ptr.add(index)).score = value;
             (*ptr.add(index)).flag = flag;
             (*ptr.add(index)).depth = depth;
         }
+        self.entries += 1;
     }
 }
 
