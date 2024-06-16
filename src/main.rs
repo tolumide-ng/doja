@@ -1,4 +1,5 @@
 mod bitboard;
+mod nnue;
 mod masks;
 mod game_phase;
 mod utils;
@@ -22,6 +23,7 @@ mod uci;
 mod tt;
 
 
+use std::ffi::CString;
 use std::io::Read;
 use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, time::Instant};
@@ -56,19 +58,13 @@ fn main() {
     // let board = BoardState::parse_fen("8/8/8/8/8/8/8/8 w - - ").unwrap();
     
     // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
-    let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
-    // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap();
-    println!("{}", board.to_string());
-    println!("the score {}", Evaluation::evaluate(&board));
+    // let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
+    // // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap();
     // println!("{}", board.to_string());
-    // Evaluation::evaluate(&board);
-    // Evaluation::get_game_phase_score(&board);
 
-    // let score = Evaluation::evaluate(&board);
-    // println!("the scoer now ius >>>> {}", score)
-    // EvaluationMasks::init();
-
-    // println!()
+    // let file_path = CString::new("nn-56a5f1c4173a.nnue").unwrap();
+    // let result = NNUE::new(file_path.as_ptr());
+    // println!("what was loaded is {:#?}", result);
 }
 
 // 8|4|2|1|
