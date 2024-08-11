@@ -4,6 +4,7 @@ mod game_phase;
 mod utils;
 mod squares;
 mod zobrist;
+mod nnue;
 mod color;
 mod search;
 mod shift;
