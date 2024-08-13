@@ -1,3 +1,5 @@
+use crate::color::Color;
+
 pub(crate) enum Evaluation {
     /// Middle Game
     MG, 
@@ -51,6 +53,36 @@ impl Piece {
 
     #[inline]
     pub(crate) fn _color(&self) -> u8 {
-    *self as u8 % 4
+        *self as u8 % 4
     }
+
+    #[inline]
+    pub(crate) fn new(piece: PieceType, color: Color) -> u8 {
+        (piece as u8) * 4 + (color as u8)
+    }
+}
+
+pub(crate) fn rank_of(sq: u8) -> u8 {
+    assert!(sq < SQUARE_NB);
+    sq / FILE_NB
+}
+
+pub(crate) fn file_of(sq: u8) -> u8 {
+    assert!(sq < SQUARE_NB);
+    sq % FILE_NB
+}
+
+pub(crate) fn relative_rank_of(color: Color, sq: u8) -> u8 {
+    if color == Color::White {
+        return rank_of(sq)
+    } 
+    7 - rank_of(sq)
+}
+
+pub(crate) fn square(rank: u8, file: u8) -> u8 {
+    (rank * FILE_NB) + file
+}
+
+pub(crate) fn relative_square(color: Color, sq: u8) -> u8 {
+    4 * square(relative_rank_of(color, sq), file_of(sq))
 }
