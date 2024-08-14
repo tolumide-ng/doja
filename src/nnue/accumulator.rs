@@ -1,6 +1,6 @@
-use crate::color::Color;
+use crate::{board::board::Board, color::Color};
 
-use super::{commons::{piece_color, piece_type, relative_square, test_bit, Piece}, constants::LEFT_FLANK};
+use super::{commons::{piece_color, piece_type, relative_square, test_bit, Piece}, constants::{NNUEAccumulator, LEFT_FLANK}};
 
 const MIRROR: [u8; 8] = [3, 2, 1, 0, 0, 1, 2, 3];
 
@@ -21,3 +21,6 @@ pub(crate) fn nnue_index(piece: u8, relksq: u8, color: Color, sq: u8) -> usize {
 
      640 * (sq64_to_sq32(mksq) + (64 * (5 * player_turn + piece_type)) + mpsq) as usize
 }
+
+
+pub(crate) fn nnue_can_update(accum: *mut NNUEAccumulator, board: Board, color: Color) {}
