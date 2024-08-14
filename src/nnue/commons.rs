@@ -45,21 +45,19 @@ pub(crate) enum Piece {
 
 
 
-impl Piece {
-    #[inline]
-    pub(crate) fn _type(&self) -> u8 {
-        (*self as u8) / 4
-    }
+#[inline]
+pub(crate) fn piece_color(piece: u8) -> u8 {
+    piece % 4
+}
 
-    #[inline]
-    pub(crate) fn _color(&self) -> u8 {
-        *self as u8 % 4
-    }
+#[inline]
+pub(crate) fn new_piece(piece: PieceType, color: Color) -> u8 {
+    (piece as u8) * 4 + (color as u8)
+}
 
-    #[inline]
-    pub(crate) fn new(piece: PieceType, color: Color) -> u8 {
-        (piece as u8) * 4 + (color as u8)
-    }
+#[inline]
+pub(crate) fn piece_type(piece: u8) -> u8 {
+    piece / 4
 }
 
 pub(crate) fn rank_of(sq: u8) -> u8 {
@@ -85,4 +83,9 @@ pub(crate) fn square(rank: u8, file: u8) -> u8 {
 
 pub(crate) fn relative_square(color: Color, sq: u8) -> u8 {
     4 * square(relative_rank_of(color, sq), file_of(sq))
+}
+
+pub(crate) fn test_bit(bb: u64, sq: u8) -> u64 {
+    assert!(sq < SQUARE_NB);
+    bb & 1 << sq
 }

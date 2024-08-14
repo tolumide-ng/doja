@@ -7,6 +7,8 @@ pub enum Color {
     White=0, Black=1, Both=2
 }
 
+// impl From<>
+
 
 impl From<Color> for usize {
     fn from(value: Color) -> Self {
