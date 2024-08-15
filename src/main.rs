@@ -2,6 +2,7 @@ mod bitboard;
 mod masks;
 mod game_phase;
 mod utils;
+mod nnue;
 mod squares;
 mod zobrist;
 mod color;

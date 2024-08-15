@@ -42,7 +42,7 @@ pub trait FEN {
             if char == '/' {
                 file = 0;
                 if square % 8 != 0 {
-                    // println!("sq {}", square);
+                    // println!("sq {}", square);git 
                     let rank = (square % 8) as u8;
                     // println!("sq {}", square);
                     let file = (square as u8 - (8 * rank)) - 1;
