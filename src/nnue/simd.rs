@@ -1,5 +1,5 @@
-// #[target_feature(enable = "avx512f")]
-#[cfg(target_feature = "avx512f")]
+
+// #[cfg(target_feature = "avx512f")]
 pub mod avx512;
 
 #[inline]
@@ -12,7 +12,8 @@ pub(crate) const fn mm_shuffle(z: i32, y: i32, x: i32, w: i32) -> i32 {
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! wrap_simd_register {
-    ($register_type:ty, $held_type:ty, $new_type:ident) => {
+    // ($register_type:ty, $held_type:ty, $new_type:ident) => {
+        ($register_type:ty, $new_type:ident) => {
         #[repr(transparent)]
         #[derive(Debug, Copy, Clone)]
         pub struct $new_type($register_type);

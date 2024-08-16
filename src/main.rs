@@ -1,3 +1,6 @@
+#![feature(stdarch_x86_avx512)]
+
+
 mod bitboard;
 mod masks;
 mod game_phase;
