@@ -104,7 +104,7 @@ pub unsafe fn load_u32(src: *const u32) {
 pub unsafe fn store_u32(dst: *mut u32, vec: VecI32) {
     // check alignment in debug mode
     debug_assert!((dst as usize) % std::mem::align_of::<VecI32>() == 0);
-    _mm512_store_si512(dst.cast(), *vec);
+    _mm512_storeu_si512(dst.cast(), *vec);
 }
 
 #[inline]
