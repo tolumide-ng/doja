@@ -1,6 +1,7 @@
 
-// #[cfg(target_feature = "avx512f")]
+#[cfg(target_feature = "avx512f")]
 pub mod avx512;
+pub mod avx2;
 
 #[inline]
 pub(crate) const fn mm_shuffle(z: i32, y: i32, x: i32, w: i32) -> i32 {

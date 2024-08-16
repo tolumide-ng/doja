@@ -1,9 +1,3 @@
-// use crate::nnue::simd::wrap_simd_register;
-// use crate::nnue::simd:
-
-// #![allow(non_camel_case_types)]
-// use std::arch::x86_64::*;
-
 use std::arch::x86_64::*;
 
 use crate::wrap_simd_register;
@@ -12,7 +6,7 @@ wrap_simd_register!(__m512i, VecI8);  //  i8,
 wrap_simd_register!(__m512i, VecI16); //  i16,
 wrap_simd_register!(__m512i, VecI32); //  i32,
 wrap_simd_register!(__m512i, VecI64); //  i64,
-wrap_simd_register!(__m512i, VecF32); //  f32,
+wrap_simd_register!(__m512, VecF32); //  f32,
 
 pub(crate) const U8_CHUNK: usize = std::mem::size_of::<VecI8>() / std::mem::size_of<u8>();
 pub(crate) const I8_CHUNK_SIZE_I32: usize = std::mem::size_of::<i32>() / std::mem::size_of<u8>();
