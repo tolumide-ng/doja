@@ -5,6 +5,7 @@ use arrayvec::ArrayVec;
 use crate::{board::piece::Piece, color::Color, squares::Square};
 
 pub mod feature;
+pub mod layers;
 
 /// The size of the input layer of the network.
 pub const INPUT: usize = 768;
@@ -14,6 +15,25 @@ pub const INPUT: usize = 768;
 const SCALE: i32 = 400;
 /// The size of one-half of the hidden layer of the network.
 pub const L1_SIZE: usize = 2048;
+pub const L2_SIZE: usize = 16;
+pub const L3_SIZE: usize = 32;
+/// chunking constant for l1
+pub const L1_CHUNK_PER_32: usize = std::mem::size_of<i32>() / std::mem::size_of::<i8>();
+
+/// The structure of the king=buckets
+const HALF_BUCKET_MAP: [usize; 32] = [
+     0,  1, 2,  3,
+     4,  5, 6,  7,
+     8,  9, 10, 11,
+     8,  8, 10, 11,
+    12, 12, 13, 13,
+    12, 12, 13, 13,
+    14, 14, 15, 15,
+    14, 14, 15, 15,
+];
+
+const QA: i32 = 255;
+const QB: i32 = 64;
 
 
 
