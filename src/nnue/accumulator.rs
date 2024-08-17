@@ -2,8 +2,11 @@ use crate::color::Color;
 
 use super::{commons::{Align64, MovedPiece}, network::{PovUpdate, UpdatedBuffer, L1_SIZE}};
 
+
+#[cfg(target_feature = "avx2")]
 pub mod avx2;
-pub mod others;
+#[cfg(not(target_feature = "avx2"))]
+pub mod generic;
 
 
 /// Activations of the hidden layer
