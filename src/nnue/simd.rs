@@ -1,20 +1,19 @@
-mod features {
-    #[cfg(target_feature = "avx512f")]
-    pub mod avx512;
-    #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
-    pub mod avx2;
-    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2"), not(target_feature = "avx512f")))]
-    use ssse3::*;
+// mod features {
+#[cfg(target_feature = "avx512f")]
+pub mod avx512;
+// #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
+pub mod avx2;
+#[cfg(all(target_feature = "ssse3", not(target_feature = "avx2"), not(target_feature = "avx512f")))]
+use ssse3::*;
 
-    #[cfg(target_feature = "avx512f")]
-    use avx512::*;
-    #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
-    pub mod avx2;
-    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2"), not(target_feature = "avx512f")))]
-    use ssse3::*;
-}
 
-use features::*;
+pub use avx2::*;
+
+#[cfg(all(target_feature = "ssse3", not(target_feature = "avx2"), not(target_feature = "avx512f")))]
+pub use ssse3::*;
+#[cfg(target_feature = "avx512f")]
+use avx512::*;
+
 
 #[cfg(any(target_feature = "ssse3", target_feature = "avx2", target_feature = "avx512f"))]
 #[inline]
