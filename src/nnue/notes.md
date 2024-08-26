@@ -1,0 +1,1 @@
+Since the feature tranformer is a purely additive process, it's enough that we multiply the weights and biases by 127.

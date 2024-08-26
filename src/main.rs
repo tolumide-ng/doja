@@ -1,3 +1,4 @@
+mod nnue;
 mod bitboard;
 mod masks;
 mod game_phase;

@@ -19,6 +19,7 @@ pub struct BoardState {
     // prev: Arc<Option<BoardState>>,
     // fifty move rule counter
     pub(crate) fifty: u8,
+    // pub(crate) parent: Option<>
 }
 
 

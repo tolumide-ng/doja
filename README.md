@@ -1,3 +1,8 @@
+### How to Run this Project:
+1. 
+
+
+
 ### Possible Improvements (TODOS!)
 1. Refactor BoardState so that some of the methods in are only on the Player (generic)
     i. This should reduce the number of if/elses
