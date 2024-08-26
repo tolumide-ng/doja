@@ -1,3 +1,7 @@
+pub(crate) const MAX_DEPTH: usize = 127;
+/// type returned by the network
+pub(crate) type EVAL = i32;
+
 /// 768
 pub(crate) const FEATURES: usize = 768;
 /// 1024

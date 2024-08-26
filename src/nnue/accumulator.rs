@@ -2,6 +2,7 @@ use super::{align64::Align64, commons::HIDDEN, net::MODEL};
 
 pub(crate) type SubAccumulator = Align64<[i16; HIDDEN]>;
 
+#[derive(Debug, Clone)]
 pub(crate) struct Accumulator {
     white: SubAccumulator,
     black: SubAccumulator,

@@ -51,6 +51,10 @@ impl BoardState {
         self.occupancies[color]
     }
 
+    pub(crate) fn occupancy(&self) -> u64 {
+        self.occupancies[Color::Both]
+    }
+
     // / Given the current pieces on the board, is this square under attack by the given side (color)
     // / Getting attackable(reachable) spots from this square, it also means this square can be reached from those
     // / attackable spots
