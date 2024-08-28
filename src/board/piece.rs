@@ -3,6 +3,7 @@ use std::ops::{Index, IndexMut};
 use crate::{color::Color, constants::{MVV_LVA, PLAYER_PIECES}};
 
 #[derive(Debug, Clone, Copy, derive_more::Display, PartialEq, Eq)]
+#[repr(u8)]
 pub enum Piece {
     /// white pawn
     #[display(fmt="P")]
@@ -103,6 +104,7 @@ impl<T> IndexMut<Piece> for [T] {
 }
 
 
+// do we need this one?
 impl From<Piece> for usize {
     fn from(value: Piece) -> Self {
         match value {
@@ -277,8 +279,26 @@ impl Piece {
 
 
 
-/// Position evaluation
-fn evaluate() {
-    let score = 0;
-    // let 
+
+
+
+#[cfg(test)]
+mod piece_tests {
+    #[test]
+    fn should_convert_from_piece_to_u8() {}
+
+    #[test]
+    fn should_convert_from_u8_to_piece() {}
+
+    #[test]
+    fn should_be_able_to_index_with_piece() {}
+
+    #[test]
+    fn should_return_piece_of_a_specific_color() {}
+
+    #[test]
+    fn should_convert_from_char_to_piece() {}
+
+    #[test]
+    fn should_return_the_material_score_of_each_piece() {}
 }
