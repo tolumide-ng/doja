@@ -94,7 +94,7 @@ pub trait FEN {
         }
 
         // setup occupancies
-        for (white, black) in Piece::white_pieces().into_iter().zip(Piece::black_pieces()) {
+        for (white, black) in Piece::all_pieces_for(Color::White).into_iter().zip(Piece::all_pieces_for(Color::Black)) {
             board.set_occupancy(Color::White, board[white as usize].into());
             board.set_occupancy(Color::Black, board[black as usize].into());
         }

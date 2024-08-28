@@ -103,27 +103,6 @@ impl<T> IndexMut<Piece> for [T] {
     }
 }
 
-
-// do we need this one?
-impl From<Piece> for usize {
-    fn from(value: Piece) -> Self {
-        match value {
-            Piece::WP => 0,
-            Piece::WN => 1,
-            Piece::WB => 2,
-            Piece::WR => 3,
-            Piece::WQ => 4,
-            Piece::WK => 5,
-            Piece::BP => 6,
-            Piece::BN => 7,
-            Piece::BB => 8,
-            Piece::BR => 9,
-            Piece::BQ => 10,
-            Piece::BK => 11,
-        }
-    }
-}
-
 impl From<char> for Piece {
     fn from(value: char) -> Self {
         match value {
@@ -196,14 +175,6 @@ impl Piece {
         
     }
 
-    pub(crate) fn white_pieces() -> [Piece; 6] {
-        [Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK]
-    }
-
-    pub(crate) fn black_pieces() -> [Piece; 6] {
-        [ Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK ]
-    }
-
     pub(crate) fn queen(color: Color) -> Piece {
         if color == Color::Black { return Piece::BQ }
         return Piece::WQ;
@@ -242,32 +213,6 @@ impl Piece {
         return Piece::WK;
     }
 
-    /// https://www.chessprogramming.org/Point_Value
-    /// Alan Turing (1953)
-    pub(crate) fn material_score(&self) -> i32 {
-        match self {
-            Self::WP => 100,    // white pawn
-            Self::WN=> 300,    // whte knight
-            Self::WB => 350,    // white bishop
-            Self::WR => 500,    
-            Self::WQ => 1000,
-            Self::WK => 10000,
-            Self::BP => -100,
-            Self::BN => -300,
-            Self::BB => -350,
-            Self::BR => -500,
-            Self::BQ => -1000, 
-            Self::BK => -10000,
-
-            // P = 100
-            // N = 320
-            // B = 330
-            // R = 500
-            // Q = 900
-            // K = 20000
-        }
-    }
-
     pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> u32 {
         let attacker = *self as usize;
         let victim = *victim as usize;
@@ -285,7 +230,8 @@ impl Piece {
 #[cfg(test)]
 mod piece_tests {
     #[test]
-    fn should_convert_from_piece_to_u8() {}
+    fn should_convert_from_piece_to_u8() {
+    }
 
     #[test]
     fn should_convert_from_u8_to_piece() {}
