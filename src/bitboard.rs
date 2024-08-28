@@ -9,6 +9,7 @@ use crate::{constants::{NOT_A_FILE, NOT_H_FILE}, squares::{Square, BIT_TABLE}};
 pub struct Bitboard(pub u64);
 
 impl Bitboard {
+    /// to get the square of a set bit, simply use Rust's (*.trailing_zeros()) function
     pub fn new() -> Self {
         Self(0)
     }

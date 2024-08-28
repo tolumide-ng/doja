@@ -191,6 +191,7 @@ impl Piece {
             return [Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK]
         }
         [ Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK ]
+        
     }
 
     pub(crate) fn white_pieces() -> [Piece; 6] {
@@ -226,7 +227,7 @@ impl Piece {
         return Piece::WP;
     }
 
-    pub(crate) fn color(&self) -> Color {
+    pub(crate) const fn color(&self) -> Color {
         let value = *self as u64;
         match value {
             0..=5 => Color::White,

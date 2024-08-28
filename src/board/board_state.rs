@@ -502,7 +502,7 @@ impl BoardState {
         // Some(board)
     }
 
-    fn get_piece_at(&self, sq: Square, color: Color) -> Option<Piece> {
+    pub(crate) fn get_piece_at(&self, sq: Square, color: Color) -> Option<Piece> {
         let target_pieces = Piece::all_pieces_for(color);
         for p in target_pieces {
             if self.board[p].get_bit(sq.into()) != 0 {
