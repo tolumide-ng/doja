@@ -168,11 +168,13 @@ impl Piece {
     }
 
     pub(crate) fn all_pieces_for(color: Color) -> [Piece; 6] {
-        if color == Color::White {
-            return [Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK]
-        }
-        [ Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK ]
-        
+        match color {
+            Color::Black => [ Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK ],
+            Color::White => [Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK], 
+            // Color::Both => [Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK,
+            //  Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK ]
+            _  => panic!("This function only supports color black and white")
+        }        
     }
 
     pub(crate) fn queen(color: Color) -> Piece {
@@ -229,22 +231,53 @@ impl Piece {
 
 #[cfg(test)]
 mod piece_tests {
+    use crate::color::Color;
+
+    use super::Piece;
+
     #[test]
     fn should_convert_from_piece_to_u8() {
+        let pieces: [(Piece, u8); 12] = [(Piece::WP, 0), (Piece::WN, 1), (Piece::WB, 2), (Piece::WR, 3), (Piece::WQ, 4), (Piece::WK, 5),
+            (Piece::BP, 6), (Piece::BN, 7), (Piece::BB, 8), (Piece::BR, 9), (Piece::BQ, 10), (Piece::BK, 11),];
+        for (piece, value) in pieces {
+            assert_eq!(piece as u8, value);
+        }
+
+        assert_eq!(Piece::from(7), Piece::BN);
+        assert_eq!(Piece::from(1), Piece::WN);
     }
 
     #[test]
-    fn should_convert_from_u8_to_piece() {}
+    fn should_be_able_to_index_with_piece() {
+        let mut values = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's'];
+        assert_eq!(values[Piece::WN], values[1]);
+        assert_eq!(values[Piece::BK], values[11]);
+        assert_eq!(values[Piece::BP], values[6]);
+        assert_eq!(values[Piece::WR], values[3]);
+        assert_eq!(values[Piece::WP], values[0]);
+        assert_eq!(values[Piece::BQ], values[10]);
+
+
+        assert_ne!(values[Piece::WQ], 'q');
+        values[Piece::WQ] = 'q';
+        assert_eq!(values[Piece::WQ], 'q');
+    }
 
     #[test]
-    fn should_be_able_to_index_with_piece() {}
+    fn should_return_piece_of_a_specific_color() {
+        let whites = [Piece::WP, Piece::WN, Piece::WB, Piece::WR, Piece::WQ, Piece::WK];
+        let blacks = [Piece::BP, Piece::BN, Piece::BB, Piece::BR, Piece::BQ, Piece::BK];
+
+        assert_eq!(Piece::all_pieces_for(Color::White), whites);
+        assert_eq!(Piece::all_pieces_for(Color::Black), blacks);
+    }
 
     #[test]
-    fn should_return_piece_of_a_specific_color() {}
+    fn should_convert_from_char_to_piece() {
+        let pieces: [(Piece, char); 12] = [(Piece::WP, 'P'), (Piece::WN, 'N'), (Piece::WB, 'B'), (Piece::WR, 'R'), (Piece::WQ, 'Q'), (Piece::WK, 'K'), (Piece::BP, 'p'), (Piece::BN, 'n'), (Piece::BB, 'b'), (Piece::BR, 'r'), (Piece::BQ, 'q'), (Piece::BK, 'k'),];
 
-    #[test]
-    fn should_convert_from_char_to_piece() {}
-
-    #[test]
-    fn should_return_the_material_score_of_each_piece() {}
+        for (piece, value) in pieces {
+            assert_eq!(Piece::from(value), piece);
+        }
+    }
 }
