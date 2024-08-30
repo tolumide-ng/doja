@@ -1,6 +1,5 @@
 
 pub mod piece;
-pub mod major; // major pieces
 // pub mod bits;
 // pub mod occupancies;
 pub mod castling;
