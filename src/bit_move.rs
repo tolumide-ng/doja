@@ -126,3 +126,88 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
         *value
     }
  }
+
+
+ #[cfg(test)]
+ mod bitmove_tests {
+    use crate::{board::piece::Piece, squares::Square};
+
+    use super::BitMove;
+
+    #[test]
+    fn should_return_a_valid_u32_after_creaton() {
+        let bmove = BitMove::new(0, 9, Piece::WP, None, true, false, false, false);
+        assert_eq!(1049152, *bmove);
+    }
+
+    #[test]
+    fn should_return_data_stored_in_the_move_for_a_queen_capture() {
+        let queen_capture =  BitMove::new(12, 28, Piece::BQ, None, true, false, false, false);
+
+        assert_eq!(queen_capture.get_capture(), true);
+        assert_eq!(queen_capture.get_castling(), false);
+        assert_eq!(queen_capture.get_double_push(), false);
+        assert_eq!(queen_capture.get_enpassant(), false);
+        assert_eq!(queen_capture.get_promotion(), None);
+        assert_eq!(queen_capture.get_target(), Square::from(28));
+        assert_eq!(queen_capture.get_src(), Square::from(12));
+    }
+
+
+    #[test]
+    fn should_return_stored_data_for_a_promoted_pawn() {
+        let pawn_to_bishop = BitMove::new(12, 5, Piece::BP, Some(Piece::BB), true, false, false, false);
+
+        assert_eq!(pawn_to_bishop.get_src(), Square::from(12));
+        assert_eq!(pawn_to_bishop.get_target(), Square::from(5));
+        assert_eq!(pawn_to_bishop.get_piece(), Piece::BP);
+        assert_eq!(pawn_to_bishop.get_promotion(), Some(Piece::BB));
+        assert_eq!(pawn_to_bishop.get_capture(), true);
+        assert_eq!(pawn_to_bishop.get_double_push(), false);
+        assert_eq!(pawn_to_bishop.get_enpassant(), false);
+        assert_eq!(pawn_to_bishop.get_castling(), false);
+    }
+
+
+    #[test]
+    fn should_return_stored_data_for_a_castling_move() {
+        let castling_move = BitMove::new(4, 2, Piece::WK, None,  false, false, false, true);
+
+        assert_eq!(castling_move.get_src(), Square::from(4));
+        assert_eq!(castling_move.get_target(), Square::from(2));
+        assert_eq!(castling_move.get_piece(), Piece::WK);
+        assert_eq!(castling_move.get_promotion(), None);
+        assert_eq!(castling_move.get_capture(), false);
+        assert_eq!(castling_move.get_double_push(), false);
+        assert_eq!(castling_move.get_enpassant(), false);
+        assert_eq!(castling_move.get_castling(), true);
+    }
+
+    #[test]
+    fn should_return_stored_data_for_a_double_push() {
+        let double_push = BitMove::new(12, 26, Piece::WP, None,  false, true, false, false);
+
+        assert_eq!(double_push.get_src(), Square::from(12));
+        assert_eq!(double_push.get_target(), Square::from(26));
+        assert_eq!(double_push.get_piece(), Piece::WP);
+        assert_eq!(double_push.get_promotion(), None);
+        assert_eq!(double_push.get_capture(), false);
+        assert_eq!(double_push.get_double_push(), true);
+        assert_eq!(double_push.get_enpassant(), false);
+        assert_eq!(double_push.get_castling(), false);
+    }
+
+    #[test]
+    fn should_return_stored_data_for_an_enpassant() {
+        let enpassant = BitMove::new(20, 12, Piece::BP, None,  false, false, true, false);
+
+        assert_eq!(enpassant.get_src(), Square::from(20));
+        assert_eq!(enpassant.get_target(), Square::from(12));
+        assert_eq!(enpassant.get_piece(), Piece::BP);
+        assert_eq!(enpassant.get_promotion(), None);
+        assert_eq!(enpassant.get_capture(), false);
+        assert_eq!(enpassant.get_double_push(), false);
+        assert_eq!(enpassant.get_enpassant(), true);
+        assert_eq!(enpassant.get_castling(), false);
+    }
+ }

@@ -61,8 +61,6 @@ impl Perft {
                 if let Some(p) = bmove.get_promotion() {
                     println!("{}{}{}: {:?},", bmove.get_src(), bmove.get_target(), p, old_nodes);
                 } else {
-                    // println!("SRC---->>>> {}        TARGET----->>>>> {}          [[[[[[CAPTURE]]]]]] {}", bmove.get_src(), bmove.get_target(), bmove.get_capture());
-                    // println!("      move: {}{}     nodes: {:?}", bmove.get_src(), bmove.get_target(), old_nodes);
                     println!("{}{}: {:?},", bmove.get_src(), bmove.get_target(), old_nodes);
                 }
             }
