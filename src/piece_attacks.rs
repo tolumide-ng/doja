@@ -164,7 +164,6 @@ impl PieceAttacks {
         attack
     }
 
-
     
     /// Gets the bishoop attacks from position sq,
     /// while stopping if there is any peice blocking the attack direction
@@ -358,7 +357,7 @@ impl PieceAttacks {
 
 #[cfg(test)]
 mod piece_attacks_test {
-    use crate::{bitboard::Bitboard, color::Color, squares::Square};
+    use crate::{bitboard::Bitboard, color::Color, squares::{self, Square}};
 
     use super::PieceAttacks;
 
@@ -428,5 +427,124 @@ mod piece_attacks_test {
         for sq in squares {
             assert_eq!(Bitboard::from(attacks).get_bit(sq as u64), 1);
         }
+
+    }
+
+
+    #[test]
+    fn should_return_rook_attacks_mask() {
+        let rook_sq = Square::D2;
+        let attacks = PieceAttacks::mask_rook_attacks(rook_sq as u64);
+    
+        let squares = [Square::D3, Square::D4, Square::D5, Square::D6, Square::D7, Square::B2, Square::C2, Square::E2, Square::F2, Square::G2];
+    
+        // println!("{:#?}", Bitboard::from(attacks).to_string());
+    
+        assert_eq!(attacks.count_ones() as usize, squares.len());
+        assert_eq!(attacks.count_ones() as usize, squares.len());
+        for sq in squares {
+            assert_eq!(Bitboard::from(attacks).get_bit(sq as u64), 1);
+        }
+    }
+
+    #[test]
+    fn should_return_bishop_attacks_on_the_fly() {
+        let piece_attacks = PieceAttacks::new();
+        let board = 0x4012008801100u64;
+        let bishop_sq = Square::F3;
+        let attacks = piece_attacks.get_bishop_attacks_on_the_fly(bishop_sq as u64, board);
+    
+        let squares = [Square::E4, Square::D5, Square::C6, Square::B7, Square::A8, Square::G4, Square::H5, Square::G2, Square::H1, Square::E2];
+        assert_eq!(squares.len(), attacks.count_ones() as usize);
+        for sq in squares {
+            assert!(Bitboard::from(attacks).get_bit(sq as u64) == 1);
+        }
+    }
+
+
+    #[test]
+    fn should_return_rook_attacks_on_the_fly() {
+        let piece_attacks = PieceAttacks::new();
+        let board = 0x4012008801100u64;
+        let rook_sq = Square::F3;
+        let attacks = piece_attacks.get_rook_attacks_on_the_fly(rook_sq as u64, board);
+    
+        let squares = [Square::A3, Square::B3, Square::C3, Square::D3, Square::E3, Square::G3, Square::H3, Square::F5, Square::F4, Square::F2, Square::F1];
+        assert_eq!(squares.len(), attacks.count_ones() as usize);
+        for sq in squares {
+            assert!(Bitboard::from(attacks).get_bit(sq as u64) == 1);
+        }
+    }
+
+    #[test]
+    fn should_return_the_bishop_attacks_for_a_board() {
+        let piece_attacks = PieceAttacks::new();
+        let board = 0x820020008c2a0u64;
+        let bishop_sq = Square::F3;
+        let attacks = piece_attacks.get_bishop_attacks(bishop_sq as u64, board);
+
+        let span = [Square::D1, Square::E2, Square::G2, Square::G4, Square::H5, Square::E4, Square::D5, Square::C6, Square::B7, Square::A8];
+
+        assert_eq!(span.len(), attacks.count_ones() as usize);
+        for sq in span {
+            assert!(Bitboard::from(attacks).get_bit(sq as u64) == 1);
+        }
+    }
+
+
+    #[test]
+    fn should_return_the_rook_attacks_for_a_board() {
+        let piece_attacks = PieceAttacks::new();
+        let board = 0x820020008c2a0u64;
+        let rook_sq = Square::F3;
+        let attacks = piece_attacks.get_rook_attacks(rook_sq as u64, board);
+
+        let span = [Square::F4, Square::F5, Square::F6, Square::F2, Square::F1, Square::D3, Square::E3, Square::G3, Square::H3];
+
+        assert_eq!(span.len(), attacks.count_ones() as usize);
+        for sq in span {
+            assert!(Bitboard::from(attacks).get_bit(sq as u64) == 1);
+        }
+    }
+
+    #[test]
+    fn should_return_the_queen_attacks_for_a_board() {
+        let piece_attacks = PieceAttacks::new();
+        let board = 0x820020008c2a0u64;
+        let queen_sq = Square::F3;
+        let attacks = piece_attacks.get_queen_attacks(queen_sq as u64, board);
+
+        let span = [Square::F4, Square::F5, Square::F6, Square::F2, Square::F1, Square::D3, Square::E3, Square::G3, Square::H3,
+        Square::D1, Square::E2, Square::G2, Square::G4, Square::H5, Square::E4, Square::D5, Square::C6, Square::B7, Square::A8];
+
+        println!("{:#?}", Bitboard::from(board).to_string());
+        println!("{:#?}", Bitboard::from(attacks).to_string());
+
+
+        assert_eq!(span.len(), attacks.count_ones() as usize);
+        for sq in span {
+            assert!(Bitboard::from(attacks).get_bit(sq as u64) == 1);
+        }
+    }
+
+    #[test]
+    fn should_return_the_nnbishop_attacks() {
+        let piece_attacks = PieceAttacks::new();
+        let board = 0x820020008c2a0u64;
+        let attackers = 0xa0u64;
+        
+        let attacks = piece_attacks.nnbishop_attacks(attackers, board);
+
+        assert_eq!(attacks, 0x85000u64);
+    }
+
+    #[test]
+    fn should_return_the_nnrook_attacks() {
+        let piece_attacks = PieceAttacks::new();
+        let board = 0x820020008c2a0u64;
+        let attackers = 0xa0u64;
+
+        let attacks = piece_attacks.nnrook_attacks(attackers, board);
+        assert_eq!(attacks, 0x20202020a0ffu64);
     }
 }
