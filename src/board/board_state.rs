@@ -153,7 +153,7 @@ impl BoardState {
 
                 while single_push_targets != 0 {
                     let target_sq = single_push_targets & (!single_push_targets + 1);
-                    let src_sq = match color {Color::White => Bitboard::south1(target_sq), _ => Bitboard::north1(target_sq)};
+                    let src_sq = match color {Color::White => Bitboard::from(target_sq).south(), _ => Bitboard::from(target_sq).north()};
 
                     // println!()
 
@@ -223,13 +223,13 @@ impl BoardState {
 
             let (enpass_right_attack, enpass_left_attack) = match color {
                 Color::White => {
-                    let enpass_right_attack = Bitboard::south_west1(enpass_mask);
-                    let enpass_left_attack = Bitboard::south_east1(enpass_mask);
+                    let enpass_right_attack = Bitboard::from(enpass_mask).south_west();
+                    let enpass_left_attack = Bitboard::from(enpass_mask).south_east();
                     (enpass_right_attack, enpass_left_attack)
                 }
                 _ => {
-                    let enpass_right_attack = Bitboard::north_east1(enpass_mask);
-                    let enpass_left_attack = Bitboard::north_west1(enpass_mask);
+                    let enpass_right_attack = Bitboard::from(enpass_mask).north_east();
+                    let enpass_left_attack = Bitboard::from(enpass_mask).north_west();
                     (enpass_right_attack, enpass_left_attack)
                 }
             };

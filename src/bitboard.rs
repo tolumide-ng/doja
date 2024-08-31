@@ -109,32 +109,6 @@ impl Bitboard {
         result
     }
 
-
-    // #[inline(always)]
-    pub(crate) fn south_east1(mask: u64) -> u64 {
-        (mask >> 7) & NOT_A_FILE
-    }
-
-    #[inline(always)]
-    pub(crate) fn south_west1(mask: u64) -> u64 {
-        (mask >> 9) & NOT_H_FILE
-    }
-
-    #[inline(always)]
-    pub(crate) fn north_west1(mask: u64) -> u64 {
-        (mask << 7) & NOT_H_FILE
-    }
-
-    #[inline(always)]
-    pub(crate) fn north_east1(mask: u64) -> u64 {
-        (mask << 9) & NOT_A_FILE
-    }
-
-    /// One shift only
-    pub(crate) fn south1(mask: u64) -> u64 { mask >> 8 }
-    /// One shift only
-    pub(crate) fn north1(mask: u64) -> u64 { mask << 8 }
-
     /// One shift only
     pub(crate) fn south(&self) -> u64 { **self >> 8 }
     /// One shift only
@@ -360,56 +334,49 @@ mod bitboard_tests {
         let g7: u64 = 0x40000000000000; let h6: u64 = 0x800000000000; let b2 = 0x200u64;
         
         
-        assert_eq!(Bitboard::south_east1(d3), e2);
-        assert_eq!(Bitboard::south_east1(g3), h2);
-        assert_eq!(Bitboard::south_east1(g7), h6);
-        assert_eq!(Bitboard::south_east1(a1), 0);
-        assert_eq!(Bitboard::south_east1(h1), 0);
-        assert_eq!(Bitboard::south_east1(h8), 0);
-        assert_eq!(Bitboard::south_east1(a8), b7);
+        assert_eq!(Bitboard::from(d3).south_east(), e2);
+        assert_eq!(Bitboard::from(g3).south_east(), h2);
+        assert_eq!(Bitboard::from(g7).south_east(), h6);
+        assert_eq!(Bitboard::from(a1).south_east(), 0);
+        assert_eq!(Bitboard::from(h1).south_east(), 0);
+        assert_eq!(Bitboard::from(h8).south_east(), 0);
+        assert_eq!(Bitboard::from(a8).south_east(), b7);
         
         
-        assert_eq!(Bitboard::south_west1(a1), 0);
-        assert_eq!(Bitboard::south_west1(h1), 0);
-        assert_eq!(Bitboard::south_west1(a8), 0);
-        assert_eq!(Bitboard::south_west1(h8), g7);
-        assert_eq!(Bitboard::south_west1(h2), g1);
-        assert_eq!(Bitboard::south_west1(g2), f1);
+        assert_eq!(Bitboard::from(a1).south_west(), 0);
+        assert_eq!(Bitboard::from(h1).south_west(), 0);
+        assert_eq!(Bitboard::from(a8).south_west(), 0);
+        assert_eq!(Bitboard::from(h8).south_west(), g7);
+        assert_eq!(Bitboard::from(h2).south_west(), g1);
+        assert_eq!(Bitboard::from(g2).south_west(), f1);
 
 
 
         // north west
-        assert_eq!(Bitboard::north_west1(g3), f4);
-        assert_eq!(Bitboard::north_west1(h8), 0);
-        assert_eq!(Bitboard::north_west1(a8), 0);
-        assert_eq!(Bitboard::north_west1(a1), 0);
-        assert_eq!(Bitboard::north_west1(h8), 0);
-        assert_eq!(Bitboard::north_west1(h1), g2);
+        assert_eq!(Bitboard::from(g3).north_west(), f4);
+        assert_eq!(Bitboard::from(h8).north_west(), 0);
+        assert_eq!(Bitboard::from(a8).north_west(), 0);
+        assert_eq!(Bitboard::from(a1).north_west(), 0);
+        assert_eq!(Bitboard::from(h8).north_west(), 0);
+        assert_eq!(Bitboard::from(h1).north_west(), g2);
 
         //north_east
-        assert_eq!(Bitboard::north_east1(g3), h4);
-        assert_eq!(Bitboard::north_east1(h1), 0);
-        assert_eq!(Bitboard::north_east1(h8), 0);
-        assert_eq!(Bitboard::north_east1(a1), b2);
-        assert_eq!(Bitboard::north_east1(a8), 0);
+        assert_eq!(Bitboard::from(g3).north_east(), h4);
+        assert_eq!(Bitboard::from(h1).north_east(), 0);
+        assert_eq!(Bitboard::from(h8).north_east(), 0);
+        assert_eq!(Bitboard::from(a1).north_east(), b2);
+        assert_eq!(Bitboard::from(a8).north_east(), 0);
 
 
         // north_one
-        assert_eq!(Bitboard::north1(a1), a2);
-        assert_eq!(Bitboard::north1(h1), h2);
-        assert_eq!(Bitboard::north1(a8), 0);
-        assert_eq!(Bitboard::north1(h8), 0);
-        assert_eq!(Bitboard::north1(g3), g4);
-        assert_eq!(Bitboard::north1(b1), b2);
-        assert_eq!(Bitboard::north1(f2), f3);
+        assert_eq!(Bitboard::from(a1).north(), a2);
+        assert_eq!(Bitboard::from(h1).north(), h2);
+        assert_eq!(Bitboard::from(a8).north(), 0);
+        assert_eq!(Bitboard::from(h8).north(), 0);
+        assert_eq!(Bitboard::from(g3).north(), g4);
+        assert_eq!(Bitboard::from(b1).north(), b2);
+        assert_eq!(Bitboard::from(f2).north(), f3);
 
-
-        //south_1
-        assert_eq!(Bitboard::south1(a1), 0);
-        assert_eq!(Bitboard::south1(h1), 0);
-        assert_eq!(Bitboard::south1(a8), a7);
-        assert_eq!(Bitboard::south1(h8), h7);
-        assert_eq!(Bitboard::south1(g3), g2);
 
         // west_one
         assert_eq!(Bitboard::from(a1).south(), 0);
@@ -420,11 +387,20 @@ mod bitboard_tests {
 
 
 
-    //     // east 1
-    //     assert_eq!(Bitboard::south1(a1), 0);
-    //     assert_eq!(Bitboard::south1(h1), 0);
-    //     assert_eq!(Bitboard::south1(a8), a7);
-    //     assert_eq!(Bitboard::south1(h8), h7);
-    //     assert_eq!(Bitboard::south1(g3), g2);
+        // east 1
+        assert_eq!(Bitboard::from(a1).east(), b1);
+        assert_eq!(Bitboard::from(h1).east(), 0);
+        assert_eq!(Bitboard::from(a8).east(), b8);
+        assert_eq!(Bitboard::from(h8).east(), 0);
+        assert_eq!(Bitboard::from(g3).east(), h3);
+
+
+
+        // east 1
+        assert_eq!(Bitboard::from(a1).west(), 0);
+        assert_eq!(Bitboard::from(h1).west(), g1);
+        assert_eq!(Bitboard::from(a8).west(), 0);
+        assert_eq!(Bitboard::from(h8).west(), g8);
+        assert_eq!(Bitboard::from(g3).west(), f3);
     }
 }
