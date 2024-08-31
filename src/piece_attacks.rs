@@ -354,3 +354,31 @@ impl PieceAttacks {
         north | east | south | west
     }
 }
+
+
+#[cfg(test)]
+mod piece_attacks_test {
+    use crate::{bitboard::Bitboard, squares::Square};
+
+    use super::PieceAttacks;
+
+    #[test]
+    fn should_return_the_king_attack_mask() {
+        let king_sq = Square::C6;
+        let attacks = PieceAttacks::mask_king_attacks(king_sq as u64);
+        let squares = [Square::C5, Square::C7, Square::D7, Square::D6, Square::D5, Square::B5, Square::B6, Square::B7];
+        assert_eq!(attacks.count_ones() as usize, squares.len());
+
+        for sq in squares {
+            assert_eq!(Bitboard::from(attacks).get_bit(sq as u64), 1);
+        }
+
+
+        let attacks = PieceAttacks::mask_king_attacks(Square::D1 as u64);
+        let squares = [Square::C1, Square::C2, Square::D2, Square::E2, Square::E1];
+        assert_eq!(attacks.count_ones() as usize, squares.len());
+        for sq in squares {
+            assert_eq!(Bitboard::from(attacks).get_bit(sq as u64), 1);
+        }
+    }
+}
