@@ -181,10 +181,6 @@ impl Bitboard {
         **self & !self.east_attack_fill()
     }
 
-    pub(crate) fn isolanis(&self) -> u64 {
-        self.no_neighbour_east() & self.no_neighbour_west()
-    }
-
 }
 
 /// Returns a stringified u64 with all 64 bits being represented.
@@ -283,7 +279,7 @@ impl From<Bitboard> for u64 {
 
 #[cfg(test)]
 mod bitboard_tests {
-    use crate::squares::Square;
+    use crate::{constants::RANK_8, squares::Square};
 
     use super::*;
 
@@ -402,5 +398,11 @@ mod bitboard_tests {
         assert_eq!(Bitboard::from(a8).west(), 0);
         assert_eq!(Bitboard::from(h8).west(), g8);
         assert_eq!(Bitboard::from(g3).west(), f3);
+
+
+        println!("{:#?}", Bitboard::from(Bitboard::from(0x1).file_fill()).to_string());
+
+
+        assert_eq!(Bitboard::from(0).north_fill(), RANK_8);
     }
 }
