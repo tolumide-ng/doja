@@ -14,20 +14,6 @@ impl Bitboard {
         Self(0)
     }
 
-    /// First shifts the binary representation of 1 to the left by value (u64),
-    /// generating a mask with the `square-th` bit set.
-    /// It then compares the mask with this bitboard using the `&` operator, effectively
-    /// comparing the value at the `square-th` position on both.
-    /// we then finally shift the result to the right by `square`, so we can get a 1 or 0 \
-    /// NB: this is same as (self.0 >> square) & 1 meaning shift self to the right
-    /// by `square` compare with 1 using the `&` operator, then return the result
-    pub fn get_bit_by_square(&self, square: Square) -> u64 {
-        // let value = (self.0 >> square) & 1;
-        let value: u64 = square.into();
-        (self.0 & (1 << value)) >> value
-    }
-
-
     /// Returns true if this bitboard is 0, otherwise returns false
     pub fn is_zero(&self) -> bool {
         **self == 0
@@ -43,8 +29,8 @@ impl Bitboard {
     /// with 1 ---->> if the value at LSB is 1, then return 1 else
     /// it returns 0
     pub fn get_bit(&self, square: u64) -> u64 {
-        let value = (self.0 >> square) & 1;
-        value
+        // ((self.0 & 1 << square) != 0) as u64
+        (self.0 >> square) & 1
     }
 
     /// ^= (BitXorAssign): 
@@ -103,7 +89,7 @@ impl Bitboard {
     }
 
     /// https://www.chessprogramming.org/Looking_for_Magics
-    pub(crate) fn pop_first_bit(&mut self) -> u64 {
+    fn pop_first_bit(&mut self) -> u64 {
         let b = self.0 ^ (self.0 - 1);
         let fold = (b as u32) ^ (b >> 32) as u32;
         self.0 &= self.0 - 1;
@@ -124,7 +110,7 @@ impl Bitboard {
     }
 
 
-    #[inline(always)]
+    // #[inline(always)]
     pub(crate) fn south_east1(mask: u64) -> u64 {
         (mask >> 7) & NOT_A_FILE
     }
@@ -145,9 +131,9 @@ impl Bitboard {
     }
 
     /// One shift only
-    pub(crate) fn south_one(mask: u64) -> u64 { mask >> 8 }
+    pub(crate) fn south1(mask: u64) -> u64 { mask >> 8 }
     /// One shift only
-    pub(crate) fn north_one(mask: u64) -> u64 { mask << 8 }
+    pub(crate) fn north1(mask: u64) -> u64 { mask << 8 }
 
     /// One shift only
     pub(crate) fn south(&self) -> u64 { **self >> 8 }
@@ -316,5 +302,129 @@ impl From<u64> for Bitboard {
 impl From<Bitboard> for u64 {
     fn from(value: Bitboard) -> Self {
         value.0
+    }
+}
+
+
+
+#[cfg(test)]
+mod bitboard_tests {
+    use crate::squares::Square;
+
+    use super::*;
+
+    const BOARD: u64 = 0x4000020880300;
+
+    #[test]
+    fn basic_immutable_operations_on_bitboard() {
+        let bitboard = Bitboard::from(BOARD);
+
+        assert_eq!(bitboard.is_zero(), false);
+        assert_eq!(bitboard.not_zero(), true);
+
+        assert_eq!(bitboard.get_bit(7), 0);
+        assert_eq!(bitboard.get_bit(8), 1);
+        assert_eq!(bitboard.get_bit(9), 1);
+        assert_eq!(bitboard.get_bit(11), 0);
+        assert_eq!(bitboard.get_bit(23), 1);
+        assert_eq!(bitboard.get_bit(56), 0);
+
+
+        assert_eq!(bitboard.count_bits(), 6);
+        assert_eq!(bitboard.get_lsb1(), Some(8));
+    }
+
+    #[test]
+    fn bitboard_navigation() {
+        let d3: u64 = 0x80000; let e2: u64 = 0x1000;
+        
+        
+
+        let h1: u64 = 0x80; let h2 = 0x8000u64; let g1= 0x40u64;
+        let h8 = 0x8000000000000000u64; let h7 = 0x80000000000000u64;
+        let g7 = 0x40000000000000u64; let g8 = 0x4000000000000000u64;
+
+        let a8 =0x100000000000000u64; let b8 = 0x200000000000000u64;
+        let a7 = 0x1000000000000u64; let b7 = 0x2000000000000u64;
+
+        let a1 =0x1u64; let a2= 0x100u64; let b2 = 0x200u64; let b1 = 0x2u64;
+
+        let g3: u64 = 0x400000; let h2 = 0x8000u64;
+        let h4 = 0x80000000u64; let f4 = 0x20000000u64;
+        let f2 = 0x2000; let g2 = 0x4000u64; let h3 = 0x800000u64;
+        let g4 = 0x40000000u64; let f3 = 0x200000u64; let f1 = 0x20u64;
+
+
+        //south_west
+        let f6: u64 = 0x200000000000; let e5: u64 = 0x1000000000;
+        let g7: u64 = 0x40000000000000; let h6: u64 = 0x800000000000; let b2 = 0x200u64;
+        
+        
+        assert_eq!(Bitboard::south_east1(d3), e2);
+        assert_eq!(Bitboard::south_east1(g3), h2);
+        assert_eq!(Bitboard::south_east1(g7), h6);
+        assert_eq!(Bitboard::south_east1(a1), 0);
+        assert_eq!(Bitboard::south_east1(h1), 0);
+        assert_eq!(Bitboard::south_east1(h8), 0);
+        assert_eq!(Bitboard::south_east1(a8), b7);
+        
+        
+        assert_eq!(Bitboard::south_west1(a1), 0);
+        assert_eq!(Bitboard::south_west1(h1), 0);
+        assert_eq!(Bitboard::south_west1(a8), 0);
+        assert_eq!(Bitboard::south_west1(h8), g7);
+        assert_eq!(Bitboard::south_west1(h2), g1);
+        assert_eq!(Bitboard::south_west1(g2), f1);
+
+
+
+        // north west
+        assert_eq!(Bitboard::north_west1(g3), f4);
+        assert_eq!(Bitboard::north_west1(h8), 0);
+        assert_eq!(Bitboard::north_west1(a8), 0);
+        assert_eq!(Bitboard::north_west1(a1), 0);
+        assert_eq!(Bitboard::north_west1(h8), 0);
+        assert_eq!(Bitboard::north_west1(h1), g2);
+
+        //north_east
+        assert_eq!(Bitboard::north_east1(g3), h4);
+        assert_eq!(Bitboard::north_east1(h1), 0);
+        assert_eq!(Bitboard::north_east1(h8), 0);
+        assert_eq!(Bitboard::north_east1(a1), b2);
+        assert_eq!(Bitboard::north_east1(a8), 0);
+
+
+        // north_one
+        assert_eq!(Bitboard::north1(a1), a2);
+        assert_eq!(Bitboard::north1(h1), h2);
+        assert_eq!(Bitboard::north1(a8), 0);
+        assert_eq!(Bitboard::north1(h8), 0);
+        assert_eq!(Bitboard::north1(g3), g4);
+        assert_eq!(Bitboard::north1(b1), b2);
+        assert_eq!(Bitboard::north1(f2), f3);
+
+
+        //south_1
+        assert_eq!(Bitboard::south1(a1), 0);
+        assert_eq!(Bitboard::south1(h1), 0);
+        assert_eq!(Bitboard::south1(a8), a7);
+        assert_eq!(Bitboard::south1(h8), h7);
+        assert_eq!(Bitboard::south1(g3), g2);
+
+        // west_one
+        assert_eq!(Bitboard::from(a1).south(), 0);
+        assert_eq!(Bitboard::from(h1).south(), 0);
+        assert_eq!(Bitboard::from(a8).south(), a7);
+        assert_eq!(Bitboard::from(h8).south(), h7);
+        assert_eq!(Bitboard::from(g3).south(), g2);
+
+
+
+    //     // east 1
+    //     assert_eq!(Bitboard::south1(a1), 0);
+    //     assert_eq!(Bitboard::south1(h1), 0);
+    //     assert_eq!(Bitboard::south1(a8), a7);
+    //     assert_eq!(Bitboard::south1(h8), h7);
+    //     assert_eq!(Bitboard::south1(g3), g2);
     }
 }

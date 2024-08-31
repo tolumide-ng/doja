@@ -5,11 +5,6 @@ use thiserror::Error;
 use crate::{bit_move::BitMove, board::{board::Board, board_state::BoardState, fen::FEN}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{control::{self, Control}, negamax::NegaMax, time_control::TimeControl}};
 
 
-// #[derive(Debug, Error)]
-// pub enum UCIError {
-//     InvalidFen
-// }
-
 
 #[derive(Error, Debug)]
 pub enum UciError {

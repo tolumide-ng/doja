@@ -153,7 +153,7 @@ impl BoardState {
 
                 while single_push_targets != 0 {
                     let target_sq = single_push_targets & (!single_push_targets + 1);
-                    let src_sq = match color {Color::White => Bitboard::south_one(target_sq), _ => Bitboard::north_one(target_sq)};
+                    let src_sq = match color {Color::White => Bitboard::south1(target_sq), _ => Bitboard::north1(target_sq)};
 
                     // println!()
 
