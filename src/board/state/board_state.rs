@@ -2,7 +2,7 @@ use std::{fmt::Display, ops::{Deref, DerefMut}};
 
 use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5,TOTAL_SQUARES, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::{Zobrist, START_POSITION_ZOBRIST}};
 
-use super::{castling::Castling, fen::FEN, piece::Piece};
+use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
 
 

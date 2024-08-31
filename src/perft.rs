@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use crate::constants::TRICKY_POSITION;
 use crate::move_type::MoveType;
-use crate::board::board_state::BoardState;
+use crate::board::state::board_state::BoardState;
 use crate::board::fen::FEN;
 
 pub(crate) struct Perft;

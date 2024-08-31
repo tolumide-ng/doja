@@ -1,6 +1,6 @@
 use std::{ops::Neg, sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::BitMove, board::{board_state::BoardState, piece::Piece}, color::Color, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}, zobrist::Zobrist};
+use crate::{bit_move::BitMove, board::{state::board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}, zobrist::Zobrist};
 
 use super::{evaluation::Evaluation, time_control::TimeControl};
 

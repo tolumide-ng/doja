@@ -23,27 +23,28 @@ mod uci;
 mod tt;
 
 
-use std::io::Read;
-use std::sync::{Arc, Mutex};
-use std::{sync::mpsc, time::Instant};
-use std::{ptr, thread};
+// use std::io::Read;
+// use std::sync::{Arc, Mutex};
+// use std::{sync::mpsc, time::Instant};
+// use std::{ptr, thread};
 
-use bit_move::BitMove;   
-use bitboard::Bitboard;
-use board::{board_state::BoardState, fen::FEN, piece::Piece};
-use color::Color;
-use constants::{ALPHA, BETA, EMPTY_BOARD, REPETITIONS, START_POSITION, TRICKY_POSITION, ZOBRIST};
-use masks::EvaluationMasks;
-use move_type::MoveType;
-use perft::Perft;
-use search::control::Control;
+use board::{fen::FEN, state::board_state::BoardState};
+// use bit_move::BitMove;   
+// use bitboard::Bitboard;
+// use board::{state::board_state::BoardState, fen::FEN};
+// use color::Color;
+// use constants::{ALPHA, BETA, EMPTY_BOARD, REPETITIONS, START_POSITION, TRICKY_POSITION, ZOBRIST};
+// use masks::EvaluationMasks;
+// use move_type::MoveType;
+// use perft::Perft;
+// use search::control::Control;
 use search::evaluation::Evaluation;
-use squares::Square;
-use tt::{HashFlag, TTable};
-use uci::UCI;
-use zobrist::Zobrist;
+// use squares::Square;
+// use tt::{HashFlag, TTable};
+// use uci::UCI;
+// use zobrist::Zobrist;
 
-use crate::{constants::CMK_POSITION, search::{negamax::NegaMax, zerosum::ZeroSum}};
+// use crate::{constants::CMK_POSITION, search::{negamax::NegaMax, zerosum::ZeroSum}};
 
 
 

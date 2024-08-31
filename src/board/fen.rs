@@ -1,7 +1,7 @@
 use thiserror::Error;
 use crate::{board::{castling::Castling, piece::Piece}, color::Color, squares::{Square, SQUARE_NAMES}};
 
-use super::board_state::BoardState;
+use crate::board::state::board_state::BoardState;
 
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -127,7 +127,7 @@ pub trait FEN {
 
 #[cfg(test)]
 mod fen_tests {
-    use crate::{board::{board_state::BoardState, castling::Castling, fen::FENError}, color::Color};
+    use crate::{board::{state::board_state::BoardState, castling::Castling, fen::FENError}, color::Color};
 
     use super::FEN;
 
@@ -159,7 +159,7 @@ mod fen_tests {
         fn the_fen_blocks_are_incomplete() {
             let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
-            let result: Result<crate::board::board_state::BoardState, FENError> = TestStruct::parse_fen(fen);
+            let result: Result<BoardState, FENError> = TestStruct::parse_fen(fen);
             assert_eq!(result.unwrap_err(), FENError::NotEnoughBlocks { blocks: 1 });
         }
 

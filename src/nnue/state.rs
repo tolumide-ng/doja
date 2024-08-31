@@ -1,6 +1,6 @@
 use std::alloc::{self, alloc_zeroed, Layout};
 
-use crate::{board::{board_state::BoardState, piece::Piece}, color::Color, squares::Square};
+use crate::{board::{state::board_state::BoardState, piece::Piece}, color::Color, squares::Square};
 
 use super::{accumulator::Accumulator, commons::{Eval, HIDDEN, MAX_DEPTH, QA, QAB, SCALE}, net::{nnue_index, squared_crelu, MODEL}};
 
