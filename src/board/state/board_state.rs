@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::{Deref, DerefMut}};
+use std::{fmt::Display, ops::{Deref, DerefMut}, rc::Rc, sync::Arc};
 
 use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5,TOTAL_SQUARES, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::{Zobrist, START_POSITION_ZOBRIST}};
 
@@ -6,7 +6,7 @@ use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BoardState {
     pub(crate) turn: Color,
     pub board: Board,
@@ -15,11 +15,11 @@ pub struct BoardState {
     occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
     // castling_table: [u8; TOTAL_SQUARES],
     pub(crate) hash_key: u64,
-    // // this is made this way without a mutex because editing the prev would not result in this same state again
-    // prev: Arc<Option<BoardState>>,
     // fifty move rule counter
     pub(crate) fifty: u8,
-    // pub(crate) parent: Option<>
+    // // this is made this way without a mutex because editing the prev would not result in this same state again
+    // prev: Arc<Option<BoardState>>,
+    pub(crate) prev: Option<Arc<BoardState>>,
 }
 
 
@@ -27,7 +27,7 @@ impl BoardState {
     pub fn new() -> BoardState {
         Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
             occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST, fifty: 0,
-            //  castling_table: CASTLING_TABLE,
+            prev: None, //  castling_table: CASTLING_TABLE,
         }
     }
 

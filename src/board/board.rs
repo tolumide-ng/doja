@@ -3,7 +3,7 @@ use std::{fmt::Display, ops::{Deref, DerefMut}};
 use crate::board::piece::Piece;
 use crate::bitboard::Bitboard;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Board([Bitboard; 12]);
 
 impl Deref for Board {
