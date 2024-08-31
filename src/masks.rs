@@ -82,25 +82,4 @@ impl EvaluationMasks {
 
         Self { file_masks, rank_masks, isolated_masks, white_passed_masks, black_passed_masks }
     }
-
-    fn black_front_spans(black_pawns: Bitboard) -> u64 {
-        Bitboard::from(black_pawns.south_fill()).south()
-    }
-
-    fn white_front_spans(white_pawns: Bitboard) -> u64 {
-        Bitboard::from(white_pawns.north_fill()).north()
-    }
-
-    pub(crate) fn white_passed_pawns(white_pawns: Bitboard, black_pawns: Bitboard) -> u64 {
-        let mut all_front_spans = Self::black_front_spans(black_pawns);
-        all_front_spans |= Bitboard::from(all_front_spans).east() | Bitboard::from(all_front_spans).west();
-        *white_pawns & !all_front_spans
-    }
-
-    pub(crate) fn black_passed_pawns(black_pawns: Bitboard, white_pawns: Bitboard) -> u64 {
-        let mut all_front_spans = Self::white_front_spans(white_pawns);
-        all_front_spans |= Bitboard::from(all_front_spans).east() | Bitboard::from(all_front_spans).west();
-        
-        *black_pawns & !all_front_spans
-    }
 }

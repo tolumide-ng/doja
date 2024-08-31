@@ -24,57 +24,34 @@ impl Bitboard {
         **self != 0
     }
 
-    /// shifts self to the right by square_value (u64) 
-    /// and compares the value at the LSB (Least Significant Byte)
-    /// with 1 ---->> if the value at LSB is 1, then return 1 else
-    /// it returns 0
+    /// Returns the bit at the index `square`
     pub fn get_bit(&self, square: u64) -> u64 {
         // ((self.0 & 1 << square) != 0) as u64
         (self.0 >> square) & 1
     }
 
-    /// ^= (BitXorAssign): 
-    /// comparing 0 and 0 returns 0, comparing 1 and 1 return 0,
-    /// comparing 1 and 0 returns 1, comparing 0 and 1 returns 1 \
-    /// Checks if the bit at the target position is 1, if the value
-    /// is 1, then it uses the BitXorAssign operator described above
+    /// Removes the but at index `square`
     pub fn pop_bit(&mut self, square: u64) {
         if self.get_bit(square.into()) != 0 {
             self.0 ^= 1 << square;
         }
     }
 
-    /// shifts the binary representation of 1 to the right by square (u64)
-    /// this creates a mask with only the `square-th` bit set i.e. if value
-    /// of the square is 6, then this (1) would become (0010 0000)
-    /// and then BitOrAssigns the mask to self.0
-    /// |= means Bitwise OR and assignment
-    /// this means that if the other positions in the target bitboard are 1,
-    /// the zeros on this new bitboard cannot override them 
-    /// since 0 | 1 is 1 and 1 | 0 is also 0
-    /// e.g
-    /// 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00100000 (mask)
-    /// 00000000 00000000 00000001 00010000 00000000 00000000 00000000 00000000 (self)
-    /// becomes (|=)
-    /// 00000000 00000000 00000001 00010000 00000000 00000000 00000000 00100000 (mask)
+    //// Sets the bit at index `square` in self
     pub fn set_bit(&mut self, square: u64) {
         self.0 |= 1 << square;
     }
 
 
-    /// Counts the number of bits(1's) in a bitboard \
-    /// e.g given 0b00011100 \
-    /// this would return 3
+    /// Counts the number of set bits on this bitboard
     #[inline]
     pub(crate) fn count_bits(&self) -> u32 {
         self.count_ones()
     }
 
 
-    // 1_u64.wrapping_shl(bits.trailing_zeros()) ??????
-    /// Returns the Least Significant first Bit
-    /// e.g given 0b00010000
-    /// the LSB would be 5
+    /// Returns the least significant bit on this bitboard, 
+    /// or returns None otherwise
     #[inline]
     pub(crate) fn get_lsb1(&self) -> Option<u64> {
         if self.0 == 0 {
@@ -139,48 +116,6 @@ impl Bitboard {
         
         occupancy.into()
     }
-
-    pub(crate) fn north_fill(&self) -> u64 {
-        let mut gen = **self;
-        gen |= gen << 8;
-        gen |= gen << 16;
-        gen |= gen << 32;
-        gen
-    }
-
-    pub(crate) fn south_fill(&self) -> u64 {
-        let mut gen = **self;
-        gen |= gen >> 8;
-        gen |= gen >> 16;
-        gen |= 32;
-        gen
-    }
-
-    pub(crate) fn file_fill(&self) -> Self {
-        Self::from(self.north_fill() | self.south_fill())
-    }
-
-    pub(crate) fn east_attack_fill(&self) -> u64 {
-        let file_fill = self.file_fill();
-        file_fill.east()
-    }
-
-    pub(crate) fn west_attack_fill(&self) -> u64 {
-        let file_fill = self.file_fill();
-        file_fill.west()
-    }
-
-
-    /// Ensure that the own set bits in this bitboard are pawns
-    pub(crate) fn no_neighbour_east(&self) -> u64 {
-        **self & !self.west_attack_fill()
-    }
-
-    /// Ensure that the own set bits in this bitboard are pawns
-    pub(crate) fn no_neighbour_west(&self) -> u64 {
-        **self & !self.east_attack_fill()
-    }
-
 }
 
 /// Returns a stringified u64 with all 64 bits being represented.
@@ -221,31 +156,6 @@ impl Display for Bitboard {
     }
 }
 
-pub fn reverse_bytes(b: u64) -> u64 {
-    let mut m: u64 = 0;
-    m |= (reverse_byte(((b >> 56) & 0xFF) as u8) as u64) << 56;
-    m |= (reverse_byte(((b >> 48) & 0xFF) as u8) as u64) << 48;
-    m |= (reverse_byte(((b >> 40) & 0xFF) as u8) as u64) << 40;
-    m |= (reverse_byte(((b >> 32) & 0xFF) as u8) as u64) << 32;
-    m |= (reverse_byte(((b >> 24) & 0xFF) as u8) as u64) << 24;
-    m |= (reverse_byte(((b >> 16) & 0xFF) as u8) as u64) << 16;
-    m |= (reverse_byte(((b >> 8) & 0xFF) as u8) as u64) << 8;
-    m |= reverse_byte((b & 0xFF) as u8) as u64;
-    m
-}
-
-pub fn reverse_byte(b: u8) -> u8 {
-    let m: u8 = ((0b0000_0001 & b) << 7)
-        | ((0b0000_0010 & b) << 5)
-        | ((0b0000_0100 & b) << 3)
-        | ((0b0000_1000 & b) << 1)
-        | ((0b0001_0000 & b) >> 1)
-        | ((0b0010_0000 & b) >> 3)
-        | ((0b0100_0000 & b) >> 5)
-        | ((0b1000_0000 & b) >> 7);
-    m
-}
-
 
 impl Deref for Bitboard {
     type Target = u64;
@@ -279,8 +189,6 @@ impl From<Bitboard> for u64 {
 
 #[cfg(test)]
 mod bitboard_tests {
-    use crate::{constants::RANK_8, squares::Square};
-
     use super::*;
 
     const BOARD: u64 = 0x4000020880300;
@@ -310,14 +218,13 @@ mod bitboard_tests {
         
         
 
-        let h1: u64 = 0x80; let h2 = 0x8000u64; let g1= 0x40u64;
-        let h8 = 0x8000000000000000u64; let h7 = 0x80000000000000u64;
-        let g7 = 0x40000000000000u64; let g8 = 0x4000000000000000u64;
+        let h1: u64 = 0x80; let g1= 0x40u64; let h8 = 0x8000000000000000u64; 
+        let h7 = 0x80000000000000u64; let g8 = 0x4000000000000000u64;
 
         let a8 =0x100000000000000u64; let b8 = 0x200000000000000u64;
         let a7 = 0x1000000000000u64; let b7 = 0x2000000000000u64;
 
-        let a1 =0x1u64; let a2= 0x100u64; let b2 = 0x200u64; let b1 = 0x2u64;
+        let a1 =0x1u64; let a2= 0x100u64; let b1 = 0x2u64;
 
         let g3: u64 = 0x400000; let h2 = 0x8000u64;
         let h4 = 0x80000000u64; let f4 = 0x20000000u64;
@@ -326,7 +233,6 @@ mod bitboard_tests {
 
 
         //south_west
-        let f6: u64 = 0x200000000000; let e5: u64 = 0x1000000000;
         let g7: u64 = 0x40000000000000; let h6: u64 = 0x800000000000; let b2 = 0x200u64;
         
         
@@ -399,10 +305,46 @@ mod bitboard_tests {
         assert_eq!(Bitboard::from(h8).west(), g8);
         assert_eq!(Bitboard::from(g3).west(), f3);
 
+    }
 
-        println!("{:#?}", Bitboard::from(Bitboard::from(0x1).file_fill()).to_string());
+
+    #[cfg(test)]
+    mod mutable_board_methods {
+        use super::*;
+
+        #[test]
+        fn should_pop_the_bit_if_it_exists() {
+            let mut bitboard = Bitboard::from(BOARD);
+
+            let sq = Square::A2 as u64;
+            assert_eq!(bitboard.get_bit(sq), 1);
+
+            bitboard.pop_bit(sq);
+            assert_ne!(bitboard.get_bit(sq), 1);
+
+            let sq = Square::G3 as u64;
+            assert_eq!(bitboard.get_bit(sq), 0);
+
+            bitboard.pop_bit(sq);
+            assert_ne!(bitboard.get_bit(sq), 1);
+        }
 
 
-        assert_eq!(Bitboard::from(0).north_fill(), RANK_8);
+        #[test]
+        fn should_set_bit() {
+            let mut bitboard = Bitboard::from(BOARD);
+
+            let sq = Square::G3 as u64;
+            assert_eq!(bitboard.get_bit(sq), 0);
+
+            bitboard.set_bit(sq);
+            assert_eq!(bitboard.get_bit(sq), 1);
+
+            assert_eq!(bitboard.get_bit(Square::A2 as u64), 1);
+
+            bitboard.pop_first_bit();
+            assert_eq!(bitboard.get_bit(Square::A2 as u64), 0);
+
+        }
     }
 }
