@@ -358,7 +358,7 @@ impl PieceAttacks {
 
 #[cfg(test)]
 mod piece_attacks_test {
-    use crate::{bitboard::Bitboard, squares::Square};
+    use crate::{bitboard::Bitboard, color::Color, squares::Square};
 
     use super::PieceAttacks;
 
@@ -376,6 +376,54 @@ mod piece_attacks_test {
 
         let attacks = PieceAttacks::mask_king_attacks(Square::D1 as u64);
         let squares = [Square::C1, Square::C2, Square::D2, Square::E2, Square::E1];
+        assert_eq!(attacks.count_ones() as usize, squares.len());
+        for sq in squares {
+            assert_eq!(Bitboard::from(attacks).get_bit(sq as u64), 1);
+        }
+    }
+
+    #[test]
+    fn should_return_the_knight_attack_mask() {
+        let knight_sq = Square::E5;
+        let attacks = PieceAttacks::mask_knight_attacks(knight_sq as u64);
+        let squares = [Square::D7, Square::C6, Square::C4, Square::D3, Square::F3, Square::G4, Square::G6, Square::F7];
+
+        assert_eq!(attacks.count_ones() as usize, squares.len());
+        for sq in squares {
+            assert_eq!(Bitboard::from(attacks).get_bit(sq  as u64), 1);
+        }
+    }
+
+
+    #[test]
+    fn should_return_bishop_attack_mask() {
+        let square = Square::F3;
+        let attacks = PieceAttacks::mask_bishop_attacks(square as u64);
+        let squares = [Square::B7, Square::C6, Square::D5, Square::E4, Square::E2, Square::G4, Square::G2];
+
+        assert_eq!(attacks.count_ones() as usize, squares.len());
+        for sq in squares {
+            assert_eq!(Bitboard::from(attacks).get_bit(sq as u64), 1);
+        }
+    }
+
+    #[test]
+    fn should_return_pawn_attacks_mask() {
+        let square = Square::G2;
+        let attacks = PieceAttacks::mask_pawn_attacks(Color::Black, square as u64);
+
+        let squares = [Square::F3, Square::H3];
+        assert_eq!(attacks.count_ones() as usize, squares.len());
+        for sq in squares {
+            assert_eq!(Bitboard::from(attacks).get_bit(sq as u64), 1);
+        }
+
+        let square = Square::C5;
+        let attacks = PieceAttacks::mask_pawn_attacks(Color::White, square as u64);
+
+        println!("{:#?}", Bitboard::from(attacks).to_string());
+        let squares = [Square::B4, Square::D4];
+
         assert_eq!(attacks.count_ones() as usize, squares.len());
         for sq in squares {
             assert_eq!(Bitboard::from(attacks).get_bit(sq as u64), 1);
