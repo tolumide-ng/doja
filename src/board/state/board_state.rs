@@ -5,6 +5,10 @@ use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CA
 use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
 
+#[cfg(test)]
+#[path ="./tests.rs"]
+mod tests;
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoardState {
@@ -51,31 +55,22 @@ impl BoardState {
         self.occupancies[color]
     }
 
-    pub(crate) fn occupancy(&self) -> u64 {
-        self.occupancies[Color::Both]
-    }
-
-    // / Given the current pieces on the board, is this square under attack by the given side (color)
-    // / Getting attackable(reachable) spots from this square, it also means this square can be reached from those
-    // / attackable spots
-
+    /// Given the current pieces on the board, is this square under attack by the given side (color)
+    /// Getting attackable(reachable) spots from this square, it also means this square can be reached from those
+    /// squares
     pub(crate) fn is_square_attacked(&self, sq_64: u64, attacker: Color) -> bool {
         // bitboard with only the square's bit set
         let sq_mask = 1u64 << sq_64;
-        let sq = Square::from(sq_64);
+        let sq: Square = Square::from(sq_64);
 
-        
-        let pawn_attackers = self[Piece::pawn(attacker)];
-        if (PIECE_ATTACKS.pawn_attacks[attacker][sq] & *pawn_attackers) != 0 { return true }
-        // println!("aaaaaa");
+        let pawn_attackers = self[Piece::pawn(attacker)]; // get the occupancy for the attacking pawns
+        if  (PIECE_ATTACKS.pawn_attacks[attacker][sq] & *pawn_attackers) != 0 { return true }
 
-        let knights = self[Piece::knight(attacker)];
+        let knights = self[Piece::knight(attacker)]; // knight occupancy for the attacking side
         if (PIECE_ATTACKS.knight_attacks[sq] & *knights) != 0 { return true }
-        // println!("bbbb");
 
         let king = self[Piece::king(attacker)];
         if (PIECE_ATTACKS.king_attacks[sq] & *king) != 0 { return true }
-        // println!("cccc");
 
         let bishops_queens = *self[Piece::queen(attacker)] | *self[Piece::bishop(attacker)];
         if (PIECE_ATTACKS.nnbishop_attacks(sq_mask, self.occupancies[Color::Both]) & bishops_queens) != 0 { return true }

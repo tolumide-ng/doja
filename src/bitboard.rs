@@ -1,11 +1,9 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{constants::{NOT_A_FILE, NOT_H_FILE}, squares::{Square, BIT_TABLE}};
+use crate::{constants::{NOT_A_FILE, NOT_H_FILE}, squares::BIT_TABLE};
 
-
-
-// #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
 pub struct Bitboard(pub u64);
 
 impl Bitboard {
@@ -310,6 +308,8 @@ mod bitboard_tests {
 
     #[cfg(test)]
     mod mutable_board_methods {
+        use crate::squares::Square;
+
         use super::*;
 
         #[test]
