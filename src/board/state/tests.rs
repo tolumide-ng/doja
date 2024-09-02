@@ -136,4 +136,94 @@ mod board_state_tests {
         }
     }
 
+
+    #[cfg(test)]
+    mod  single_push_targets {
+        use crate::{bitboard::Bitboard, board::{piece::Piece, state::board_state::BoardState}, color::Color, squares::Square};
+
+        #[test]
+        fn single_push_target_for_white_pawn() {
+            let mut board = BoardState::new();
+            let wp = 0x200260000u64; // white pawns
+            let enemy_pawns = 0x2002000u64; // black pawns
+            board.board[Piece::WP] = Bitboard::from(wp);
+            board.occupancies[Color::White] = wp;
+            board.board[Piece::BP] = Bitboard::from(enemy_pawns);
+            board.occupancies[Color::Black] = enemy_pawns;
+            let result = board.single_push_targets(Color::White);
+
+            let targets = [Square::B6, Square::B4, Square::C4, Square::F4];
+
+            assert_eq!(result.count_ones() as usize,targets.len());
+            for sq in targets {
+                assert!((result & 1 << (sq as u64)) != 0);
+            }
+        }
+
+
+        #[test]
+        fn single_push_target_for_black_pawns() {
+            let mut board = BoardState::new();
+            let bp = 0x200260000u64; // black pawns
+            let enemy_pawns = 0x2002000u64; // white pawns
+            board.board[Piece::BP] = Bitboard::from(bp);
+            board.occupancies[Color::Black] = bp;
+            board.board[Piece::WP] = Bitboard::from(enemy_pawns);
+            board.occupancies[Color::White] = enemy_pawns;
+            let result = board.single_push_targets(Color::Black);
+
+            let targets = [Square::B4, Square::B2, Square::C2, Square::F2];
+            assert_eq!(result.count_ones() as usize, targets.len());
+            for sq in targets {
+                assert!(result & (1 << sq as u64) != 0);
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod double_push_targets {
+        use crate::{bitboard::Bitboard, board::{piece::Piece, state::board_state::BoardState}, color::Color, squares::Square};
+
+        #[test]
+        fn double_push_for_white_pawns() {
+            let mut board = BoardState::new();
+            let wp = 0x9a00u64;
+            let enemy = 0x200002040000u64;
+            board.board[Piece::WP] = Bitboard::from(wp);
+            board.occupancies[Color::White] = wp;
+            board.board[Piece::BP] = Bitboard::from(enemy);
+            board.occupancies[Color::Black] = enemy;
+
+            let result = board.double_push_targets(Color::White);
+            
+            let targets = [Square::B4, Square::D4, Square::E4, Square::H4];
+            assert_eq!(targets.len(), result.count_ones() as usize);
+            for sq in targets {
+                assert!(result & (1 << sq as u64) != 0);
+            }
+        }
+
+        #[test]
+        fn double_push_for_black_pawns() {
+            let mut board = BoardState::new();
+            let bp = 0x35000000000000u64;
+            let enemy =  0x500000042000u64;
+            board.board[Piece::BP] = Bitboard::from(bp);
+            board.occupancies[Color::Black] = bp;
+            board.board[Piece::WP] = Bitboard::from(enemy);
+            board.occupancies[Color::White] = enemy;
+
+            let result = board.double_push_targets(Color::Black);
+            let targets = [Square::A5, Square::C5, Square::E5, Square::F5];
+            
+            assert_eq!(result.count_ones() as usize, targets.len());
+            for sq in targets {
+                println!("on the square sq {:#?}", sq);
+                assert!(result & (1<<sq as u64) != 0);
+            }
+
+        }
+
+    }
+
 }

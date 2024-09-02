@@ -85,6 +85,7 @@ impl BoardState {
 
     
     /// Target for single pawn pushes (black or white)
+    /// Returns a value with all the bits set when the pawns of that specific color are pushed
     fn single_push_targets(&self, color: Color) -> u64 {
         let empty = !self.occupancies[Color::Both];
         let color_pawns = self[Piece::pawn(color)];

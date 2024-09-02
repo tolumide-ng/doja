@@ -517,8 +517,8 @@ mod piece_attacks_test {
         let span = [Square::F4, Square::F5, Square::F6, Square::F2, Square::F1, Square::D3, Square::E3, Square::G3, Square::H3,
         Square::D1, Square::E2, Square::G2, Square::G4, Square::H5, Square::E4, Square::D5, Square::C6, Square::B7, Square::A8];
 
-        println!("{:#?}", Bitboard::from(board).to_string());
-        println!("{:#?}", Bitboard::from(attacks).to_string());
+        // println!("{:#?}", Bitboard::from(board).to_string());
+        // println!("{:#?}", Bitboard::from(attacks).to_string());
 
 
         assert_eq!(span.len(), attacks.count_ones() as usize);
