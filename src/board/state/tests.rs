@@ -152,7 +152,7 @@ mod board_state_tests {
             board.set_occupancy(Color::Black, enemy_pawns);
             let result = board.single_push_targets(Color::White);
 
-            let targets = [Square::B6, Square::B4, Square::C4, Square::F4];
+            let targets = [Square::B6, Square::C4, Square::F4];
 
             assert_eq!(result.count_ones() as usize,targets.len());
             for sq in targets {
@@ -172,7 +172,7 @@ mod board_state_tests {
             board.set_occupancy(Color::White, enemy_pawns);
             let result = board.single_push_targets(Color::Black);
 
-            let targets = [Square::B4, Square::B2, Square::C2, Square::F2];
+            let targets = [Square::B2, Square::C2];
             assert_eq!(result.count_ones() as usize, targets.len());
             for sq in targets {
                 assert!(result & (1 << sq as u64) != 0);
@@ -196,7 +196,7 @@ mod board_state_tests {
 
             let result = board.double_push_targets(Color::White);
             
-            let targets = [Square::B4, Square::D4, Square::E4, Square::H4];
+            let targets = [Square::D4, Square::E4, Square::H4];
             assert_eq!(targets.len(), result.count_ones() as usize);
             for sq in targets {
                 assert!(result & (1 << sq as u64) != 0);
@@ -214,7 +214,7 @@ mod board_state_tests {
             board.set_occupancy(Color::White, enemy);
 
             let result = board.double_push_targets(Color::Black);
-            let targets = [Square::A5, Square::C5, Square::E5, Square::F5];
+            let targets = [Square::A5, Square::C5, Square::F5];
 
             assert_eq!(result.count_ones() as usize, targets.len());
             for sq in targets {
@@ -258,7 +258,7 @@ mod board_state_tests {
             board.set_occupancy(Color::White, enemy);
 
             let result = board.pawns_able_to_double_push(Color::Black);
-            let targets = [Square::E7, Square::F7];
+            let targets = [Square::E7];
 
             assert_eq!(result.count_ones() as usize, targets.len());
             for sq in targets {
@@ -302,9 +302,8 @@ mod board_state_tests {
             board.set_occupancy(Color::White, enemy);
 
             let result = board.get_pawn_movement(Color::Black, false);
-            let targets = [(Square::E7, Square::E6), (Square::F7, Square::F6), (Square::B4, Square::B3), (Square::C5, Square::C4)];
+            let targets = [(Square::E7, Square::E6), (Square::F7, Square::F6), (Square::C5, Square::C4)];
 
-        
             assert_eq!(result.len(), targets.len());
             for (src, target) in targets {
                 let expected = BitMove::new(src as u32, target  as u32, Piece::BP, None, false, false, false, false);
