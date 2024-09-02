@@ -5,7 +5,7 @@ pub struct PieceAttacks {
     pub(crate) knight_attacks: [u64; TOTAL_SQUARES],
     pub(crate) bishop_masks: [u64; TOTAL_SQUARES],
     pub(crate) rook_masks: [u64; TOTAL_SQUARES],
-    /// this returns the squares that an sq of this color can ATTACK! as pawn (CORRECT) \
+    /// this returns the squares that a sq of this color can ATTACK! as pawn (CORRECT) \
     /// another loose but incomplete definition is where it can be attacked from by other pawns (this is incomplete or partially wrong)
     pub(crate) pawn_attacks: [[u64; TOTAL_SQUARES]; PLAYERS_COUNT]
 }

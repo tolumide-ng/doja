@@ -48,7 +48,21 @@ impl BoardState {
     }
 
     pub(crate) fn set_occupancy(&mut self, color: Color, occupancy: u64) {
-        self.occupancies[color] |= occupancy;
+        match color {
+            Color::White => self.occupancies[color] |= occupancy, 
+            Color::Black => self.occupancies[color] |= occupancy,
+            _ => {}
+        }
+        self.occupancies[Color::Both] |= occupancy;
+    }
+
+    pub(crate) fn reset_occupancy_to(&mut self, color: Color, occupancy: u64) {
+        match color {
+            Color::White => self.occupancies[color] = occupancy, 
+            Color::Black => self.occupancies[color] = occupancy,
+            _ => {}
+        }
+        self.occupancies[Color::Both] = occupancy;
     }
 
     pub(crate) fn get_occupancy(&self, color: Color) -> u64 {
@@ -183,7 +197,7 @@ impl BoardState {
     pub(crate) fn get_pawn_attacks(&self, color: Color) -> Vec<BitMove> {
         let piece = Piece::pawn(color);
         let mut mv_list: Vec<BitMove> = vec![];
-        let mut color_pawns = *self[piece];
+        let mut color_pawns = *self[piece]; // pawns belonging to this color
         
         while color_pawns != 0 {
             let src: u32 = color_pawns.trailing_zeros();
