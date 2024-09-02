@@ -107,6 +107,7 @@ impl BoardState {
         single_push.north() & !self.occupancies[Color::Both] & RANK_4
     }
 
+    /// Returns a value that has the squares containing only eligible pawns of `color` that can make double push moves
     fn pawns_able_to_double_push(&self, color: Color) -> u64 {
         let empty = !self.occupancies[Color::Both];
         if color == Color::Black {

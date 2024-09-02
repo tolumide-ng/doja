@@ -215,15 +215,58 @@ mod board_state_tests {
 
             let result = board.double_push_targets(Color::Black);
             let targets = [Square::A5, Square::C5, Square::E5, Square::F5];
-            
+
             assert_eq!(result.count_ones() as usize, targets.len());
             for sq in targets {
                 println!("on the square sq {:#?}", sq);
                 assert!(result & (1<<sq as u64) != 0);
             }
+        }
+    }
 
+
+    #[cfg(test)]
+    mod pawns_able_to_double_push {
+        use crate::board::piece::Piece;
+
+        use super::*;
+
+        #[test]
+        fn white_pawns_eligible_to_double_push() {
+            let mut board = BoardState::new();
+            let wp = 0x500000042000u64;
+            let enemy = 0x200002040000u64;
+            board.board[Piece::WP] = Bitboard::from(wp);
+            board.occupancies[Color::White] = wp;
+            board.board[Piece::BP] = Bitboard::from(enemy);
+            board.occupancies[Color::Black] = enemy;
+
+            let result = board.pawns_able_to_double_push(Color::White);
+            let targets = [Square::F2];
+            assert_eq!(targets.len(), result.count_ones() as usize);
+            for sq in targets {
+                assert!(result & (1 << sq as u64) != 0);
+            }
         }
 
+        #[test]
+        fn black_pawns_eligible_to_double_push() {
+            let mut board = BoardState::new();
+            let bp = 0x30000402000000u64;
+            let enemy =  0x2000040000u64;
+            board.board[Piece::BP] = Bitboard::from(bp);
+            board.occupancies[Color::Black] = bp;
+            board.board[Piece::WP] = Bitboard::from(enemy);
+            board.occupancies[Color::White] = enemy;
+
+            let result = board.pawns_able_to_double_push(Color::Black);
+            let targets = [Square::E7, Square::F7];
+
+            assert_eq!(result.count_ones() as usize, targets.len());
+            for sq in targets {
+                assert!(result & (1<<sq as u64) != 0);
+            }
+        }
     }
 
 }
