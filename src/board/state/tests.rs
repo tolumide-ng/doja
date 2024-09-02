@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod board_state_tests {
     use super::*;
+    use crate::board::piece::Piece;
     use crate::{bitboard::Bitboard, board::{castling::Castling, state::board_state::BoardState}, color::Color, constants::{RANK_7, RANK_8}, squares::Square};
 
     #[test]
@@ -32,8 +33,6 @@ mod board_state_tests {
 
     #[cfg(test)]
     mod is_square_under_attack {
-        use crate::board::piece::Piece;
-
         use super::*;
 
         #[test]
@@ -227,8 +226,6 @@ mod board_state_tests {
 
     #[cfg(test)]
     mod pawns_able_to_double_push {
-        use crate::board::piece::Piece;
-
         use super::*;
 
         #[test]
@@ -268,5 +265,74 @@ mod board_state_tests {
             }
         }
     }
+
+    #[cfg(test)]
+    mod pawn_movement {
+        use crate::bit_move::BitMove;
+
+        use super::*;
+
+        #[test]
+        fn get_double_moves_for_white_pawns() {
+            let mut board = BoardState::new();
+            let wp = 0x500000042000u64;
+            let enemy = 0x200002040000u64;
+            board.board[Piece::WP] = Bitboard::from(wp);
+            board.occupancies[Color::White] = wp;
+            board.board[Piece::BP] = Bitboard::from(enemy);
+            board.occupancies[Color::Black] = enemy;
+
+            let result = board.get_pawn_movement(Color::White, true);
+            let targets = [(Square::F2, Square::F4)];
+            assert_eq!(result.len(), targets.len());
+
+            for (src, target) in targets {
+                let expected = BitMove::new(src as u32, target  as u32, Piece::WP, None, false, true, false, false);
+                assert!(result.contains(&expected));
+            }
+        }
+
+        #[test]
+        fn get_single_pawn_moves_for_black_pawns() {
+            let mut board = BoardState::new();
+            let bp = 0x30000402000000u64;
+            let enemy =  0x2000060000u64;
+            board.board[Piece::BP] = Bitboard::from(bp);
+            board.occupancies[Color::Black] = bp;
+            board.board[Piece::WP] = Bitboard::from(enemy);
+            board.occupancies[Color::White] = enemy;
+
+            let result = board.get_pawn_movement(Color::Black, false);
+            let targets = [(Square::E7, Square::E6), (Square::F7, Square::F6), (Square::B4, Square::B3), (Square::C5, Square::C4)];
+
+        
+            assert_eq!(result.len(), targets.len());
+            for (src, target) in targets {
+                let expected = BitMove::new(src as u32, target  as u32, Piece::BP, None, false, false, false, false);
+                assert!(result.contains(&expected));
+            }
+        }
+
+        #[test]
+        fn should_get_the_promotions() {
+            let mut board = BoardState::new();
+            let bp = 0x82400u64;
+            board.board[Piece::BP] = Bitboard::from(bp);
+            board.occupancies[Color::Black] = bp;
+
+            let result = board.get_pawn_movement(Color::Black, false);
+            let targets = [(Square::C2, Square::C1, Some(Piece::BQ)), (Square::C2, Square::C1, Some(Piece::BB)), (Square::C2, Square::C1, Some(Piece::BR)), (Square::C2, Square::C1, Some(Piece::BN)), (Square::F2, Square::F1, Some(Piece::BQ)), (Square::F2, Square::F1, Some(Piece::BB)), (Square::F2, Square::F1, Some(Piece::BR)), (Square::F2, Square::F1, Some(Piece::BN)), (Square::D3, Square::D2, None)];
+
+            assert_eq!(result.len(), targets.len());
+
+            for (src, target, promoted_to) in targets {
+                let expected = BitMove::new(src as u32, target as u32, Piece::BP, promoted_to, false, false, false, false);
+                assert!(result.contains(&expected));
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod pawn_attacks {}
 
 }

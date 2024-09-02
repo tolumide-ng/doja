@@ -118,6 +118,8 @@ impl BoardState {
         return Bitboard::from(empty_rank_3).south() & *self[Piece::WP];
     }
 
+    /// Returns all possible movements for pawns of a specific color.
+    /// If the double argument is true, then only double pawns moves are returned in the result
     pub(crate) fn get_pawn_movement(&self, color: Color, double: bool) -> Vec<BitMove> {
         match double {
             true => {
@@ -129,12 +131,12 @@ impl BoardState {
 
                 
                 while src2 !=0 {
-                    let sindex = src2.trailing_zeros() as u32;
-                    let tindex = target2.trailing_zeros() as u32;
+                    let src = src2.trailing_zeros() as u32;
+                    let target = target2.trailing_zeros() as u32;
 
                     
                     let piece = Piece::pawn(color);
-                    let xx = BitMove::new(sindex, tindex, piece, None, false, true, false, false);
+                    let xx = BitMove::new(src, target, piece, None, false, true, false, false);
                     move_list.push(xx);
 
                     src2 &= src2 -1;
@@ -143,16 +145,12 @@ impl BoardState {
                 move_list
             }
             false => {
-                // let psrc = self.pawns_able_2push(color);
-
-                let mut move_list: Vec<BitMove>  = vec![];
                 let mut single_push_targets = self.single_push_targets(color);
+                let mut move_list: Vec<BitMove>  = Vec::with_capacity(single_push_targets.count_ones() as usize);
 
                 while single_push_targets != 0 {
                     let target_sq = single_push_targets & (!single_push_targets + 1);
                     let src_sq = match color {Color::White => Bitboard::from(target_sq).south(), _ => Bitboard::from(target_sq).north()};
-
-                    // println!()
 
                     let t_sq = target_sq.trailing_zeros();
                     let s_sq = src_sq.trailing_zeros();

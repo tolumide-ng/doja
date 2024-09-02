@@ -29,7 +29,7 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
 
 
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
  pub struct BitMove(u32);
 
  impl BitMove {
