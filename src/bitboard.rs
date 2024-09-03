@@ -28,7 +28,7 @@ impl Bitboard {
         (self.0 >> square) & 1
     }
 
-    /// Removes the but at index `square`
+    /// Removes the bit at index `square`
     pub fn pop_bit(&mut self, square: u64) {
         if self.get_bit(square.into()) != 0 {
             self.0 ^= 1 << square;

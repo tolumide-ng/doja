@@ -321,12 +321,13 @@ impl BoardState {
 
         while pieces_on_board.not_zero() {
             let square = pieces_on_board.get_lsb1().unwrap();
+            // assert_eq!(square, pieces_on_board.trailing_zeros() as u64);
             pieces_on_board.pop_bit(square);
             let src = Square::from(square);
 
         
-        // generates a bitboard(u64) where only this index of this square is set
-        let sq_bits = 1u64 << src as u64;            
+            // generates a bitboard(u64) where only this src square is set to 1
+            let sq_bits = 1u64 << src as u64;            
             let (attacks, occupancies) = match piece {
                 Piece::WN | Piece::BN => (PIECE_ATTACKS.knight_attacks[src], !self.occupancies[color]),
                 Piece::WB | Piece::BB => (PIECE_ATTACKS.nnbishop_attacks(sq_bits, self.occupancies[Color::Both]), !self.occupancies[color]),
@@ -340,13 +341,14 @@ impl BoardState {
             };
 
             // let attacks = attack_map[src];
-            // we're getting !self.occupancies[color] because our knight should be able to make both quiet or capture moves (on the opponent)
+            // we're getting !self.occupancies[color]s because our knight hould be able to make both quiet or capture moves (on the opponent)
             let mut targets = Bitboard::from(attacks & occupancies);
 
             let source = src as u32;
 
             while targets.not_zero() {
                 let target = targets.get_lsb1().unwrap();
+                // let target = targets.trailing_zeros() as u64;
                 // capture move // there is an opponent on the target square
                 let opponent_on_target = Bitboard::from(self.occupancies[!color]).get_bit(target) != 0;
                 move_list.push(BitMove::new(source, target as u32, piece, None, opponent_on_target, false, false, false));

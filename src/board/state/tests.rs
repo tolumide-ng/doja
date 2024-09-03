@@ -531,4 +531,67 @@ mod board_state_tests {
     }
 
 
+    #[cfg(test)]
+    mod sliding_moves {
+        use super::*;
+        use crate::squares::Square::*;
+        use crate::color::Color::*;
+        use crate::board::piece::Piece::*;
+
+
+        #[test]
+        fn should_return_all_possible_destinations_including_capturs_for_knight() {
+            let mut board = BoardState::new();
+
+            let black_pawns = 0x82000004200u64;
+            let black_queen = 1 << B4 as u64;
+            let white_knight = 1 << D3 as u64; // attacker
+            let white_rook = 1 << F4 as u64;
+
+            board.set_occupancy(Color::Black, black_pawns | black_queen);
+            board.set_occupancy(Color::White, white_knight | white_rook);
+            board.board[BP] = Bitboard::from(black_pawns);
+            board.board[BQ] = Bitboard::from(black_queen);
+            board.board[WN] = Bitboard::from(white_knight);
+            board.board[WR] = Bitboard::from(white_rook);
+
+            let received = board.get_sliding_and_leaper_moves(White, WN);
+            let targets = [(B2, Some(BP)), (B4, Some(BQ)), (C1, None), (C5, None), (F2, None), (E1, None), (E5, None)];
+
+            assert_eq!(received.len(), targets.len());
+
+            for (target, captured) in targets {
+                let expected = BitMove::new(D3 as u32, target as u32, WN, None, captured.is_some(), false, false, false);
+                assert!(received.contains(&expected));
+            }
+        }
+
+        #[test]
+        fn should_return_all_possible_destinations_including_capturs_for_bishop() {
+            let mut board = BoardState::new();
+
+            let black_pawns = 0x82000004200u64;
+            let black_queen = 1 << H8 as u64;
+            let white_bishop = 1 << E5 as u64; // attacker
+            let white_rook = 1 << F4 as u64;
+
+            board.set_occupancy(Color::Black, black_pawns | black_queen);
+            board.set_occupancy(Color::White, white_bishop | white_rook);
+            board.board[BP] = Bitboard::from(black_pawns);
+            board.board[BQ] = Bitboard::from(black_queen);
+            board.board[WB] = Bitboard::from(white_bishop);
+            board.board[WR] = Bitboard::from(white_rook);
+
+            let received = board.get_sliding_and_leaper_moves(White, WB);
+            let targets = [(D4, false), (C3, false), (B2, true), (D6, true), (F6, false), (G7, false), (H8, true), ];
+
+            assert_eq!(received.len(), targets.len());
+            for (target, captured) in targets {
+                let expected = BitMove::new(E5 as u32 as u32, target as u32, WB, None, captured, false, false, false);
+                assert!(received.contains(&expected));
+            }
+        }
+    }
+
+
 }
