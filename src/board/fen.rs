@@ -93,6 +93,7 @@ pub trait FEN {
         board.set_occupancy(Color::Both, both);
 
 
+
         // if fen_blocks[3] == "-" {
         //     if fen_blocks.len() < 6 {
         //         return Err(FENError::IncompletedEnpassant);

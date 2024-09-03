@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod board_state_tests {
-    use super::*;
     use crate::board::piece::Piece;
     use crate::bit_move::BitMove;
     use crate::{bitboard::Bitboard, board::{castling::Castling, state::board_state::BoardState}, color::Color, constants::{RANK_7, RANK_8}, squares::Square};
@@ -12,8 +11,7 @@ mod board_state_tests {
         assert_eq!(board.castling_rights, Castling::all());
         assert_eq!(board.enpassant, None);
         assert_eq!(board.hash_key, 12825486226133058263);
-        assert_eq!(board.fifty, 0);
-        assert_eq!(board.prev, None);
+        assert_eq!(board.fifty, [0, 0]);
     }
 
 
@@ -535,7 +533,6 @@ mod board_state_tests {
     mod sliding_moves {
         use super::*;
         use crate::squares::Square::*;
-        use crate::color::Color::*;
         use crate::board::piece::Piece::*;
 
 
@@ -555,7 +552,7 @@ mod board_state_tests {
             board.board[WN] = Bitboard::from(white_knight);
             board.board[WR] = Bitboard::from(white_rook);
 
-            let received = board.get_sliding_and_leaper_moves(White, WN);
+            let received = board.get_sliding_and_leaper_moves(WN);
             let targets = [(B2, Some(BP)), (B4, Some(BQ)), (C1, None), (C5, None), (F2, None), (E1, None), (E5, None)];
 
             assert_eq!(received.len(), targets.len());
@@ -582,7 +579,7 @@ mod board_state_tests {
             board.board[WB] = Bitboard::from(white_bishop);
             board.board[WR] = Bitboard::from(white_rook);
 
-            let received = board.get_sliding_and_leaper_moves(White, WB);
+            let received = board.get_sliding_and_leaper_moves(WB);
             let targets = [(D4, false), (C3, false), (B2, true), (D6, true), (F6, false), (G7, false), (H8, true), ];
 
             assert_eq!(received.len(), targets.len());
@@ -591,6 +588,204 @@ mod board_state_tests {
                 assert!(received.contains(&expected));
             }
         }
+
+        #[test]
+        fn should_return_all_possible_destinations_including_captures_for_rook() {
+            let mut board = BoardState::new();
+
+            let white_pawns = 0x082000004200u64;
+            let white_knights = 0x20020u64;
+            let black_rooks = 1 << D2 as u64 | 1 << (C1 as u64);
+
+            board.set_occupancy(Color::Black, black_rooks);
+            board.set_occupancy(Color::White, white_pawns | white_knights);
+            board.board[WP] = Bitboard::from(white_pawns);
+            board.board[WN] = Bitboard::from(white_knights);
+            board.board[BR] = Bitboard::from(black_rooks);
+
+            let received = board.get_sliding_and_leaper_moves(BR);
+            let targets = [(D2, D1, false), (D2, D3, false), (D2, D4, false), (D2, D5, false), (D2, D6, true), (D2, C2, false), (D2, B2, true), (D2, E2, false), (D2, F2, false), (D2, G2, true),
+            (C1, A1, false), (C1, B1, false), (C1, D1, false), (C1, E1, false), (C1, F1, true), (C1, C2, false), (C1, C3, false), (C1, C4, false), (C1, C5, false), (C1, C6, false), (C1, C7, false), (C1, C8, false)];
+
+            assert_eq!(received.len(), targets.len());
+
+            for (src, target, is_capture) in targets {
+                let expected = BitMove::new(src as u32, target as u32, BR, None, is_capture, false, false, false);
+                assert!(received.contains(&expected));
+            }
+        }
+
+
+        #[test]
+        fn should_return_all_possible_destinations_including_captures_for_queen() {
+            let mut board = BoardState::new();
+
+            let white_pawns = 0x082000004200u64;
+            let white_knights = 0x20020u64;
+            let black_queen = 1 << D2 as u64;
+
+            board.set_occupancy(Color::Black, black_queen);
+            board.set_occupancy(Color::White, white_pawns | white_knights);
+            board.board[WP] = Bitboard::from(white_pawns);
+            board.board[WN] = Bitboard::from(white_knights);
+            board.board[BQ] = Bitboard::from(black_queen);
+
+            let received = board.get_sliding_and_leaper_moves(BQ);
+            let targets = [(D2, D1, false), (D2, D3, false), (D2, D4, false), (D2, D5, false), (D2, D6, true), (D2, C2, false), (D2, B2, true), (D2, E2, false), (D2, F2, false), (D2, G2, true),
+            (D2, E1, false), (D2, C1, false), (D2, C3, false), (D2, B4, false), (D2, A5, false), (D2, E3, false), (D2, F4, false), (D2, G5, false), (D2, H6, false)];
+
+            assert_eq!(received.len(), targets.len());
+
+            for (src, target, is_capture) in targets {
+                let expected = BitMove::new(src as u32, target as u32, BQ, None, is_capture, false, false, false);
+                assert!(received.contains(&expected));
+            }
+        }
+    }
+
+
+    #[cfg(test)]
+    mod make_move {
+        use super::*;
+        
+        use crate::move_type::MoveType;
+        use crate::squares::Square::*;
+        use crate::board::piece::Piece::*;
+        use crate::color::Color::*;
+
+        #[cfg(test)]
+        mod capturing_moves_and_regular_moves {
+        use crate::board::fen::FEN;
+
+        use super::*;
+
+        #[test]
+        fn bishop_can_move_or_capture() {
+
+            let mut board = BoardState::new();
+
+            let white_pawns = 0x082000004200u64;
+            let white_knights = 0x20020u64;
+            let black_king = 1 << E8 as u64;
+            let white_king = 1 << E1 as u64;
+            let subject = 1 << D2 as u64; // black bishop
+            let white_bishop = 1 << (A6 as u64);
+            board.set_occupancy(Color::Black, subject | black_king);
+            board.set_occupancy(Color::White, white_pawns | white_knights | white_king | white_bishop);
+            board.board[WP] = Bitboard::from(white_pawns);
+            board.board[WN] = Bitboard::from(white_knights);
+            board.board[WB] = Bitboard::from(white_bishop);
+            board.board[BB] = Bitboard::from(subject);
+            board.board[BK] = Bitboard::from(black_king);
+            board.board[WK] = Bitboard::from(white_king);
+            board.turn = Black;
+
+            let bitmove = BitMove::new(D2 as u32, D3 as u32, BB, None, false, false, false, false);
+            assert_eq!(Square::from((*board.board[BB]).trailing_zeros() as u64), D2);
+
+            let zobrist_key = board.hash_key;
+            let result = board.make_move(bitmove, MoveType::AllMoves).unwrap();
+
+            assert_ne!(result.hash_key, zobrist_key);
+            assert_eq!(Square::from((*result.board[BB]).trailing_zeros() as u64), D3);
+
+            let bitmove = BitMove::new(A6 as u32, D3 as u32, WB, None, true, false, false, false);
+            let capture_result = result.make_move(bitmove, MoveType::CapturesOnly).unwrap();
+
+            assert_ne!(capture_result.hash_key, zobrist_key);
+            assert_ne!(capture_result.hash_key, result.hash_key);
+            assert_eq!(Square::from((*capture_result.board[WB]).trailing_zeros() as u64), D3);
+            assert_eq!((*capture_result.board[BB]).trailing_zeros(), 64);
+            assert_eq!((*capture_result.board[BB]).count_ones(), 0);
+        }
+
+        #[test]
+        fn queen_can_capture() {
+            let mut board = BoardState::new();
+
+            let black_pawns = 0x2000008800u64;
+            let black_king = 1 << H8 as u64;
+            let white_king = 1 << A3 as u64;
+            let white_pawns = 0x1000020000400u64;
+            let subject = 1 << E4 as u64; // white queen
+            let black_queen = 1<< C8 as u64;
+            board.set_occupancy(Color::White, subject | white_king | white_pawns);
+            board.set_occupancy(Black, black_king | black_pawns | black_queen);
+            board.board[BP] = Bitboard::from(black_pawns);
+            board.board[BK] = Bitboard::from(black_king);
+            board.board[WK] = Bitboard::from(white_king);
+            board.board[WP] = Bitboard::from(white_pawns);
+            board.board[WQ] = Bitboard::from(subject);
+            board.board[BQ] = Bitboard::from(black_queen);
+
+            let zobrist = board.hash_key;
+            let bitmove = BitMove::new(E4 as u32, F5 as u32, WQ, None, true, false, false, false);
+
+            assert_eq!((*board.board[BP]).count_ones(), 3);
+            let result = board.make_move(bitmove, MoveType::AllMoves).unwrap();
+            
+            assert_ne!(result.hash_key, zobrist);
+            assert_eq!(Square::from((*result.board[WQ]).trailing_zeros() as u64), F5);
+            assert_eq!((*result.board[BP]).count_ones(), 2);
+            
+            let bitmove = BitMove::new(C8 as u32, F5 as u32, BQ, None, true, false, false, false);
+            let capture_result = result.make_move(bitmove, MoveType::CapturesOnly).unwrap();
+
+            assert_ne!(capture_result.hash_key, zobrist);
+            assert_ne!(capture_result.hash_key, result.hash_key);
+            assert_eq!(Square::from((*capture_result.board[BQ]).trailing_zeros() as u64), F5);
+            assert_eq!((*capture_result.board[WQ]).trailing_zeros(), 64);
+            assert_eq!((*capture_result.board[WQ]).count_ones(), 0);
+        }
+
+        #[test]
+        fn king_can_capture() {
+            let board = BoardState::parse_fen("rnb1kbnr/p1p1p1pp/8/3p1N2/3K4/7q/PP1PPPPP/R2Q1BNR w KQkq - 0 1").unwrap();
+
+            let zobrist = board.hash_key;
+            let bitmove = BitMove::new(D4 as u32, D5 as u32, WK, None, true, false, false, false);
+
+            assert_eq!((*board.board[WK]).count_ones(), 1);
+            assert_eq!(Square::from((*board.board[WK]).trailing_zeros() as u64), D4);
+
+            let result = board.make_move(bitmove, MoveType::AllMoves).unwrap();
+            assert_ne!(result.hash_key, board.hash_key);
+            assert_eq!(Square::from((*result.board[WK]).trailing_zeros()  as u64), D5);
+            
+            let bitmove = BitMove::new(E8 as u32, D7 as u32, BK, None, false, false, false, false);
+            let black_king_move = result.make_move(bitmove, MoveType::AllMoves).unwrap();
+
+            assert_ne!(black_king_move.hash_key, result.hash_key);
+            assert_ne!(black_king_move.hash_key, zobrist);
+            assert_eq!(Square::from((*black_king_move.board[BK]).trailing_zeros() as u64), D7);
+
+        }
+
+        #[test]
+        fn rook_can_capture() {}
+
+        #[test]
+        fn knight_can_capture() {}
+
+        #[test]
+        fn pawn_can_capture() {}
+        }
+
+
+
+        #[cfg(test)]
+        mod enpassant {}
+
+        #[cfg(test)]
+        mod zobrist_key {}
+
+        #[cfg(test)]
+        mod pawn_promotion {}
+
+        #[cfg(test)]
+        mod castling_move {}
+
+        // #[c]
     }
 
 

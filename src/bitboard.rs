@@ -344,7 +344,7 @@ mod bitboard_tests {
 
             bitboard.pop_first_bit();
             assert_eq!(bitboard.get_bit(Square::A2 as u64), 0);
-
         }
     }
+
 }

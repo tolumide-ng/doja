@@ -10,7 +10,7 @@ use crate::bitboard::Bitboard;
 mod tests;
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BoardState {
     pub(crate) turn: Color,
     pub board: Board,
@@ -20,18 +20,18 @@ pub struct BoardState {
     // castling_table: [u8; TOTAL_SQUARES],
     pub(crate) hash_key: u64,
     // fifty move rule counter
-    pub(crate) fifty: u8,
+    pub(crate) fifty: [u8; 2],
     // // this is made this way without a mutex because editing the prev would not result in this same state again
     // prev: Arc<Option<BoardState>>,
-    pub(crate) prev: Option<Arc<BoardState>>,
+    // pub(crate) prev: Option<Arc<BoardState>>,
 }
 
 
 impl BoardState {
     pub fn new() -> BoardState {
         Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
-            occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST, fifty: 0,
-            prev: None, //  castling_table: CASTLING_TABLE,
+            occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST, fifty: [0, 0],
+            // prev: None, //  castling_table: CASTLING_TABLE,
         }
     }
 
@@ -314,13 +314,14 @@ impl BoardState {
     }
 
 
-    pub(crate) fn get_sliding_and_leaper_moves(&self, color: Color, piece: Piece) -> Vec<BitMove> {
+    pub(crate) fn get_sliding_and_leaper_moves(&self, piece: Piece) -> Vec<BitMove> {
         let mut move_list: Vec<BitMove> = vec![];
         
+        let color = piece.color();
         let mut pieces_on_board = self[piece];
 
         while pieces_on_board.not_zero() {
-            let square = pieces_on_board.get_lsb1().unwrap();
+            let square = pieces_on_board.trailing_zeros() as u64;
             // assert_eq!(square, pieces_on_board.trailing_zeros() as u64);
             pieces_on_board.pop_bit(square);
             let src = Square::from(square);
@@ -347,7 +348,7 @@ impl BoardState {
             let source = src as u32;
 
             while targets.not_zero() {
-                let target = targets.get_lsb1().unwrap();
+                let target = targets.trailing_zeros() as u64;
                 // let target = targets.trailing_zeros() as u64;
                 // capture move // there is an opponent on the target square
                 let opponent_on_target = Bitboard::from(self.occupancies[!color]).get_bit(target) != 0;
@@ -362,18 +363,17 @@ impl BoardState {
 
     pub(crate) fn gen_movement(&self) -> Moves {
         let color = self.turn;
-
         let mut move_list = Moves::new();
 
         move_list.add_many(&self.get_pawn_attacks(color));
         move_list.add_many(&self.get_pawn_movement(color, true));
         move_list.add_many(&self.get_pawn_movement(color, false));
         move_list.add_many(&self.get_castling(color));
-        move_list.add_many(&self.get_sliding_and_leaper_moves(color, Piece::knight(color)));
-        move_list.add_many(&self.get_sliding_and_leaper_moves(color, Piece::bishop(color)));
-        move_list.add_many(&self.get_sliding_and_leaper_moves(color, Piece::rook(color)));
-        move_list.add_many(&self.get_sliding_and_leaper_moves(color, Piece::queen(color)));
-        move_list.add_many(&self.get_sliding_and_leaper_moves(color, Piece::king(color)));
+        move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::knight(color)));
+        move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::bishop(color)));
+        move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::rook(color)));
+        move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::queen(color)));
+        move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::king(color)));
 
 
         move_list
@@ -398,10 +398,10 @@ impl BoardState {
                 board.hash_key ^= ZOBRIST.piece_keys[piece][to];
 
                 if Piece::WP == bit_move.get_piece() || Piece::BP == bit_move.get_piece() || bit_move.get_capture() {
-                    board.fifty = 0;
+                    board.fifty = [0, 0];
                 }
 
-
+                
                 // Removes the captured piece from the the captured piece bitboard
                 if bit_move.get_capture() {
                     // there would usually only be a maximum of 2 captures each, consider unrolling this for loop (what did I mean here by 2???????)
@@ -428,10 +428,9 @@ impl BoardState {
                 if bit_move.get_enpassant() {
                     let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     board[Piece::pawn(!turn)].pop_bit(enpass_target);
-                    board.fifty = 0;
                     board.hash_key ^= ZOBRIST.piece_keys[Piece::pawn(!turn)][enpass_target as usize];
                 }
-
+                
                 if let Some(enpass) = board.enpassant {
                     // remove the enpassant from the zobrist_hash if it was there before (this move definitely resulted in an existing enpassant been removed)
                     board.hash_key ^= ZOBRIST.enpassant_keys[enpass as usize];
@@ -488,6 +487,7 @@ impl BoardState {
                 board.occupancies[Color::Both] = board.occupancies[Color::White] | board.occupancies[Color::Black];
                 
                 
+                println!("************************************************************");
                 // is this an illegal move?
                 if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !board.turn) {
                     return None;
@@ -495,6 +495,13 @@ impl BoardState {
                 
                 board.turn = !board.turn;
                 board.hash_key ^= ZOBRIST.side_key;
+
+                if Piece::WP == bit_move.get_piece() || Piece::BP == bit_move.get_piece() || bit_move.get_capture() {
+                    board.fifty = [0, 0];
+                } else {
+                    board.fifty[bit_move.get_piece().color()] +=1;
+                }
+                
 
                 Some(board)
             }

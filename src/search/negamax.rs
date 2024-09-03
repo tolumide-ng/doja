@@ -224,7 +224,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         // let mut best_move: Option<BitMove> = None;
 
         let mut hash_flag = HashFlag::UpperBound;
-        if self.ply > 0 && self.is_repetition(board) || board.fifty >= 100 {
+        if self.ply > 0 && self.is_repetition(board) || board.fifty.iter().any(|&p| p >= 100) {
             return 0 // draw
         }
 
