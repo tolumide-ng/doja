@@ -79,9 +79,10 @@ impl BoardState {
 
         let pawn_attackers = self[Piece::pawn(attacker)]; // get the occupancy for the attacking pawns
         if  (PIECE_ATTACKS.pawn_attacks[attacker][sq] & *pawn_attackers) != 0 { return true }
-
+        
         let knights = self[Piece::knight(attacker)]; // knight occupancy for the attacking side
         if (PIECE_ATTACKS.knight_attacks[sq] & *knights) != 0 { return true }
+
 
         let king = self[Piece::king(attacker)];
         if (PIECE_ATTACKS.king_attacks[sq] & *king) != 0 { return true }
@@ -389,6 +390,8 @@ impl BoardState {
                 let from = bit_move.get_src(); // initial position of the piece
                 let to = bit_move.get_target(); // target position of the piece
                 let piece = bit_move.get_piece(); // the piece trying to move
+
+                if *(self[piece]) & (1 << (from as u64)) == 0 || self.turn != bit_move.get_piece().color() {return None}
                 
                 
                 // move piece
@@ -396,17 +399,17 @@ impl BoardState {
                 board[piece].set_bit(to.into());
                 board.hash_key ^= ZOBRIST.piece_keys[piece][from];
                 board.hash_key ^= ZOBRIST.piece_keys[piece][to];
-
+                
                 if Piece::WP == bit_move.get_piece() || Piece::BP == bit_move.get_piece() || bit_move.get_capture() {
                     board.fifty = [0, 0];
                 }
-
+                
                 
                 // Removes the captured piece from the the captured piece bitboard
                 if bit_move.get_capture() {
                     // there would usually only be a maximum of 2 captures each, consider unrolling this for loop (what did I mean here by 2???????)
                     let target_pieces = Piece::all_pieces_for(!turn);
-    
+                    
                     for p in target_pieces {
                         if board[p].get_bit(to.into()) != 0 {
                             board[p].pop_bit(to.into());
@@ -415,7 +418,6 @@ impl BoardState {
                         }
                     }
                 }
-
                 
                 if let Some(promoted_to) = bit_move.get_promotion() { // if this piece is eligible for promotion, the new type it's vying for
                     board[piece].pop_bit(to.into());
@@ -423,6 +425,7 @@ impl BoardState {
                     board[promoted_to].set_bit(to.into());
                     board.hash_key ^= ZOBRIST.piece_keys[promoted_to][to];
                 }
+
                 
                 
                 if bit_move.get_enpassant() {
@@ -486,8 +489,7 @@ impl BoardState {
                 board.occupancies[Color::Black] = *board[Piece::BP] | *board[Piece::BB] | *board[Piece::BK] | *board[Piece::BN] | *board[Piece::BQ] | *board[Piece::BR];
                 board.occupancies[Color::Both] = board.occupancies[Color::White] | board.occupancies[Color::Black];
                 
-                
-                println!("************************************************************");
+            
                 // is this an illegal move?
                 if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !board.turn) {
                     return None;
@@ -521,6 +523,16 @@ impl BoardState {
     }
 
     pub(crate) fn get_piece_at(&self, sq: Square, color: Color) -> Option<Piece> {
+        // let bit_on_board = (1 << sq as u64) as u64;
+        // let color = if bit_on_board & self.occupancies[Color::White] != 0 {
+        //     Color::White
+        // } else if bit_on_board & self.occupancies[Color::Black] != 0 {
+        //     Color::Black
+        // } else {
+        //     Color::Both
+        // };
+
+
         let target_pieces = Piece::all_pieces_for(color);
         for p in target_pieces {
             if self.board[p].get_bit(sq.into()) != 0 {

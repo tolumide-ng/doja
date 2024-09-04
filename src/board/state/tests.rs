@@ -1,7 +1,12 @@
 #[cfg(test)]
 mod board_state_tests {
     use crate::board::piece::Piece;
+    use crate::board::piece::Piece::*;
+    use crate::color::Color::*;
     use crate::bit_move::BitMove;
+    use crate::board::fen::FEN;
+
+    use crate::squares::Square::*;
     use crate::{bitboard::Bitboard, board::{castling::Castling, state::board_state::BoardState}, color::Color, constants::{RANK_7, RANK_8}, squares::Square};
 
     #[test]
@@ -32,16 +37,13 @@ mod board_state_tests {
 
     #[cfg(test)]
     mod is_square_under_attack {
+        use crate::board::fen::FEN;
+
         use super::*;
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_pawns() {
-            let mut board = BoardState::new();
-
-            let bp = 0x40004000220u64;
-            board.board[Piece::BP] = Bitboard::from(bp); // attacker
-            board.board[Piece::WP] = Bitboard::from(0x8040800u64); // victims
-            board.set_occupancy(Color::Black, bp);
+            let board = BoardState::parse_fen("r3k3/8/2p5/8/2pP4/2P5/1p1P4/3Q1p1K w KQkq - 0 1").unwrap();
             
             let result = board.is_square_attacked(Square::D3 as u64, Color::Black);
             assert!(result);
@@ -51,23 +53,18 @@ mod board_state_tests {
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_knights() {
-            let mut board = BoardState::new();
-            let white_knights = 0x40000000200u64;
-            let black_pawns = 0x8001000u64;
-            board.board[Piece::WN] = Bitboard::from(white_knights);
-            board.board[Piece::BP] = Bitboard::from(black_pawns);
-            board.set_occupancy(Color::White, white_knights);
-            board.set_occupancy(Color::Black, black_pawns);
+            let board = BoardState::parse_fen("3qk3/8/2N5/8/3p4/8/1p2NPPP/2BQK2R b KQkq - 1 1").unwrap();
 
+            println!("{:#?}", board.to_string());
             assert!(board.is_square_attacked(Square::D4 as u64, Color::White));
-            assert!(!board.is_square_attacked(Square::E2 as u64, Color::White));
+            assert!(!board.is_square_attacked(Square::E2 as u64, Color::Black));
         }
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_a_king() {
             let mut board = BoardState::new();
 
-            let bk = 0x1000u64;
+            let bk = 0x1000u64;  // e2
             board.board[Piece::BK] = Bitboard::from(bk);
             board.set_occupancy(Color::Black, bk);
 
@@ -77,27 +74,20 @@ mod board_state_tests {
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_a_bishop_or_queen() {
-            let mut board = BoardState::new();
+            let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
 
-            let bb = 0x1000u64;
-            board.board[Piece::BB] = Bitboard::from(bb);
-            board.set_occupancy(Color::Black, bb);
+            assert!(board.is_square_attacked(Square::G4 as u64, White));
+            assert!(board.is_square_attacked(Square::F1 as u64, White));
+            assert!(!board.is_square_attacked(Square::H8 as u64,White));
+            assert!(board.is_square_attacked(Square::E1 as u64,White));
 
-            assert!(board.is_square_attacked(Square::G4 as u64, Color::Black));
-            assert!(board.is_square_attacked(Square::F1 as u64, Color::Black));
-            assert!(!board.is_square_attacked(Square::H8 as u64, Color::Black));
-            assert!(!board.is_square_attacked(Square::E1 as u64, Color::Black));
 
-            let mut board = BoardState::new();
-
-            let bq = 0x1002u64;
-            board.board[Piece::BQ] = Bitboard::from(bq);
-            board.set_occupancy(Color::Black, bq);
+            let board = BoardState::parse_fen("rnkb2nr/p1pp2pp/8/7q/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
 
             assert!(board.is_square_attacked(Square::G4 as u64, Color::Black));
-            assert!(board.is_square_attacked(Square::F1 as u64, Color::Black));
+            assert!(board.is_square_attacked(Square::F3 as u64, Color::Black));
+            assert!(board.is_square_attacked(Square::E2 as u64, Color::Black));
             assert!(!board.is_square_attacked(Square::H8 as u64, Color::Black));
-            assert!(board.is_square_attacked(Square::E1 as u64, Color::Black));
             assert!(!board.is_square_attacked(Square::A3 as u64, Color::Black));
         }
 
@@ -650,13 +640,8 @@ mod board_state_tests {
         
         use crate::move_type::MoveType;
         use crate::move_type::MoveType::*;
-        use crate::squares::Square::*;
-        use crate::board::piece::Piece::*;
-        use crate::color::Color::*;
-
         #[cfg(test)]
         mod capturing_moves_and_regular_moves {
-        use crate::board::fen::FEN;
 
         use super::*;
 
@@ -829,20 +814,23 @@ mod board_state_tests {
             assert_eq!((*board.board[WP]).count_ones(), 8);
             assert_eq!((*board.board[BP]).count_ones(), 5);
 
-            let white_moves = board.make_move(bitmove, AllMoves).unwrap();
+            let mut white_moves = board.make_move(bitmove, AllMoves).unwrap();
 
             assert_eq!((*white_moves.board[BP]).count_ones(), 5);
             assert_eq!((*white_moves.board[WP]).count_ones(), 8);
 
             let bitmove = BitMove::new(B5 as u32, A4 as u32, BP, None, true, false, false, false);
-            let black_captures = board.make_move(bitmove, AllMoves).unwrap();
+            white_moves.set_turn(Black);
+            println!("{:#?}", white_moves.to_string());
+            // println!()
+            let black_captures = white_moves.make_move(bitmove, AllMoves).unwrap();
 
-            assert_eq!((*black_captures.board[BP]).count_ones(), 4);
-            assert_eq!((*black_captures.board[WP]).count_ones(), 8);
+            assert_eq!((*black_captures.board[BP]).count_ones(), 5);
+            assert_eq!((*black_captures.board[WP]).count_ones(), 7);
         }
 
         #[test]
-        fn enpassant_move_and_capture() {
+        fn enpassant_move_and_capture() { // double moves must always result in an enpassant
             let board = BoardState::parse_fen("r2qkbnr/4pppp/2R5/4P3/1p6/1P2P3/PP1P2PP/N1BQKBNR w KQk - 0 4").unwrap();
             let bitmove = BitMove::new(A2 as u32, A4 as u32, WP, None, false, true, false, false);
 
@@ -873,23 +861,106 @@ mod board_state_tests {
 
 
         #[test]
-        fn should_not_move_if_the_source_position_is_not_correct() {}
+        fn should_not_move_if_the_source_position_is_not_correct() {
+            let board = BoardState::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let src = C6;
+            let bitmove = BitMove::new(src as u32, C5 as u32, BP, None, false, false, false, false);
+
+            assert!(board.occupancies[Both] & (1 << C6 as u64) == 0);
+            assert!(board.occupancies[Both] & (1 << C5 as u64) == 0);
+
+            let result = board.make_move(bitmove, AllMoves);
+            assert!(result.is_none());
+        }
 
         #[test]
-        fn should_result_in_an_invalid_state_if_its_not_the_users_turn() {}
+        fn should_not_change_position_if_the_target_move_is_invalid() {
+            let board = BoardState::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let bitmove = BitMove::new(H4 as u32, H6 as u32, BN, None, false, false, false, false);
+
+            assert!(board.occupancies[Both] & (1 << H4 as u64) != 0);
+            assert!(board.occupancies[Both] & (1 << H6 as u64) == 0);
+            
+            let result = board.make_move(bitmove, AllMoves);
+         
+            assert!(result.is_none());
+            assert!(board.occupancies[Both] & (1 << H4 as u64) != 0);
+            assert!(board.occupancies[Both] & (1 << H6 as u64) == 0);
+         
+        }
+
+        #[test]
+        fn black_pawns_should_only_move_southwards() {
+            let board = BoardState::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let black_moving_north = BitMove::new(D6 as u32, D7 as u32, BP, None, false, false, false, false);
+
+            assert!(board.occupancies[Both] & (1 << D6 as u64) != 0);
+            assert!(board.occupancies[Both] & (1 << D7 as u64) == 0);
+
+
+            let result = board.make_move(black_moving_north, AllMoves);
+            assert!(result.is_none());
+            assert!(board.occupancies[Both] & (1 << D7 as u64) == 0);
+            assert!(board.occupancies[Both] & (1 << D7 as u64) == 0);
+        }
+
+        #[test]
+        fn white_pawns_should_only_move_northwards() {
+            let board = BoardState::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let white_pawn_moving_south = BitMove::new(D4 as u32, D3 as u32, WP, None, false, false, false, false);
+
+            assert!(board.occupancies[Both] & (1 << D4 as u64) != 0);
+            assert!(board.occupancies[Both] & (1 << D3 as u64) == 0);
+
+            let result = board.make_move(white_pawn_moving_south, AllMoves);
+            
+            assert!(result.is_none());
+            assert!(board.occupancies[Both] & (1 << D4 as u64) != 0);
+            assert!(board.occupancies[Both] & (1 << D3 as u64) == 0);
+        }
+
+        #[test]
+        fn pawns_should_not_be_able_to_move_north_north_or_south_south_if_it_is_occupied() {
+            let board = BoardState::parse_fen("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let white_pawn_moving_south = BitMove::new(E6 as u32, E7 as u32, WP, None, false, false, false, false);
+
+            assert!(board.occupancies[Both] & (1 << E6 as u64) != 0);
+            assert!(board.occupancies[Both] & (1 << E7 as u64) != 0);
+
+            let result = board.make_move(white_pawn_moving_south, AllMoves);
+            
+            assert!(result.is_none());
+
+            let black_pawn_moving_north = BitMove::new(E7 as u32, E6 as u32, WP, None, false, false, false, false);
+
+            assert!(board.occupancies[Both] & (1 << E6 as u64) != 0);
+            assert!(board.occupancies[Both] & (1 << E7 as u64) != 0);
+
+            let result = board.make_move(black_pawn_moving_north, AllMoves);
+            
+            assert!(result.is_none());
         }
 
 
-        #[cfg(test)]
-        mod zobrist_key {}
+        #[test]
+        fn  should_return_none_if_it_is_not_the_players_turn() {
+            let board = BoardState::parse_fen("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let black_bishop_move = BitMove::new(B4 as u32, E1 as u32, BB, None, true, false, false, false);
 
-        #[cfg(test)]
-        mod pawn_promotion {}
+            assert!(board.occupancies[Both] & (1 << B4 as u32) != 0);
+            assert!(board.occupancies[Both] & (1 << E1 as u32) != 0);
 
-        #[cfg(test)]
-        mod castling_move {}
+            let result = board.make_move(black_bishop_move, AllMoves);
+            assert!(result.is_none());
+        }
+    }
+    }
 
-        // #[c]
+    #[test]
+    fn returns_the_piece_at_a_particular_position() {
+        let board = BoardState::parse_fen("4rkn1/P5pp/8/7q/4P3/8/5PPP/2R1K1NR w KQkq e3 0 1").unwrap();
+        
+        assert_eq!(board.get_piece_at(C1, White).unwrap(), WR);
     }
 
 
