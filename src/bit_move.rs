@@ -35,6 +35,7 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
  impl BitMove {
 
 
+    /// enpassant? to know whether this is a move trying to take advantage of an existing enpassant (that resulted form a doublepush) on the board
     pub(crate) fn new(source: u32, target: u32, piece: Piece, promotion: Option<Piece>, capture: bool, double_push: bool, enpassant: bool, castling: bool) -> Self {
         // println!("source==={source} target=={target}");
         let promotion_piece = if let Some(p) = promotion {p as u32} else {0};

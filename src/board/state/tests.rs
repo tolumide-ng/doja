@@ -649,6 +649,7 @@ mod board_state_tests {
         use super::*;
         
         use crate::move_type::MoveType;
+        use crate::move_type::MoveType::*;
         use crate::squares::Square::*;
         use crate::board::piece::Piece::*;
         use crate::color::Color::*;
@@ -700,7 +701,7 @@ mod board_state_tests {
         }
 
         #[test]
-        fn queen_can_capture() {
+        fn queen_move_and_capture() {
             let mut board = BoardState::new();
 
             let black_pawns = 0x2000008800u64;
@@ -739,7 +740,7 @@ mod board_state_tests {
         }
 
         #[test]
-        fn king_can_capture() {
+        fn king_move_and_capture() {
             let board = BoardState::parse_fen("rnb1kbnr/p1p1p1pp/8/3p1N2/3K4/7q/PP1PPPPP/R2Q1BNR w KQkq - 0 1").unwrap();
 
             let zobrist = board.hash_key;
@@ -758,23 +759,126 @@ mod board_state_tests {
             assert_ne!(black_king_move.hash_key, result.hash_key);
             assert_ne!(black_king_move.hash_key, zobrist);
             assert_eq!(Square::from((*black_king_move.board[BK]).trailing_zeros() as u64), D7);
-
         }
 
         #[test]
-        fn rook_can_capture() {}
+        fn rook_move_and_capture() {
+            let board = BoardState::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/1NBQKBNR b KQk - 3 3").unwrap();
+
+            let bitmove = BitMove::new(A8 as u32, A4 as u32, BR, None, false, false, false, false);
+
+            assert_eq!((*board.board[BR]).count_ones(), 2);
+            assert_eq!((*board.board[WR]).count_ones(), 2);
+
+            let black_move = board.make_move(bitmove, AllMoves).unwrap();
+
+            
+            assert_eq!((*black_move.board[BR]).count_ones(), 2);
+            assert_eq!((*black_move.board[WR]).count_ones(), 2);
+
+            let bitmove = BitMove::new(C4 as u32, A4 as u32, WR, None, true, false, false, false);;
+            let white_captures = black_move.make_move(bitmove, AllMoves).unwrap();
+            
+            println!("{:#?}", white_captures.to_string());
+
+            assert_ne!(white_captures.hash_key, black_move.hash_key);
+            assert_ne!(white_captures.hash_key, board.hash_key);
+            assert_eq!((*white_captures.board[BR]).count_ones(), 1);
+            assert_eq!((*white_captures.board[WR]).count_ones(), 2);
+        }
 
         #[test]
-        fn knight_can_capture() {}
+        fn knight_move_and_capture() {
+            let board = BoardState::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/N1BQKBNR w KQk - 3 3").unwrap();
+
+            let bitmove = BitMove::new(A1 as u32, B3 as u32, WN, None, true, false, false, false);
+
+            assert_eq!((*board.board[BN]).count_ones(), 1);
+            assert_eq!((*board.board[WN]).count_ones(), 2);
+            assert_eq!((*board.board[BP]).count_ones(), 5);
+            assert_eq!((*board.board[WP]).count_ones(), 8);
+
+            let white_captures = board.make_move(bitmove, AllMoves).unwrap();
+
+
+            assert_eq!((*white_captures.board[BN]).count_ones(), 1);
+            assert_eq!((*white_captures.board[WN]).count_ones(), 2);
+            assert_eq!((*white_captures.board[BP]).count_ones(), 4);
+            assert_eq!((*white_captures.board[WP]).count_ones(), 8);
+            
+
+            println!("{:#?}", white_captures.to_string());
+            let bitmove = BitMove::new(G8 as u32, F6 as u32, BN, None, false, false, false, false);
+            let black_move = white_captures.make_move(bitmove, AllMoves).unwrap();
+            
+            
+            assert_ne!(black_move.hash_key, white_captures.hash_key);
+            assert_ne!(black_move.hash_key, board.hash_key);
+            assert_eq!((*black_move.board[BN]).count_ones(), 1);
+            assert_eq!((*white_captures.board[WN]).count_ones(), 2);
+            assert_eq!((*white_captures.board[BP]).count_ones(), 4);
+            assert_eq!((*white_captures.board[WP]).count_ones(), 8);
+            assert_eq!(Square::from((*black_move.board[BN]).trailing_zeros() as u64), F6)
+        }
 
         #[test]
-        fn pawn_can_capture() {}
+        fn pawn_move_and_capture() {
+            let board = BoardState::parse_fen("r2qkbnr/4pppp/2R5/1p2P3/8/PP2P3/1P1P2PP/N1BQKBNR w KQk - 4 3").unwrap();
+            let bitmove = BitMove::new(A3 as u32, A4 as u32, WP, None, false, false, false, false);
+
+            assert_eq!((*board.board[WP]).count_ones(), 8);
+            assert_eq!((*board.board[BP]).count_ones(), 5);
+
+            let white_moves = board.make_move(bitmove, AllMoves).unwrap();
+
+            assert_eq!((*white_moves.board[BP]).count_ones(), 5);
+            assert_eq!((*white_moves.board[WP]).count_ones(), 8);
+
+            let bitmove = BitMove::new(B5 as u32, A4 as u32, BP, None, true, false, false, false);
+            let black_captures = board.make_move(bitmove, AllMoves).unwrap();
+
+            assert_eq!((*black_captures.board[BP]).count_ones(), 4);
+            assert_eq!((*black_captures.board[WP]).count_ones(), 8);
+        }
+
+        #[test]
+        fn enpassant_move_and_capture() {
+            let board = BoardState::parse_fen("r2qkbnr/4pppp/2R5/4P3/1p6/1P2P3/PP1P2PP/N1BQKBNR w KQk - 0 4").unwrap();
+            let bitmove = BitMove::new(A2 as u32, A4 as u32, WP, None, false, true, false, false);
+
+            assert_eq!((*board.board[WP]).count_ones(), 8);
+            assert_eq!((*board.board[BP]).count_ones(), 5);
+            assert!((1 <<  A2 as u64) & board.occupancies[Both] != 0);
+            assert!((1 <<  A4 as u64) & board.occupancies[Both] == 0);
+            assert!(board.enpassant.is_none());
+
+            let white_moves = board.make_move(bitmove, AllMoves).unwrap();
+
+            assert_eq!((*white_moves.board[WP]).count_ones(), 8);
+            assert_eq!((*white_moves.board[BP]).count_ones(), 5);
+            assert!((1 <<  A2 as u64) & white_moves.occupancies[Both] == 0);
+            assert!((1 <<  A4 as u64) & white_moves.occupancies[Both] != 0);
+            assert!(white_moves.enpassant == Some(A3));
+
+            let bitmove = BitMove::new(B4 as u32, A3 as u32, BP, None, true, false, true, false);
+            let black_captures = white_moves.make_move(bitmove, AllMoves).unwrap();
+            
+            assert_eq!((*black_captures.board[WP]).count_ones(), 7);
+            assert_eq!((*black_captures.board[BP]).count_ones(), 5);
+            assert!((1 <<  B4 as u64) & black_captures.occupancies[Both] == 0);
+            assert!((1 <<  A3 as u64) & black_captures.occupancies[Both] != 0);
+            assert!(black_captures.enpassant.is_none());
+
         }
 
 
+        #[test]
+        fn should_not_move_if_the_source_position_is_not_correct() {}
 
-        #[cfg(test)]
-        mod enpassant {}
+        #[test]
+        fn should_result_in_an_invalid_state_if_its_not_the_users_turn() {}
+        }
+
 
         #[cfg(test)]
         mod zobrist_key {}
