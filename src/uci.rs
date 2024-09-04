@@ -62,7 +62,7 @@ impl UCI {
                 Some("go") => {
                     match self.parse_go(input) {
                         Ok(control) if self.board.is_some() => {
-                            println!("the received controller is -------- {}", control.depth());
+                            println!("the received contro  ller is -------- {}", control.depth());
                             self.update_controller(control);
                             println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
                             let controller = Arc::clone(&self.controller);

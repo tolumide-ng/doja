@@ -64,18 +64,6 @@ impl Default for TTable {
     }
 }
 
-// impl Deref for TTable {
-//     type Target = Box<[TT; BYTES_PER_MB]>;
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
-
-// impl DerefMut for TTable {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
 
 impl TTable {
     pub(crate) fn probe(&self, zobrist_key: u64, depth: u8, alpha: i32, beta: i32, ply: usize) -> Option<i32> {

@@ -1,7 +1,6 @@
-use std::{ops::Neg, sync::{Arc, Mutex}, time::Instant};
+use std::{sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::BitMove, board::{state::board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}, zobrist::Zobrist};
-
+use crate::{bit_move::BitMove, board::{state::board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
 use super::{evaluation::Evaluation, time_control::TimeControl};
 
 
@@ -12,7 +11,6 @@ pub struct NegaMax<T: TimeControl> {
     pv_length: [usize; 64],
     pv_table: [[i32; 64]; MAX_PLY],
     nodes: u64,
-    /// ply: is the distance to the root, see: https://www.chessprogramming.org/Root
     ply: usize,
     follow_pv: bool,
     score_pv: bool,
@@ -77,8 +75,6 @@ impl<T> NegaMax<T> where T: TimeControl {
             // println!("");
             println!("\n--------------------------");
         }
-        // println!("and now, ply is {}", self.ply);
-        // println!("{:?} \n\n", self.pv_length);
     }
     
     // This method is currently VERY SLOW once the depth starts approaching 8, please work to improve it
