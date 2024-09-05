@@ -2,7 +2,7 @@ use std::{cell::RefCell, io::{self, stdout, Stdout, Write}, rc::Rc, str::SplitWh
 
 use thiserror::Error;
 
-use crate::{bit_move::BitMove, board::{board::Board, state::board_state::BoardState, fen::FEN}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{control::{self, Control}, negamax::NegaMax, time_control::TimeControl}};
+use crate::{bit_move::BitMove, board::{board::Board, state::board_state::BoardState, fen::FEN}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{control::{self, Control}, alpha_beta::NegaMax, time_control::TimeControl}};
 
 
 

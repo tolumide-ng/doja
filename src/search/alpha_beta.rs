@@ -12,6 +12,7 @@ pub struct NegaMax<T: TimeControl> {
     pv_table: [[i32; 64]; MAX_PLY],
     nodes: u64,
     ply: usize,
+    /// pv - principal variation
     follow_pv: bool,
     score_pv: bool,
     controller: Arc<Mutex<T>>,
@@ -217,7 +218,6 @@ impl<T> NegaMax<T> where T: TimeControl {
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
     fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &BoardState) -> i32 {
         self.pv_length[self.ply] = self.ply;
-        // let mut best_move: Option<BitMove> = None;
 
         let mut hash_flag = HashFlag::UpperBound;
         if self.ply > 0 && self.is_repetition(board) || board.fifty.iter().any(|&p| p >= 100) {
