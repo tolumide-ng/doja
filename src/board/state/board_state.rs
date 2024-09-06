@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}, rc::Rc, sync::Arc};
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5,TOTAL_SQUARES, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::{Zobrist, START_POSITION_ZOBRIST}};
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, TOTAL_SQUARES, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::{Zobrist, START_POSITION_ZOBRIST}};
 
 use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
@@ -510,7 +510,8 @@ impl BoardState {
                             let mask = ((1 << ((H1 - E1) + 1)) - 1) as u64;
                             let result = shifted_occupancy & mask;
 
-                            if (result | king_side_mask) != king_side_mask {
+                            let cannot_castle = (board.castling_rights.bits() & WHITE_KING_CASTLING_MASK) == 0;
+                            if ((result | king_side_mask) != king_side_mask) || cannot_castle {
                                 return None;
                             }
 
@@ -524,7 +525,9 @@ impl BoardState {
                             let mask = ((1 << ((H8 - E8) + 1)) - 1) as u64;
                             let result = shifted_occupancy & mask;
 
-                            if (result | king_side_mask) != king_side_mask {
+                            let cannot_castle = (board.castling_rights.bits() & BLACK_KING_CASTLING_MASK) == 0;
+
+                            if ((result | king_side_mask) != king_side_mask) || cannot_castle {
                                 return None;
                             }
 
@@ -538,8 +541,9 @@ impl BoardState {
                             let mask = ((1 << (E1  - A1) + 1) - 1) as u64;
 
                             let result = shifted_occupancy & mask;
+                            let cannot_castle = (board.castling_rights.bits() & WHITE_QUEEN_CASTLING_MASK) == 0;
                             
-                            if (result | queen_side_mask) != queen_side_mask {
+                            if ((result | queen_side_mask) != queen_side_mask) || cannot_castle {
                                 println!("the mask is {:05b}", mask);
                                 return None;
                             }
@@ -554,7 +558,9 @@ impl BoardState {
                             let mask = ((1 << (E8  - A8) + 1) - 1) as u64;
 
                             let result = shifted_occupancy & mask;
-                            if (result | queen_side_mask) != queen_side_mask {
+                            let cannot_castle = (board.castling_rights.bits() & BLACK_QUEEN_CASTLING_MASK) == 0;
+
+                            if (result | queen_side_mask) != queen_side_mask || cannot_castle {
                                 return None;
                             }
 

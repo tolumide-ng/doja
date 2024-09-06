@@ -1080,7 +1080,7 @@ mod board_state_tests {
 
         #[test]
         fn should_fail_to_castle_whiteking_kingside_if_there_are_pieces_between_the_king_and_the_rook() {
-            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R3KQ1R w KQkq - 1 2").unwrap();
+            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/4KQ2 w KQkq - 1 2").unwrap();
             let mv = BitMove::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
 
             let result = board.make_move(mv, AllMoves);
@@ -1097,7 +1097,12 @@ mod board_state_tests {
         }
 
         #[test]
-        fn should_fail_to_castle_if_side_does_not_have_castling_rights_anymore() {}
+        fn should_fail_to_castle_if_side_does_not_have_castling_rights_anymore() {
+            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w ---- - 1 2").unwrap();
+
+            let mv = BitMove::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
+            assert!(board.make_move(mv, AllMoves).is_none());
+        }
     }
 
 
