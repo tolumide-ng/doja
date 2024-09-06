@@ -29,6 +29,7 @@ impl Bitboard {
     }
 
     /// Removes the bit at index `square`
+    /// should be renamed to (pop_bit_at)
     pub fn pop_bit(&mut self, square: u64) {
         if self.get_bit(square.into()) != 0 {
             self.0 ^= 1 << square;

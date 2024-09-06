@@ -29,6 +29,8 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
 
 
 
+/// todo! change this to a macro, include validation of the move in this.
+/// e.g. a white_pawn_cannot_be_promoted_to_a_black_queen e.t.c
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
  pub struct BitMove(u32);
 

@@ -24,13 +24,15 @@ pub struct BoardState {
     // // this is made this way without a mutex because editing the prev would not result in this same state again
     // prev: Arc<Option<BoardState>>,
     // pub(crate) prev: Option<Arc<BoardState>>,
+    /// Vec<(move_that_was_made, zobrist_hash, captured_piece_else_none)>
+    pub(crate) history: Vec<(BitMove, u64, Option<Piece>)>,
 }
 
 
 impl BoardState {
     pub fn new() -> BoardState {
         Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
-            occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST, fifty: [0, 0],
+            occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST, fifty: [0, 0], history: Vec::new()
             // prev: None, //  castling_table: CASTLING_TABLE,
         }
     }
@@ -378,6 +380,43 @@ impl BoardState {
 
 
         move_list
+    }
+
+
+
+    pub(crate) fn undo_move(&mut self) {
+        if self.history.len() == 0 { return }
+
+        let (mv, hash, captured) = self.history.pop().unwrap();
+        let src = mv.get_src();
+        let tgt = mv.get_target() as u64;
+        let piece = mv.get_piece();
+        let is_promotion = mv.get_promotion();
+        let is_capture = mv.get_capture();
+        let double_push = mv.get_double_push();
+        let enpassant = mv.get_enpassant();
+        let castling = mv.get_castling();
+
+        let color = piece.color(); // the side that moved
+
+        *self[piece] |= 1 << mv.get_src() as u64;
+        
+        if mv.get_enpassant() { // victim is a pawn of the opposite color
+            let victim_sq = match piece.color() {Color::White => tgt + 16, _ => tgt - 16 };
+            *self[!color] |= 1 << victim_sq; 
+        }
+
+        if mv.get_castling() {}
+
+        if !mv.get_castling() && !mv.get_enpassant() {
+            if let Some(captured_piece) = captured {
+                *self[captured_piece] |= 1 << mv.get_target() as u64;
+            }
+        }
+
+        self.turn = color;
+
+        
     }
 
 

@@ -5,9 +5,10 @@ mod board_state_tests {
     use crate::color::Color::*;
     use crate::bit_move::BitMove;
     use crate::board::fen::FEN;
+    use crate::move_type::MoveType::*;
 
     use crate::squares::Square::*;
-    use crate::{bitboard::Bitboard, board::{castling::Castling, state::board_state::BoardState}, color::Color, constants::{RANK_7, RANK_8}, squares::Square};
+    use crate::{bitboard::Bitboard, board::{castling::Castling, state::board_state::BoardState}, color::Color, squares::Square};
 
     #[test]
     fn should_create_a_new_board_state() {
@@ -956,11 +957,91 @@ mod board_state_tests {
     }
     }
 
+    #[cfg(test)] 
+    mod pawn_promotion {
+        use super::*;
+        #[test]
+        fn should_promote_a_pawn_move_to_queen() {
+            let board = BoardState::parse_fen("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
+    
+            let mv = BitMove::new(F7 as u32, F8 as u32, WP, Some(WQ), false, false, false, false);
+            assert_eq!(board[WQ].count_ones(), 1);
+            assert_eq!(board[WP].count_ones(), 3);
+            assert_eq!(board[BQ].count_ones(), 0);
+            assert_eq!(board[BP].count_ones(), 2);
+    
+            let result = board.make_move(mv, AllMoves).unwrap();
+    
+            assert_eq!(result[WQ].count_ones(), 2);
+            assert_eq!(result[WP].count_ones(), 2);
+            assert_eq!(result[BQ].count_ones(), 0);
+            assert_eq!(result[BP].count_ones(), 2);
+        }
+    
+        #[test]
+        fn should_return_none_if_a_promotion_is_invalid() {
+            let board = BoardState::parse_fen("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
+            let mv = BitMove::new(H5 as u32, H1 as u32, BP, Some(BQ), false, false, false, false);
+    
+            let result = board.make_move(mv, AllMoves);
+            assert!(result.is_none());
+        }
+    
+        #[test]
+        fn should_make_a_capture_and_promotion_at_the_same_time() {
+            let board = BoardState::parse_fen("2b5/k4P2/p7/8/8/1K6/1P1Pp3/3Q4 b k - 2 2").unwrap();
+            let mv = BitMove::new(E2 as u32, D1 as u32, BP, Some(BR), true, false, false, false);
+    
+            assert_eq!(board[WQ].count_ones(), 1);
+            assert_eq!(board[WP].count_ones(), 3);
+            assert_eq!(board[BQ].count_ones(), 0);
+            assert_eq!(board[BP].count_ones(), 2);
+            assert_eq!(board[BR].count_ones(), 0);
+    
+            let result = board.make_move(mv, AllMoves).unwrap();
+    
+            assert_eq!(result[WQ].count_ones(), 0);
+            assert_eq!(result[WP].count_ones(), 3);
+            assert_eq!(result[BQ].count_ones(), 0);
+            assert_eq!(result[BP].count_ones(), 1);
+            assert_eq!(result[BR].count_ones(), 1);
+        }
+    }
+
+
+
+
     #[test]
     fn returns_the_piece_at_a_particular_position() {
         let board = BoardState::parse_fen("4rkn1/P5pp/8/7q/4P3/8/5PPP/2R1K1NR w KQkq e3 0 1").unwrap();
         
         assert_eq!(board.get_piece_at(C1, White).unwrap(), WR);
+    }
+
+
+    #[cfg(test)]
+    mod undo_move {
+        #[test]
+        fn should_undo_a_regular_capturing_move() {
+            // assert!(false);
+        }
+
+        #[test]
+        fn should_undo_a_quiet_move() {
+            // assert!(false);
+        }
+
+        #[test]
+        fn should_undo_an_enpassant_capture() {}
+
+        #[test]
+        fn should_undo_a_double_move() {}
+
+        #[test]
+        fn should_undo_a_pawn_promotion() {}
+
+        #[test]
+        fn should_undo_a_castling_move() {}
     }
 
 

@@ -191,22 +191,21 @@ impl<T> NegaMax<T> where T: TimeControl {
         let sorted_moves = self.sort_moves(board, board.gen_movement().into_iter());
 
         for mv in sorted_moves {
-            if let Some(new_board) = board.make_move(mv, MoveType::CapturesOnly) {
-                self.ply += 1;
-                self.repetition_index+=1;
-                self.repetition_table[self.repetition_index] = new_board.hash_key;
-                // print!("{}, ", self.ply);
-                let score = -self.quiescence(-beta, -alpha, &new_board);
-                self.ply -=1;
-                self.repetition_index-=1;
+            let Some(new_board) = board.make_move(mv, MoveType::CapturesOnly) else {continue};
+            self.ply += 1;
+            self.repetition_index+=1;
+            self.repetition_table[self.repetition_index] = new_board.hash_key;
+            // print!("{}, ", self.ply);
+            let score = -self.quiescence(-beta, -alpha, &new_board);
+            self.ply -=1;
+            self.repetition_index-=1;
 
-                // return 0 if time is up
-                if self.controller.as_ref().lock().unwrap().stopped() { return 0}
-                
-                if score > alpha { 
-                    alpha = score; 
-                    if score >= beta { return beta }
-                }
+            // return 0 if time is up
+            if self.controller.as_ref().lock().unwrap().stopped() { return 0}
+            
+            if score > alpha { 
+                alpha = score; 
+                if score >= beta { return beta }
             }
         }
 
