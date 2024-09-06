@@ -33,10 +33,6 @@ impl NNUEState {
 
         // init with feature biases and add in all features of the board
         boxed.accumulator_stack[0] = Accumulator::default();
-    
-        // NEXT STEP: How do we convert the set bits(occupancy) to their respective square values
-        // let square =
-        // for sq in board.occupancy() {}
 
         let mut black_sqs = board.get_occupancy(Color::Black);
         let mut white_sqs = board.get_occupancy(Color::White);
