@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::Index};
+use std::{fmt::Display, ops::{Index, Sub}};
 
 
 // TODO! square should have u8 values not u64
@@ -181,6 +181,14 @@ impl From<u64> for Square {
             7 => Square::H1,
             _ => panic!("Unrecognized value: {value}")
         }
+    }
+}
+
+impl Sub for Square {
+    type Output = u64;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self as u64 - rhs as u64
     }
 }
 

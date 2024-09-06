@@ -406,7 +406,7 @@ mod board_state_tests {
             for (src, target, piece) in expected {
                 let bitmove = BitMove::new(src as u32, target as u32, piece, None, false, false, false, true);
                 assert!(received.contains(&bitmove));
-            } 
+            }
         }
     
         #[test]
@@ -997,15 +997,107 @@ mod board_state_tests {
             assert_eq!(board[BQ].count_ones(), 0);
             assert_eq!(board[BP].count_ones(), 2);
             assert_eq!(board[BR].count_ones(), 0);
-    
+            assert_eq!(board.occupancies[Black].count_ones(), 4);
+            assert_eq!(board.occupancies[White].count_ones(), 5);
+            
             let result = board.make_move(mv, AllMoves).unwrap();
-    
+            
             assert_eq!(result[WQ].count_ones(), 0);
             assert_eq!(result[WP].count_ones(), 3);
             assert_eq!(result[BQ].count_ones(), 0);
             assert_eq!(result[BP].count_ones(), 1);
             assert_eq!(result[BR].count_ones(), 1);
+            assert_eq!(result.occupancies[Black].count_ones(), 4);
+            assert_eq!(result.occupancies[White].count_ones(), 4);
         }
+    }
+
+    #[cfg(test)]
+    mod castling_moves {
+        use super::*;
+
+        #[test]
+        fn black_king_can_castle_queenside() {
+            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
+            let mv = BitMove::new(E8 as u32, C8 as u32, BK, None, false, false, false, true);
+
+            let result = board.make_move(mv, AllMoves).unwrap();
+            assert_eq!(Square::from(result[BK].trailing_zeros() as u64), C8);
+            assert_eq!(Square::from(result[BR].trailing_zeros() as u64), D8);
+            assert_eq!(result[BR].count_ones(), 2);
+        }
+
+        #[test]
+        fn black_king_can_castle_kingside() {
+            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
+            let mv = BitMove::new(E8 as u32, G8 as u32, BK, None, false, false, false, true);
+
+            let result = board.make_move(mv, AllMoves).unwrap();
+            println!("{:#?}", result.to_string());
+            assert_eq!(Square::from(result[BK].trailing_zeros() as u64), G8);
+            assert_eq!(Square::from(result[BR].trailing_zeros() as u64), A8);
+            assert_eq!(Square::from(((*result[BR] ^ (1 << A8 as u64))).trailing_zeros() as u64), F8);
+            assert_eq!(result[BR].count_ones(), 2);
+            assert_eq!(result[BK].count_ones(), 1);
+        }
+
+        #[test]
+        fn white_king_can_castle_kingside() {
+            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
+
+            let mv = BitMove::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
+            let result = board.make_move(mv, AllMoves).unwrap();
+
+            assert_eq!(result[WR].count_ones(), 2);
+
+            assert_eq!(Square::from(result[WK].trailing_zeros() as u64), G1);
+
+            println!("{:#?}", result.to_string());
+            assert_eq!(Square::from(result[WK].trailing_zeros() as u64), G1);
+            assert_eq!(Square::from(result[WR].trailing_zeros() as u64), A1);
+            assert_eq!(Square::from(((*result[WR] ^ (1<< A1 as u64)).trailing_zeros()) as u64), F1);
+            assert_eq!(result[BR].count_ones(), 2);
+            assert_eq!(result[BK].count_ones(), 1);
+        }
+
+        #[test]
+        fn should_fail_to_castle_whiteking_queenside_if_there_are_pieces_between_the_castling_sides() {
+            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
+
+            let mv = BitMove::new(E1 as u32, C1 as u32, WK, None, false, false, false, true);
+            let result = board.make_move(mv, AllMoves);
+            assert!(result.is_none());
+        }
+
+        #[test]
+        fn should_fail_to_castle_blacking_kingside_if_there_are_pieces_between_the_king_and_the_rook() {
+            let board = BoardState::parse_fen("r3kq1r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
+            let mv = BitMove::new(E8 as u32, G8 as u32, BK, None, false, false, false, true);
+            println!("{:#?}", board.to_string());
+
+            assert!(board.make_move(mv, AllMoves).is_none());
+        }
+
+        #[test]
+        fn should_fail_to_castle_whiteking_kingside_if_there_are_pieces_between_the_king_and_the_rook() {
+            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R3KQ1R w KQkq - 1 2").unwrap();
+            let mv = BitMove::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
+
+            let result = board.make_move(mv, AllMoves);
+
+            assert!(result.is_none());
+        }
+
+        #[test]
+        fn should_fail_to_castle_blackking_queenside_if_there_are_pieces_between_the_king_and_the_rook() {
+            let board = BoardState::parse_fen("r1q1k2r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R3KQ1R b KQkq - 1 2").unwrap();
+            let mv = BitMove::new(E8 as u32, C8 as u32, BK, None, false, false, false, true);
+            println!("{:#?}", board.to_string());
+            assert!(board.make_move(mv, AllMoves).is_none());
+        }
+
+        #[test]
+        fn should_fail_to_castle_if_side_does_not_have_castling_rights_anymore() {}
     }
 
 
