@@ -103,10 +103,18 @@ pub const POSITION_4: &str = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1
 pub const REPETITIONS: &str = "2r3k1/R7/8/1R6/8/8/P4KPP/8 w - - 0 40 ";
 
 
+// A contempt factor is just another name for a a draw score, with the implication that the draw score is adjsted in order to reflect hte desirability
+// or undesirability of a draw -- high_value (don't draw), low value(draw is understandable)
+// I think a good opening-phase contempt value is -0.50 pawns.  A good general-purpose contempt factor is -0.25.  In endgames, 0.00 is suitable, 
+// or a value that is not very negative at all.  It is a bad idea to play into a pawn ending with a negative evaluation.
+
+
 // Score bounds for the range of mating scores
 /// [-infinity, -mate_value...-mate_score, ... score ... mate_score ... mate_value, infinity]
+/// -- "MATE" is in this case a constant with a large positive value, larger than any score created by summing material and positional factors could be.
+/// https://web.archive.org/web/20071031100110/http://www.brucemo.com/compchess/programming/matescore.htm
 pub(crate) const MATE_VALUE: i32 = 49_000;
-pub(crate) const MATE_SCORE: i32 = 48_000;
+pub(crate) const MATE_SCORE: i32 = 48_000; // i.e. MATE_VALUE - 1000
 pub(crate) const INFINITY: i32 = 50_000;
 
 pub(crate) const ALPHA: i32 = -INFINITY;

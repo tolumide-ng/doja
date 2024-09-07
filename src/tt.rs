@@ -1,6 +1,4 @@
-use std::{ops::{Deref, DerefMut}, ptr};
-
-use crate::{bit_move::BitMove, constants::MATE_SCORE};
+use crate::constants::MATE_SCORE;
 
 /**
  * Transposition Table

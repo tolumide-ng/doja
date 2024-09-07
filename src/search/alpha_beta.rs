@@ -58,7 +58,6 @@ impl<T> NegaMax<T> where T: TimeControl {
             if self.controller.as_ref().lock().unwrap().stopped() { break; }
 
             self.follow_pv = true;
-            println!("************************************************************depth is {depth}");
             let score = self.negamax(alpha, beta, depth, board);
             if (score <= alpha) || (score >= beta) {
                 alpha = ALPHA; // We fell outside the window, so try again with a
@@ -72,11 +71,13 @@ impl<T> NegaMax<T> where T: TimeControl {
             
 
             if score > -MATE_VALUE && score < -MATE_SCORE {
-                println!("info score mate {} depth {} nodes {} time {}ms pv", (-(score + MATE_VALUE)/2) -1, depth, self.nodes, start_time.elapsed().as_millis())
+                println!("info score mate {} depth {} nodes {} time {}ms pv", (-(score + MATE_VALUE)/2) -1, depth, self.nodes, start_time.elapsed().as_millis());
+                println!("MATE IN {}", (MATE_VALUE - (score + 1)/2));
             } else if (score > MATE_SCORE) && score < MATE_VALUE {
-                println!("info score mate {} depth {} nodes {} time {}ms pv", ((MATE_VALUE - score)/2) + 1, depth, self.nodes, start_time.elapsed().as_millis())
+                println!("info score mate {} depth {} nodes {} time {}ms pv", ((MATE_VALUE - score)/2) + 1, depth, self.nodes, start_time.elapsed().as_millis());
+                println!("MATED IN {}", (MATE_VALUE + score)/2);
             } else {
-                println!("info score cp {} depth {} nodes {} time {}ms pv", score, depth, self.nodes, start_time.elapsed().as_millis())
+                println!("info score cp {} depth {} nodes {} time {}ms pv", score, depth, self.nodes, start_time.elapsed().as_millis());
             }
 
             for count in 0..self.pv_length[0] as usize {
@@ -249,6 +250,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         // println!("ply is {}", self.ply);
         if depth == 0 {
             let score = self.quiescence(alpha, beta, board);
+            // self.tt.record(board.hash_key, depth, score, self.ply, HashFlag::Exact);
             return score;
         }
 
