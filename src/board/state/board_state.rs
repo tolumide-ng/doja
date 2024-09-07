@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::{Deref, DerefMut}, rc::Rc, sync::Arc};
+use std::{fmt::Display, ops::{Deref, DerefMut}};
 
 use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, TOTAL_SQUARES, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::{Zobrist, START_POSITION_ZOBRIST}};
 
@@ -389,43 +389,78 @@ impl BoardState {
     pub(crate) fn undo_move(&mut self) {
         if self.history.len() == 0 { return }
 
-        let (mv, hash, captured) = self.history.pop().unwrap();
+        let (mv, hash, victim) = self.history.pop().unwrap();
         let src = mv.get_src() as u64;
         let tgt = mv.get_target() as u64;
         let piece = mv.get_piece();
-        let is_promotion = mv.get_promotion();
-        let is_capture = mv.get_capture();
-        let double_push = mv.get_double_push();
-        let enpassant = mv.get_enpassant();
-        let castling = mv.get_castling();
-
         let color = piece.color(); // the side that moved
 
-        *self[piece] |= 1 << src;
-        self.occupancies[!color] |= 1 <<  src;
-        
-        if mv.get_enpassant() { // victim is a pawn of the opposite color
-            let victim_sq = match piece.color() {Color::White => tgt + 16, _ => tgt - 16 };
-            *self[piece] |= 1 << victim_sq;
-            self.occupancies[!color] |= 1 << victim_sq;
+        {
+            // remove the acting(src) piece from wherever it moved to (target)
+            let new_piece = match mv.get_promotion() {Some(p) => p, None => piece};
+            *self[new_piece] ^= 1 << tgt;
+            self.occupancies[color] ^= 1 << tgt;
+            self.occupancies[Color::Both] ^= 1 << tgt;
         }
+
+        {
+            // return the acting(src) piece to the point where it started (src);
+            *self[piece] |= 1 << src;
+            self.occupancies[color] |= 1 << src;
+            self.occupancies[Color::Both] |= 1 << src;
+        }
+
+        if mv.get_double_push() {
+            self.enpassant = None;
+        }
+
+
+        if mv.get_enpassant() { // victim is a pawn of the opposite color
+            let sq = match piece.color() {Color::White => tgt + 16, _ => tgt - 16 };
+            *self[Piece::rook(!color)] |= 1 << sq;
+            self.occupancies[!color] |= 1 << sq;
+            self.occupancies[Color::Both] |= 1 << sq;
+            self.set_enpassant(Some(Square::from(tgt)));
+        };
 
         if mv.get_castling() {
-            match color {
+            let rook = Piece::rook(color);
+
+            let (moved_to, moved_from)= match color {
                 Color::White => {
                     if tgt == Square::G1 as u64 {
-                        *self[WR] ^= 1 << Square::F1 as u64;
-                        // *selsef
+                        self.set_castling(Castling::from(self.castling_rights.bits() | WHITE_KING_CASTLING_MASK));
+                        ((1 << F1 as u64) as u64, (1 << H1 as u64) as u64)
+                    } else { // C1 queen side 
+                        self.set_castling(Castling::from(self.castling_rights.bits() | WHITE_QUEEN_CASTLING_MASK));
+                        ((1 << D1 as u64) as u64,  (1 << A1 as u64) as u64)
                     }
                 }
-                _ => {}
-            }
+                _ => {
+                    if tgt == Square::G8 as u64 {
+                        self.set_castling(Castling::from(self.castling_rights.bits() | BLACK_KING_CASTLING_MASK));
+                        ((1 << F8 as u64) as u64, (1 << H8 as u64) as u64)
+                    } else { // if tgt == Square::C8 as u64 {}
+                        self.set_castling(Castling::from(self.castling_rights.bits() | BLACK_QUEEN_CASTLING_MASK));
+                        ((1 << D8 as u64) as u64, (1 << A8 as u64) as u64,)
+                    }
+                    
+                }
+            };
+            
+            // remove
+            *self[rook] ^= moved_to;
+            self.occupancies[color] ^= moved_to;
+            self.occupancies[Color::Both] ^= moved_to;
+            
+            // return to former sq
+            *self[rook] |= moved_from;
+            self.occupancies[color] |= moved_from;
+            self.occupancies[Color::Both] |= moved_from;
         }
 
-        if !mv.get_castling() && !mv.get_enpassant() {
-            if let Some(captured_piece) = captured {
-                *self[captured_piece] |= 1 << mv.get_target() as u64;
-            }
+        if !mv.get_enpassant() && mv.get_capture() {
+            //  get the captured piece back
         }
 
         self.turn = color;
@@ -599,7 +634,8 @@ impl BoardState {
                 } else {
                     board.fifty[bit_move.get_piece().color()] +=1;
                 }
-                
+
+                *self = board;
 
                 Some(board)
             }
