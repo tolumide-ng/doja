@@ -1,18 +1,40 @@
-use std::ops::Neg;
+use std::{ops::Neg, sync::atomic::{AtomicBool, Ordering}};
 
 use crate::{board::{piece::Piece, state::board_state::BoardState}, move_type::MoveType::*, squares::Square};
 
 use super::evaluation::Evaluation;
 
+const MOVE_MAX: usize = 100;
+
+/// "MVV/LVA" stands for "Most Valuable Victim/Least Valuable Attacker".
 pub(crate) struct AlphaBeta {
     /// pv means principal variation
     found_pv: bool,
+
+    // line
+    cmove: usize, // Number of moves in the line
+    arg_move: [u32; MOVE_MAX], // The line.
+    timeout: AtomicBool,
 }
 
 
 impl AlphaBeta {
     pub(crate) fn evaluate(board: &BoardState) -> i32 {
         Evaluation::evaluate(board)
+    }
+
+    pub(crate) fn iterative_deepening(&mut self, limit: usize, alpha: i32, beta: i32, board: &BoardState) {
+        let mut alpha = alpha; let mut beta = beta;
+        
+        for depth in 1..=limit {
+            let val = &self.alpha_beta(depth, &mut alpha, &mut beta, board);
+
+            if self.timeout.load(Ordering::Relaxed) { break; }
+
+            if *val <= alpha || *val >= beta {
+                // alpha 
+            }
+        }
     }
 
     pub(crate) fn alpha_beta(&mut self, depth: usize, alpha: &mut i32, beta: &mut i32, board: &BoardState) -> i32 {
