@@ -416,8 +416,8 @@ impl BoardState {
 
 
         if mv.get_enpassant() { // victim is a pawn of the opposite color
-            let sq = match piece.color() {Color::White => tgt + 16, _ => tgt - 16 };
-            *self[Piece::rook(!color)] |= 1 << sq;
+            let sq = match piece.color() {Color::White => tgt + 16, _ => tgt - 16 }; // victim
+            *self[Piece::pawn(!color)] |= 1 << sq;
             self.occupancies[!color] |= 1 << sq;
             self.occupancies[Color::Both] |= 1 << sq;
             self.set_enpassant(Some(Square::from(tgt)));
@@ -461,6 +461,11 @@ impl BoardState {
 
         if !mv.get_enpassant() && mv.get_capture() {
             //  get the captured piece back
+            if let Some(captured_piece) = victim {
+                *self.board[captured_piece] |= 1 << tgt;
+                self.occupancies[!color] |= 1 << tgt;
+                self.occupancies[Color::Both] |= 1 << tgt; 
+            };
         }
 
         self.turn = color;
