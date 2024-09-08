@@ -5,6 +5,7 @@ use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{BL
 use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
 use crate::squares::Square::*;
+use crate::color::Color::*;
 
 #[cfg(test)]
 #[path ="./tests.rs"]
@@ -472,6 +473,67 @@ impl BoardState {
         
     }
 
+    pub(crate) fn validate_castling_move(&self, mv: &BitMove) -> Option<(Square, Square)> {
+        let king_side_mask = 0b1001u64;
+        let queen_side_mask = 0b10001u64;
+
+        match mv.get_target() {
+            Square::G1 => { // white castles king side
+                let shifted_occupancy = self.occupancies[Both] >> (E1 as u64);
+                let mask = ((1 << ((H1 - E1) + 1)) - 1) as u64;
+                let result = shifted_occupancy & mask;
+
+                let cannot_castle = (self.castling_rights.bits() & WHITE_KING_CASTLING_MASK) == 0;
+                if ((result | king_side_mask) != king_side_mask) || cannot_castle {
+                    return None;
+                }
+
+                return Some((H1, F1));
+            }
+            Square::G8 => { // black castles king side
+                let shifted_occupancy = self.occupancies[Color::Both] >> (E8 as u64);
+                let mask = ((1 << ((H8 - E8) + 1)) - 1) as u64;
+                let result = shifted_occupancy & mask;
+
+                let cannot_castle = (self.castling_rights.bits() & BLACK_KING_CASTLING_MASK) == 0;
+
+                if ((result | king_side_mask) != king_side_mask) || cannot_castle {
+                    return None;
+                }
+
+                return Some((H8, F8));
+            }
+            Square::C1 => { // white castles queen side
+                let shifted_occupancy = self.occupancies[Color::Both] >> (A1 as u64);
+                let mask = ((1 << (E1  - A1) + 1) - 1) as u64;
+
+                let result = shifted_occupancy & mask;
+                let cannot_castle = (self.castling_rights.bits() & WHITE_QUEEN_CASTLING_MASK) == 0;
+                
+                if ((result | queen_side_mask) != queen_side_mask) || cannot_castle {
+                    println!("the mask is {:05b}", mask);
+                    return None;
+                }
+
+                return Some((A1, D1));
+            }
+            Square::C8 => { // black castles queen side
+                let shifted_occupancy = self.occupancies[Color::Both] >> (A8 as u64);
+                let mask = ((1 << (E8  - A8) + 1) - 1) as u64;
+
+                let result = shifted_occupancy & mask;
+                let cannot_castle = (self.castling_rights.bits() & BLACK_QUEEN_CASTLING_MASK) == 0;
+
+                if (result | queen_side_mask) != queen_side_mask || cannot_castle {
+                    return None;
+                }
+
+                return Some((A8, D8));
+            }
+            x => unreachable!("Not a valid castling target {x}")
+        }
+    }
+
 
     pub(crate) fn make_move(&self, bit_move: BitMove, move_type: MoveType) -> Option<Self> {
         let mut board = self.clone();
@@ -540,76 +602,14 @@ impl BoardState {
                 }
 
                 if bit_move.get_castling() {
-                    let king_side_mask = 0b1001u64;
-                    let queen_side_mask = 0b10001u64;
-
-                    match to {
-                        Square::G1 => { // white castles king side
-                            let shifted_occupancy = self.occupancies[Color::Both] >> (E1 as u64);
-                            let mask = ((1 << ((H1 - E1) + 1)) - 1) as u64;
-                            let result = shifted_occupancy & mask;
-
-                            let cannot_castle = (board.castling_rights.bits() & WHITE_KING_CASTLING_MASK) == 0;
-                            if ((result | king_side_mask) != king_side_mask) || cannot_castle {
-                                return None;
-                            }
-
-                            board[Piece::WR].pop_bit(Square::H1.into());
-                            board[Piece::WR].set_bit(Square::F1.into());
-                            board.hash_key ^= ZOBRIST.piece_keys[Piece::WR][Square::H1 as usize];
-                            board.hash_key ^= ZOBRIST.piece_keys[Piece::WR][Square::F1 as usize];
-                        }
-                        Square::G8 => { // black castles king side
-                            let shifted_occupancy = self.occupancies[Color::Both] >> (E8 as u64);
-                            let mask = ((1 << ((H8 - E8) + 1)) - 1) as u64;
-                            let result = shifted_occupancy & mask;
-
-                            let cannot_castle = (board.castling_rights.bits() & BLACK_KING_CASTLING_MASK) == 0;
-
-                            if ((result | king_side_mask) != king_side_mask) || cannot_castle {
-                                return None;
-                            }
-
-                            board[Piece::BR].pop_bit(Square::H8.into());
-                            board[Piece::BR].set_bit(Square::F8.into());
-                            board.hash_key ^= ZOBRIST.piece_keys[Piece::BR][Square::H8 as usize];
-                            board.hash_key ^= ZOBRIST.piece_keys[Piece::BR][Square::F8 as usize];
-                        }
-                        Square::C1 => { // white castles queen side
-                            let shifted_occupancy = self.occupancies[Color::Both] >> (A1 as u64);
-                            let mask = ((1 << (E1  - A1) + 1) - 1) as u64;
-
-                            let result = shifted_occupancy & mask;
-                            let cannot_castle = (board.castling_rights.bits() & WHITE_QUEEN_CASTLING_MASK) == 0;
-                            
-                            if ((result | queen_side_mask) != queen_side_mask) || cannot_castle {
-                                println!("the mask is {:05b}", mask);
-                                return None;
-                            }
-
-                            board[Piece::WR].pop_bit(Square::A1.into());
-                            board[Piece::WR].set_bit(Square::D1.into());
-                            board.hash_key ^= ZOBRIST.piece_keys[Piece::WR][Square::A1 as usize];
-                            board.hash_key ^= ZOBRIST.piece_keys[Piece::WR][Square::D1 as usize];
-                        }
-                        Square::C8 => { // black castles queen side
-                            let shifted_occupancy = self.occupancies[Color::Both] >> (A8 as u64);
-                            let mask = ((1 << (E8  - A8) + 1) - 1) as u64;
-
-                            let result = shifted_occupancy & mask;
-                            let cannot_castle = (board.castling_rights.bits() & BLACK_QUEEN_CASTLING_MASK) == 0;
-
-                            if (result | queen_side_mask) != queen_side_mask || cannot_castle {
-                                return None;
-                            }
-
-                            board[Piece::BR].pop_bit(Square::A8.into());
-                            board[Piece::BR].set_bit(Square::D8.into());
-                            board.hash_key ^= ZOBRIST.piece_keys[Piece::BR][Square::A8 as usize];
-                            board.hash_key ^= ZOBRIST.piece_keys[Piece::BR][Square::D8 as usize];
-                        }
-                        x => unreachable!("Not a valid castling target {x}")
-                    }
+                    if let Some((src, tgt)) = self.validate_castling_move(&bit_move) {
+                        board[Piece::rook(self.turn)].pop_bit(src.into());
+                        board[Piece::rook(self.turn)].set_bit(tgt.into());
+                        board.hash_key ^= ZOBRIST.piece_keys[Piece::rook(self.turn)][src as usize];
+                        board.hash_key ^= ZOBRIST.piece_keys[Piece::rook(self.turn)][tgt as usize];
+                    } else {
+                        return None;
+                    };
                 }
 
                 let old_castling = usize::from_str_radix(&board.castling_rights.bits().to_string(), 10).unwrap();
@@ -654,7 +654,7 @@ impl BoardState {
         }
     }
 
-    pub(crate) fn make_move_wrapper(&mut self, m: BitMove, mv_ty: MoveType) {
+    pub(crate) fn play_with_nnue(&mut self, m: BitMove, mv_ty: MoveType, nnue_state: &mut Box<NNUEState>) {
         // victims here don't include enpassant captures
         let captured = match m.get_capture() {true => { self.get_piece_at(m.get_target(), m.get_piece().color()) }, false => None};
         let action = (m, self.hash_key, captured);
