@@ -35,12 +35,12 @@ impl NNUEState {
         // init with feature biases and add in all features of the board
         boxed.accumulator_stack[0] = Accumulator::default();
 
-        let mut board_sqs = board.get_occupancy(Color::Both);
+        let mut board_sqs = board.get_occupancy(Both);
         while board_sqs != 0 {
             let sq = board_sqs.trailing_zeros() as u64;
-            let white = board.get_occupancy(Color::White) & (1u64 << sq);
+            let is_white = (board.get_occupancy(White) & (1 << sq as u64)) == 0;
             let sq = Square::from(sq);
-            let color = if white != 0 { White } else { Black };
+            let color = if is_white { White } else { Black };
 
             boxed.manual_update::<ON>(board.get_piece_at(sq, color).unwrap(), sq);
             board_sqs &= board_sqs - 1;
@@ -69,22 +69,16 @@ impl NNUEState {
         self.accumulator_stack[self.current_acc] = Accumulator::default();
 
         // Update the first accumulator
-        
-        let mut black_sqs = board.get_occupancy(Color::Black);
-        let mut white_sqs = board.get_occupancy(Color::White);
+        let mut board_sqs = board.get_occupancy(Both);
+        while board_sqs != 0 {
+            let sq = board_sqs.trailing_zeros() as u64;
+            let is_white = (board.get_occupancy(White) & (1 << sq as u64)) == 0;
+            let color = if is_white {White} else {Black};
+            let sq = Square::from(sq);
 
-        while black_sqs != 0 {
-            let sq = Square::from(black_sqs.trailing_zeros() as u64);
-            self.manual_update::<ON>(board.get_piece_at(sq, Color::Black).unwrap(), sq);
-            black_sqs &= black_sqs -1;
+            self.manual_update::<ON>(board.get_piece_at(sq, color).unwrap(), sq);
+            board_sqs &= board_sqs - 1;
         }
-
-        while white_sqs != 0 {
-            let sq = Square::from(white_sqs.trailing_zeros() as u64);
-            self.manual_update::<ON>(board.get_piece_at(sq, Color::White).unwrap(), sq);
-            white_sqs &= white_sqs -1;
-        }
-
     }
     
     /// Add a new accumulator to the stack by copying the previous top

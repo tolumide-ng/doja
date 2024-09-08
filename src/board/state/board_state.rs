@@ -1,6 +1,6 @@
-use std::{fmt::Display, ops::{Deref, DerefMut}};
+use std::{fmt::Display, mem::replace, ops::{Deref, DerefMut}};
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, TOTAL_SQUARES, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::{Zobrist, START_POSITION_ZOBRIST}};
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, TOTAL_SQUARES, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, move_type::MoveType, moves::Moves, nnue::state::NNUEState, squares::Square, zobrist::{Zobrist, START_POSITION_ZOBRIST}};
 
 use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
@@ -652,24 +652,30 @@ impl BoardState {
                 }
             }
         }
-
-        // board.prev = Arc::new(Some(self.clone()));
-
-        // Some(board)
     }
 
+    pub(crate) fn make_move_wrapper(&mut self, m: BitMove, mv_ty: MoveType) {
+        // victims here don't include enpassant captures
+        let captured = match m.get_capture() {true => { self.get_piece_at(m.get_target(), m.get_piece().color()) }, false => None};
+        let action = (m, self.hash_key, captured);
+        let mut board = self.make_move(m, mv_ty);
+        let Some(mut new_board) = board else {return};
+        new_board.history.push(action);
+        let _prev_board = replace(self, new_board);
+    }
+
+    // pub(crate) fn make_move_nnue(&self, m: BitMove, nnue_state: &mut Box<NNUEState>) {
+    //     let mut board = self.clone();
+    //     let (src, tgt) = (m.get_src(), m.get_target());
+    //     let piece = m.get_piece();
+    //     let capture = m.get_capture();
+
+    //     nnue_state.push();
+
+
+    // }
+
     pub(crate) fn get_piece_at(&self, sq: Square, color: Color) -> Option<Piece> {
-        // let bit_on_board = (1 << sq as u64) as u64;
-        // let color = if bit_on_board & self.occupancies[Color::White] != 0 {
-        //     Color::White
-        // } else if bit_on_board & self.occupancies[Color::Black] != 0 {
-        //     Color::Black
-        // } else {
-        //     Color::Both
-        // };
-
-
-
         let target_pieces = Piece::all_pieces_for(color);
         for p in target_pieces {
             if self.board[p].get_bit(sq.into()) != 0 {
