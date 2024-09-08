@@ -5,7 +5,6 @@ use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{BL
 use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
 use crate::squares::Square::*;
-use crate::board::piece::Piece::*;
 
 #[cfg(test)]
 #[path ="./tests.rs"]
@@ -15,7 +14,7 @@ mod tests;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BoardState {
     pub(crate) turn: Color,
-    pub board: Board,
+    pub(crate) board: Board,
     pub(crate) castling_rights: Castling,
     pub(crate) enpassant: Option<Square>,
     occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
@@ -668,6 +667,7 @@ impl BoardState {
         // } else {
         //     Color::Both
         // };
+
 
 
         let target_pieces = Piece::all_pieces_for(color);

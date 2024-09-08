@@ -1,11 +1,11 @@
 use super::{align64::Align64, commons::HIDDEN, net::MODEL};
 
-pub(crate) type SubAccumulator = Align64<[i16; HIDDEN]>;
+type SideAccumulator = Align64<[i16; HIDDEN]>;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Accumulator {
-    pub(crate) white: SubAccumulator,
-    pub(crate) black: SubAccumulator,
+    pub(crate) white: SideAccumulator,
+    pub(crate) black: SideAccumulator,
 }
 
 
@@ -18,7 +18,7 @@ impl Default for Accumulator {
 impl Accumulator {
     /// Updates weights for a single feature, either turning them on or off
     pub(crate) fn update_weights<const ON: bool>(&mut self, idx: (usize, usize)) {
-        fn update<const ON: bool>(acc: &mut SubAccumulator, idx: usize) {
+        fn update<const ON: bool>(acc: &mut SideAccumulator, idx: usize) {
             let zip = acc.iter_mut().zip(&MODEL.feature_weights[idx..idx + HIDDEN]);
 
             for (acc_val, &weight) in zip {
@@ -37,7 +37,7 @@ impl Accumulator {
     /// Update the accumulator for quite move.
     /// Adds in features for the destination and removes the features of the source
     pub(crate) fn add_sub_weights(&mut self, from: (usize, usize), to: (usize, usize)) {
-        fn add_sub(acc: &mut SubAccumulator, from: usize, to: usize) {
+        fn add_sub(acc: &mut SideAccumulator, from: usize, to: usize) {
             let zip = acc.iter_mut().zip(MODEL.feature_weights[from..from+HIDDEN].iter().zip(&MODEL.feature_weights[to..to+HIDDEN]));
 
             for (acc_val, (&remove_weight, &add_weight)) in zip {

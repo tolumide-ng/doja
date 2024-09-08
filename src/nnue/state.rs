@@ -1,12 +1,13 @@
 use std::alloc::{self, alloc_zeroed, Layout};
 
 use crate::{board::{state::board_state::BoardState, piece::Piece}, color::Color, squares::Square};
+use crate::color::Color::*;
 
 use super::{accumulator::Accumulator, commons::{Eval, HIDDEN, MAX_DEPTH, QA, QAB, SCALE}, net::{nnue_index, squared_crelu, MODEL}};
 
 // Used for turning features on/off
-pub(crate) const ON: bool = true;
-pub(crate) const OFF: bool = true;
+pub(super) const ON: bool = true;
+pub(super) const OFF: bool = true;
 
 
 /// NNUEStack is a stack of accumulators. updated along the search tree
@@ -34,20 +35,28 @@ impl NNUEState {
         // init with feature biases and add in all features of the board
         boxed.accumulator_stack[0] = Accumulator::default();
 
-        let mut black_sqs = board.get_occupancy(Color::Black);
-        let mut white_sqs = board.get_occupancy(Color::White);
+        let mut board_sqs = board.get_occupancy(Color::Both);
+        while board_sqs != 0 {
+            let sq = board_sqs.trailing_zeros() as u64;
+            let white = board.get_occupancy(Color::White) & (1u64 << sq);
+            let sq = Square::from(sq);
+            let color = if white != 0 { White } else { Black };
 
-        while black_sqs != 0 {
-            let sq = Square::from(black_sqs.trailing_zeros() as u64);
-            boxed.manual_update::<ON>(board.get_piece_at(sq, Color::Black).unwrap(), sq);
-            black_sqs &= black_sqs -1;
+            boxed.manual_update::<ON>(board.get_piece_at(sq, color).unwrap(), sq);
+            board_sqs &= board_sqs - 1;
         }
 
-        while white_sqs != 0 {
-            let sq = Square::from(white_sqs.trailing_zeros() as u64);
-            boxed.manual_update::<ON>(board.get_piece_at(sq, Color::White).unwrap(), sq);
-            white_sqs &= white_sqs -1;
-        }
+        // while black_sqs != 0 {
+        //     let sq = Square::from(black_sqs.trailing_zeros() as u64);
+        //     boxed.manual_update::<ON>(board.get_piece_at(sq, Color::Black).unwrap(), sq);
+        //     black_sqs &= black_sqs -1;
+        // }
+
+        // while white_sqs != 0 {
+        //     let sq = Square::from(white_sqs.trailing_zeros() as u64);
+        //     boxed.manual_update::<ON>(board.get_piece_at(sq, Color::White).unwrap(), sq);
+        //     white_sqs &= white_sqs -1;
+        // }
         
         boxed
     }

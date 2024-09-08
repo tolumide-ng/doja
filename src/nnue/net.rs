@@ -18,7 +18,7 @@ pub(crate) static MODEL: NNUEParams = unsafe { std::mem::transmute(*include_byte
 
 /// Retrns white and black feature weight index for given features
 pub(crate) fn nnue_index(piece: Piece, sq: Square) -> (usize, usize) {
-    const COLOR_STRIDE: usize = 64 * 6;
+    const COLOR_STRIDE: usize = 64 * 6; // number_of_squares * number of pieces per side(excluding the King)
     const PIECE_STRIDE: usize = 64;
     let p = (piece as usize) / 2;
     let c = piece.color();
