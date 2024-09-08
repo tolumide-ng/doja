@@ -121,7 +121,7 @@ pub(crate) const ALPHA: i32 = -INFINITY;
 pub(crate) const BETA: i32 = INFINITY;
 pub(crate) const FULL_DEPTH_MOVE: u8 = 4;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
 pub(crate) const REDUCTION_LIMIT: u8 = 3;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
-pub(crate) const DEPTH_REDUCTION_FACTOR: u8 = 2;
+pub(crate) const DEPTH_REDUCTION_FACTOR: u8 = 2; // (suggested deduction factor) https://web.archive.org/web/20071031095933/http://www.brucemo.com/compchess/programming/nullmove.htm
 pub(crate) const VAL_WINDOW: i32 = 50; // https://web.archive.org/web/20071031095918/http://www.brucemo.com/compchess/programming/aspiration.htm
 pub(crate) const NODES_2047: u64 = 2047;
 

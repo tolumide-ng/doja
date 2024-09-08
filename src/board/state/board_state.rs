@@ -430,19 +430,19 @@ impl BoardState {
                 Color::White => {
                     if tgt == Square::G1 as u64 {
                         self.set_castling(Castling::from(self.castling_rights.bits() | WHITE_KING_CASTLING_MASK));
-                        ((1 << F1 as u64) as u64, (1 << H1 as u64) as u64)
+                        ((1u64 << F1 as u64), (1u64 << H1 as u64))
                     } else { // C1 queen side 
                         self.set_castling(Castling::from(self.castling_rights.bits() | WHITE_QUEEN_CASTLING_MASK));
-                        ((1 << D1 as u64) as u64,  (1 << A1 as u64) as u64)
+                        ((1u64 << D1 as u64),  (1u64 << A1 as u64))
                     }
                 }
                 _ => {
                     if tgt == Square::G8 as u64 {
                         self.set_castling(Castling::from(self.castling_rights.bits() | BLACK_KING_CASTLING_MASK));
-                        ((1 << F8 as u64) as u64, (1 << H8 as u64) as u64)
+                        ((1u64 << F8 as u64) as u64, 1u64 << H8 as u64)
                     } else { // if tgt == Square::C8 as u64 {}
                         self.set_castling(Castling::from(self.castling_rights.bits() | BLACK_QUEEN_CASTLING_MASK));
-                        ((1 << D8 as u64) as u64, (1 << A8 as u64) as u64,)
+                        (1u64 << D8 as u64, 1u64 << A8 as u64)
                     }
                     
                 }
@@ -640,7 +640,7 @@ impl BoardState {
                     board.fifty[bit_move.get_piece().color()] +=1;
                 }
 
-                *self = board;
+                // *self = board;
 
                 Some(board)
             }

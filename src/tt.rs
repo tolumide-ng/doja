@@ -24,7 +24,7 @@ pub(crate) enum HashFlag {
     /// Beta-cutoff nodes (FailHigh) score >= beta
     LowerBound = 1,
     /// Alpha nodes (FailLow) score < alpha
-    UpperBound = 2,
+    UpperBound = 2, // alpha
 }
  
 

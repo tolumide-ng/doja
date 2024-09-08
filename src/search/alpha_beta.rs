@@ -229,7 +229,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         self.pv_length[self.ply] = self.ply;
         self.found_pv = false;
 
-        let mut hash_flag = HashFlag::UpperBound;
+        let mut hash_flag = HashFlag::UpperBound; // alpha
         if self.ply > 0 && self.is_repetition(board) || board.fifty.iter().any(|&p| p >= 50) {
             return 0 // draw
         }
@@ -268,9 +268,13 @@ impl<T> NegaMax<T> where T: TimeControl {
         let mut legal_moves = 0;
 
         // Null-Move Forward Pruning
+        // Null-move forward pruning is a step you perform prior to searching any of the moves.  You ask the question, "If I do nothing here, can the opponent do anything?"
+        // In order to test this, we allow the opponent play this turn(even though its ours), if they play and we're not in harms way (greater than beat), then we're good.
+        // -- "Null-move forward pruning is not used, at least in endgames.  If you do try to use it in endgames, very bad things will happen very often."
         let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !king_in_check && self.ply> 0;
         // added 1 to the depth_reduction factor to be sure, there is atleast one more depth that would be checked
         if null_move_forward_pruning_conditions {
+            // nmfp: null-move forward prunning (board)
             let mut nmfp_board = board.clone();
             self.ply += 1;
             self.repetition_index+=1;
@@ -314,9 +318,6 @@ impl<T> NegaMax<T> where T: TimeControl {
             self.repetition_index+=1;
             self.repetition_table[self.repetition_index] = new_board.hash_key;
             legal_moves += 1;
-
-
-            // Null-move forward pruning is a step you perform prior to searching any of the moves.  You ask the question, "If I do nothing here, can the opponent do anything?"
 
 
             // https://www.chessprogramming.org/Principal_Variation_Search#Pseudo_Code

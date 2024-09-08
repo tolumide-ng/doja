@@ -45,7 +45,7 @@ impl AlphaBeta {
     }
 
     pub(crate) fn alpha_beta(&mut self, depth: usize, alpha: &mut i32, beta: &mut i32, board: &BoardState) -> i32 {
-        let mut hashf = HashFlag::Alpha;
+        let mut hashf: HashFlag = HashFlag::Alpha;
 
         if let Some(val) = self.tt.probe(depth, *alpha, *beta, board.hash_key)  {
             return val;
@@ -91,6 +91,7 @@ impl AlphaBeta {
             if val > *alpha {
                 *alpha = val;
                 self.found_pv = true;
+                hashf = HashFlag::Exact;
             }
 
             legal_moves += 1;
@@ -101,7 +102,7 @@ impl AlphaBeta {
             return 0 // stalemate | draw
         }
         
-        self.tt.record(depth, *alpha, board.hash_key, HashFlag::Alpha, None);
+        self.tt.record(depth, *alpha, board.hash_key, hashf, None);
         *alpha
     }
 
