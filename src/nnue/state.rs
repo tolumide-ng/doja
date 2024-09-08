@@ -6,8 +6,8 @@ use crate::color::Color::*;
 use super::{accumulator::Accumulator, commons::{Eval, HIDDEN, MAX_DEPTH, QA, QAB, SCALE}, net::{nnue_index, squared_crelu, MODEL}};
 
 // Used for turning features on/off
-pub(super) const ON: bool = true;
-pub(super) const OFF: bool = true;
+pub(crate) const ON: bool = true;
+pub(crate) const OFF: bool = false;
 
 
 /// NNUEStack is a stack of accumulators. updated along the search tree

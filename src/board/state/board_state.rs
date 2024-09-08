@@ -6,6 +6,7 @@ use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
 use crate::squares::Square::*;
 use crate::color::Color::*;
+use crate::nnue::state::{OFF, ON};
 
 #[cfg(test)]
 #[path ="./tests.rs"]
@@ -654,27 +655,44 @@ impl BoardState {
         }
     }
 
-    pub(crate) fn play_with_nnue(&mut self, m: BitMove, mv_ty: MoveType, nnue_state: &mut Box<NNUEState>) {
-        // victims here don't include enpassant captures
-        let captured = match m.get_capture() {true => { self.get_piece_at(m.get_target(), m.get_piece().color()) }, false => None};
-        let action = (m, self.hash_key, captured);
-        let mut board = self.make_move(m, mv_ty);
-        let Some(mut new_board) = board else {return};
-        new_board.history.push(action);
-        let _prev_board = replace(self, new_board);
+    pub(crate) fn play_with_nnue(&mut self, mv: BitMove, mv_ty: MoveType, nnue_state: &mut Box<NNUEState>) {
+        let (src, tgt) = (mv.get_src(), mv.get_target());
+        let tgt_sq = Square::from(tgt);
+
+        if let Some(new_board) = self.make_move(mv, mv_ty) {
+            nnue_state.push();
+
+            let captured: Option<Piece> = None;
+    
+            if mv.get_enpassant() {
+                let enpass_tgt = Square::from(match !self.turn {Color::Black => tgt as u64 + 8, _ => tgt as u64 -  8});
+                nnue_state.manual_update::<OFF>(Piece::pawn(!self.turn), enpass_tgt);
+            } else if mv.get_capture() {
+                let captured = self.get_piece_at(tgt, !self.turn);
+                nnue_state.manual_update::<OFF>(captured.unwrap(), tgt_sq);
+            } else if mv.get_castling() {
+                let (rook_src, rook_tgt) = self.validate_castling_move(&mv).unwrap();
+                nnue_state.move_update(Piece::rook(self.turn), rook_src, rook_tgt);
+            }
+
+            if let Some(promoted) =  mv.get_promotion() {
+                nnue_state.manual_update::<OFF>(mv.get_piece(), src);
+                nnue_state.manual_update::<ON>(promoted, tgt);
+            } else {
+                nnue_state.move_update(mv.get_piece(), src, tgt);
+            }
+
+            let prev_hash = self.hash_key;
+
+            let captured = match mv.get_capture() {true => { self.get_piece_at(mv.get_target(), mv.get_piece().color()) }, false => None};
+
+            let _prev_board = replace(self, new_board);
+            self.history.push((mv, prev_hash, captured));
+
+        }
     }
 
-    // pub(crate) fn make_move_nnue(&self, m: BitMove, nnue_state: &mut Box<NNUEState>) {
-    //     let mut board = self.clone();
-    //     let (src, tgt) = (m.get_src(), m.get_target());
-    //     let piece = m.get_piece();
-    //     let capture = m.get_capture();
-
-    //     nnue_state.push();
-
-
-    // }
-
+    
     pub(crate) fn get_piece_at(&self, sq: Square, color: Color) -> Option<Piece> {
         let target_pieces = Piece::all_pieces_for(color);
         for p in target_pieces {
