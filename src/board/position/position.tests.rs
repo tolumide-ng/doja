@@ -131,5 +131,59 @@ mod do_and_undo_a_move {
 
         
     }
+
+    #[test]
+    fn should_be_able_to_undo_multiple_captures() {
+        let board = BoardState::parse_fen("r3k1n1/4p1pp/8/1p1p1Q2/P2p1N2/4P3/5P1P/R3KBNR w KQkq - 0 1").unwrap();
+        let mut position = Position::with(board);
+        let white_knight_captures_pawn = BitMove::new(F4 as u32, D5 as u32, WN, None, true, false, false, false);
+
+        assert!(position.board.occupancies[Both] & (1u64 << F4 as u64) != 0);
+        assert!(position.board.occupancies[Both] & (1u64 << D5 as u64) != 0);
+        assert!(position.board.occupancies[White] & (1u64 << F4 as u64) != 0);
+        assert!(position.board.occupancies[Black] & (1u64 << D5 as u64) != 0);
+
+        position.make_move(white_knight_captures_pawn, CapturesOnly);
+
+        assert!(position.board.occupancies[Both] & (1u64 << F4 as u64) == 0);
+        assert!(position.board.occupancies[Black] & (1u64 << D5 as u64) == 0);
+        assert!(position.board.occupancies[White] & (1u64 << D5 as u64) != 0);
+        assert!(position.board.occupancies[White] & (1u64 << F4 as u64) == 0);
+
+        let black_pawn_captures_pawn = BitMove::new(B5 as u32, A4 as u32, BP, None, true, false, false, false);
+
+        assert!((position.board.occupancies[Black] & 1u64 << B5 as u64) != 0);
+        assert!((position.board.occupancies[White] & 1u64 << A4 as u64) != 0);
+
+        position.make_move(black_pawn_captures_pawn, CapturesOnly);
+
+        assert!((position.board.occupancies[Black] & 1u64 << B5 as u64) == 0);
+        assert!((position.board.occupancies[White] & 1u64 << A4 as u64) == 0);
+        assert!((position.board.occupancies[Black] & 1u64 << A4 as u64) != 0);
+
+        assert!((position.board.occupancies[Black] & 1u64 << A4 as u64) != 0);
+        assert!((position.board.occupancies[White] & 1u64 << A1 as u64) != 0);
+
+        let white_rook_captures = BitMove::new(A1 as u32, A4 as u32, WR, None, true, false, false, false);
+
+        position.make_move(white_rook_captures, CapturesOnly);
+
+        assert!((position.board.occupancies[Black] & 1u64 << A4 as u64) == 0);
+        assert!((position.board.occupancies[White] & 1u64 << A1 as u64) == 0);
+        assert!((position.board.occupancies[White] & 1u64 << A4 as u64) != 0);
+
+        position.undo_move(false);
+        position.undo_move(false);
+
+        assert!((position.board.occupancies[Black] & 1u64 << B5 as u64) != 0);
+        assert!((position.board.occupancies[White] & 1u64 << A4 as u64) != 0);
+        
+        position.undo_move(false);
+
+        assert!(position.board.occupancies[Both] & (1u64 << F4 as u64) != 0);
+        assert!(position.board.occupancies[Both] & (1u64 << D5 as u64) != 0);
+        assert!(position.board.occupancies[White] & (1u64 << F4 as u64) != 0);
+        assert!(position.board.occupancies[Black] & (1u64 << D5 as u64) != 0);
+    }
 }
 

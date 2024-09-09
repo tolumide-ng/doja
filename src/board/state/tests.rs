@@ -1115,30 +1115,4 @@ mod board_state_tests {
         assert_eq!(board.get_piece_at(C1, White).unwrap(), WR);
     }
 
-    #[cfg(test)]
-    mod undo_move {
-        // #[test]
-        // fn should_undo_a_regular_capturing_move() {
-        //     // assert!(false);
-        // }
-
-        // #[test]
-        // fn should_undo_a_quiet_move() {
-        //     // assert!(false);
-        // }
-
-        // #[test]
-        // fn should_undo_an_enpassant_capture() {}
-
-        // #[test]
-        // fn should_undo_a_double_move() {}
-
-        // #[test]
-        // fn should_undo_a_pawn_promotion() {}
-
-        // #[test]
-        // fn should_undo_a_castling_move() {}
-    }
-
-
 }
