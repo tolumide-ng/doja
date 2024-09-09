@@ -1,10 +1,11 @@
+use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 use crate::{bit_move::BitMove, move_type::MoveType, nnue::state::NNUEState, squares::Square};
 use crate::color::Color::*;
 use crate::nnue::state::{ON, OFF};
 use crate::squares::Square::*;
 use super::castling::Castling;
-use super::{piece::Piece, state::board_state::BoardState};
+use super::{piece::{Piece, Piece::*}, state::board_state::BoardState};
 
 #[cfg(test)]
 #[path ="./position.tests.rs"]
@@ -188,8 +189,17 @@ impl Position {
 
         if with_nnue {
             self.nnue_state.pop();
-        }
+        }        
+    }
 
+    pub(crate) fn evaluate(&self) -> i32 {
+        let eval = self.nnue_state.evaluate(self.board.turn);
+
+        let total_material = (self.board.board[WN].count_bits() + self.board.board[BK].count_bits()) as i32 * PIECE_VALUES[WN] +
+        (self.board.board[WB].count_bits() + self.board.board[BB].count_bits()) as i32 * PIECE_VALUES[WB] + 
+        (self.board.board[WQ].count_bits() + self.board.board[BQ].count_bits()) as i32 * PIECE_VALUES[WQ] + 
+        (self.board.board[WK].count_bits() + self.board.board[BK].count_bits()) as i32 * PIECE_VALUES[WK];
         
+        (eval * (700 + total_material/32)) /1024
     }
 }

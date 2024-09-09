@@ -3,6 +3,8 @@ use std::{fmt::Display, ops::{Deref, DerefMut}};
 use crate::board::piece::Piece;
 use crate::bitboard::Bitboard;
 
+
+/// Rename this PieceSet/PieceMap
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Board([Bitboard; 12]);
 
