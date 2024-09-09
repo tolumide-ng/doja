@@ -30,11 +30,7 @@ mod do_and_undo_a_move {
         assert!(position.board.occupancies[Black] & white_knight_c4 == 0);
         assert!(position.board.occupancies[White] & white_knight_c4 != 0);
 
-        println!("{:#?}", position.board.to_string());
-
         position.make_move(mv, CapturesOnly);
-
-        println!("{:#?}", position.board.to_string());
 
         assert!(position.board.occupancies[Both] & black_bishop_d5 == 0);
         assert!(position.board.occupancies[Black] & black_bishop_d5 == 0);
@@ -64,7 +60,7 @@ mod do_and_undo_a_move {
         assert!(position.board.occupancies[Black] & white_knight_c4 == 0);
         assert!(position.board.occupancies[White] & white_knight_c4 != 0);
 
-        position.board.make_move(mv, CapturesOnly);
+        position.make_move(mv, CapturesOnly);
         
         assert!(position.board.occupancies[Both] & black_bishop_d5 == 0);
         assert!(position.board.occupancies[Black] & black_bishop_d5 == 0);
@@ -76,8 +72,8 @@ mod do_and_undo_a_move {
         assert!(position.board.occupancies[White] & black_knight_c4 == 0);
         assert!(position.board.occupancies[Both] & black_knight_c4 != 0);
         
-        position.undo_move();
-        println!("{:#?}", position.board.to_string());
+        position.undo_move(false);
+
         assert!(position.board.occupancies[Both] & black_bishop_d5 != 0);
         assert!(position.board.occupancies[Black] & black_bishop_d5 != 0);
         assert!(position.board.occupancies[White] & black_bishop_d5 == 0);
@@ -91,7 +87,7 @@ mod do_and_undo_a_move {
 
     #[test]
     fn should_undo_an_enpassant_move() {
-        let mut board = BoardState::parse_fen("rnbqk1nr/p2p3p/4p3/8/Pp1P1B2/6Pp/1PP2P1P/R2QKB1R b KQkq a3 0 1").unwrap();
+        let board = BoardState::parse_fen("rnbqk1nr/p2p3p/4p3/8/Pp1P1B2/6Pp/1PP2P1P/R2QKB1R b KQkq a3 0 1").unwrap();
         let zobrist_before_move = board.hash_key;
 
         let mv = BitMove::new(B4 as u32, A3 as u32, BP, None, true, false, true, false);
@@ -121,7 +117,7 @@ mod do_and_undo_a_move {
         assert_eq!(position.board.turn, White);
         assert_ne!(zobrist_before_move, zobrist_after_move);
         
-        position.undo_move();
+        position.undo_move(false);
         let zobrist_after_undo = position.board.hash_key;
         assert!(position.board.occupancies[Black] & white_pawn_a4 == 0);
         assert!(position.board.occupancies[White] & black_pawn_b4 == 0);

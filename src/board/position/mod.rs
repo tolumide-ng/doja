@@ -100,7 +100,7 @@ impl Position {
         false
     }
 
-    pub(crate) fn undo_move(&mut self) {
+    pub(crate) fn undo_move(&mut self, with_nnue: bool) {
         if self.history.len() == 0 { return }
 
         let History { mv, hash, victim } = self.history.pop().unwrap();
@@ -186,7 +186,9 @@ impl Position {
 
         self.board.turn = color;
 
-        self.nnue_state.pop();
+        if with_nnue {
+            self.nnue_state.pop();
+        }
 
         
     }
