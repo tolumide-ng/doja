@@ -1,12 +1,11 @@
-use std::{fmt::Display, mem::replace, ops::{Deref, DerefMut}};
+use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, TOTAL_SQUARES, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, move_type::MoveType, moves::Moves, nnue::state::NNUEState, squares::Square, zobrist::{Zobrist, START_POSITION_ZOBRIST}};
+use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::START_POSITION_ZOBRIST};
 
 use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
 use crate::squares::Square::*;
 use crate::color::Color::*;
-use crate::nnue::state::{OFF, ON};
 
 #[cfg(test)]
 #[path ="./tests.rs"]
@@ -19,23 +18,18 @@ pub struct BoardState {
     pub(crate) board: Board,
     pub(crate) castling_rights: Castling,
     pub(crate) enpassant: Option<Square>,
-    occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
+    pub(crate) occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
     // castling_table: [u8; TOTAL_SQUARES],
     pub(crate) hash_key: u64,
     // fifty move rule counter
     pub(crate) fifty: [u8; 2],
-    // // this is made this way without a mutex because editing the prev would not result in this same state again
-    // prev: Arc<Option<BoardState>>,
-    // pub(crate) prev: Option<Arc<BoardState>>,
-    /// Vec<(move_that_was_made, zobrist_hash, captured_piece_else_none)>
-    pub(crate) history: Vec<(BitMove, u64, Option<Piece>)>,
 }
 
 
 impl BoardState {
     pub fn new() -> BoardState {
         Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
-            occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST, fifty: [0, 0], history: Vec::new()
+            occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST, fifty: [0, 0],
             // prev: None, //  castling_table: CASTLING_TABLE,
         }
     }
@@ -385,99 +379,6 @@ impl BoardState {
         move_list
     }
 
-
-
-    pub(crate) fn undo_move(&mut self) {
-        if self.history.len() == 0 { return }
-
-        let (mv, hash, victim) = self.history.pop().unwrap();
-        let src = mv.get_src() as u64;
-        let tgt = mv.get_target() as u64;
-        let piece = mv.get_piece();
-        let color = piece.color(); // the side that moved
-
-        {
-            // remove the acting(src) piece from wherever it moved to (target)
-            let new_piece = match mv.get_promotion() {Some(p) => p, None => piece};
-            *self[new_piece] ^= 1 << tgt;
-            self.occupancies[color] ^= 1 << tgt;
-            self.occupancies[Color::Both] ^= 1 << tgt;
-        }
-
-        {
-            // return the acting(src) piece to the point where it started (src);
-            *self[piece] |= 1 << src;
-            self.occupancies[color] |= 1 << src;
-            self.occupancies[Color::Both] |= 1 << src;
-        }
-
-        if mv.get_double_push() {
-            self.enpassant = None;
-        }
-
-
-        if mv.get_enpassant() { // victim is a pawn of the opposite color
-            let sq = match piece.color() {Color::White => tgt - 8, _ => tgt + 8 }; // victim
-            
-            *self[Piece::pawn(!color)] |= 1 << sq;
-            self.occupancies[!color] |= 1 << sq;
-            self.occupancies[Color::Both] |= 1 << sq;
-            self.set_enpassant(Some(Square::from(tgt)));
-        };
-
-        if mv.get_castling() {
-            let rook = Piece::rook(color);
-
-            let (moved_to, moved_from)= match color {
-                Color::White => {
-                    if tgt == Square::G1 as u64 {
-                        self.set_castling(Castling::from(self.castling_rights.bits() | WHITE_KING_CASTLING_MASK));
-                        ((1u64 << F1 as u64), (1u64 << H1 as u64))
-                    } else { // C1 queen side 
-                        self.set_castling(Castling::from(self.castling_rights.bits() | WHITE_QUEEN_CASTLING_MASK));
-                        ((1u64 << D1 as u64),  (1u64 << A1 as u64))
-                    }
-                }
-                _ => {
-                    if tgt == Square::G8 as u64 {
-                        self.set_castling(Castling::from(self.castling_rights.bits() | BLACK_KING_CASTLING_MASK));
-                        ((1u64 << F8 as u64) as u64, 1u64 << H8 as u64)
-                    } else { // if tgt == Square::C8 as u64 {}
-                        self.set_castling(Castling::from(self.castling_rights.bits() | BLACK_QUEEN_CASTLING_MASK));
-                        (1u64 << D8 as u64, 1u64 << A8 as u64)
-                    }
-                    
-                }
-            };
-            
-            // remove
-            *self[rook] ^= moved_to;
-            self.occupancies[color] ^= moved_to;
-            self.occupancies[Color::Both] ^= moved_to;
-            
-            // return to former sq
-            *self[rook] |= moved_from;
-            self.occupancies[color] |= moved_from;
-            self.occupancies[Color::Both] |= moved_from;
-        }
-
-        if !mv.get_enpassant() && mv.get_capture() {
-            //  get the captured piece back
-            println!("did we get a victiim????? {:#?}", victim);
-            if let Some(captured_piece) = victim {
-                println!("there was a captured piuece>>>>>>>> {:#?}", captured_piece);
-                *self.board[captured_piece] |= 1 << tgt;
-                self.occupancies[!color] |= 1 << tgt;
-                self.occupancies[Color::Both] |= 1 << tgt; 
-            };
-        }
-        self.hash_key = hash;
-
-        self.turn = color;
-
-        
-    }
-
     pub(crate) fn validate_castling_move(&self, mv: &BitMove) -> Option<(Square, Square)> {
         let king_side_mask = 0b1001u64;
         let queen_side_mask = 0b10001u64;
@@ -658,62 +559,6 @@ impl BoardState {
             }
         }
     }
-
-    pub(crate) fn play(&mut self, mv: BitMove, mv_ty: MoveType) {
-        let captured = match mv.get_capture() {true => { self.get_piece_at(mv.get_target(), !mv.get_piece().color()) }, false => None};
-
-        if let Some(new_board) = self.make_move(mv, mv_ty) {
-            println!("before {:#?}", self.hash_key);
-            println!("AFTER {:#?}", new_board.hash_key);
-            let mv_history = (mv, self.hash_key, captured);
-            let _ = replace(self, new_board);
-            self.history.push(mv_history);
-        }
-    }
-
-
-    pub(crate) fn play_with_nnue(&mut self, mv: BitMove, mv_ty: MoveType, nnue_state: &mut Box<NNUEState>) {
-        let (src, tgt) = (mv.get_src(), mv.get_target());
-        let tgt_sq = Square::from(tgt);
-
-        if let Some(new_board) = self.make_move(mv, mv_ty) {
-            nnue_state.push();
-
-            let mut captured: Option<Piece> = None;
-
-            
-            if mv.get_enpassant() {
-                let enpass_tgt = Square::from(match !self.turn {Color::Black => tgt as u64 + 8, _ => tgt as u64 -  8});
-                captured = self.get_piece_at(enpass_tgt, !self.turn);
-                nnue_state.manual_update::<OFF>(Piece::pawn(!self.turn), enpass_tgt);
-            } else if mv.get_capture() {
-                let captured = self.get_piece_at(tgt, !self.turn);
-                nnue_state.manual_update::<OFF>(captured.unwrap(), tgt_sq);
-            } else if mv.get_castling() {
-                let (rook_src, rook_tgt) = self.validate_castling_move(&mv).unwrap();
-                nnue_state.move_update(Piece::rook(self.turn), rook_src, rook_tgt);
-            }
-
-            if let Some(promoted) =  mv.get_promotion() {
-                nnue_state.manual_update::<OFF>(mv.get_piece(), src);
-                nnue_state.manual_update::<ON>(promoted, tgt);
-            } else {
-                nnue_state.move_update(mv.get_piece(), src, tgt);
-            }
-
-            let prev_hash = self.hash_key;
-
-            if mv.get_capture() && !mv.get_enpassant() {
-                captured = match mv.get_capture() {true => { self.get_piece_at(mv.get_target(), mv.get_piece().color()) }, false => None};
-
-            }
-
-            let _prev_board = replace(self, new_board);
-            self.history.push((mv, prev_hash, captured));
-
-        }
-    }
-
     
     pub(crate) fn get_piece_at(&self, sq: Square, color: Color) -> Option<Piece> {
         let target_pieces = Piece::all_pieces_for(color);

@@ -4,6 +4,7 @@ pub mod state;
 pub mod castling;
 pub mod board;
 pub mod fen;
+pub mod position; // this would eventually be the real board state 
 
 
 

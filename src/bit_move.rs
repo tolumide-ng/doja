@@ -202,13 +202,13 @@ const CATSLING: u32 = 0b1000_0000_0000_0000_0000_0000;
 
     #[test]
     fn should_return_stored_data_for_an_enpassant() {
-        let enpassant = BitMove::new(20, 12, Piece::BP, None,  false, false, true, false);
+        let enpassant = BitMove::new(20, 12, Piece::BP, None,  true, false, true, false);
 
         assert_eq!(enpassant.get_src(), Square::from(20));
         assert_eq!(enpassant.get_target(), Square::from(12));
         assert_eq!(enpassant.get_piece(), Piece::BP);
         assert_eq!(enpassant.get_promotion(), None);
-        assert_eq!(enpassant.get_capture(), false);
+        assert_eq!(enpassant.get_capture(), true);
         assert_eq!(enpassant.get_double_push(), false);
         assert_eq!(enpassant.get_enpassant(), true);
         assert_eq!(enpassant.get_castling(), false);

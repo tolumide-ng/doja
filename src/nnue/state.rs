@@ -41,8 +41,12 @@ impl NNUEState {
             let is_white = (board.get_occupancy(White) & (1 << sq as u64)) == 0;
             let sq = Square::from(sq);
             let color = if is_white { White } else { Black };
+            let p = board.get_piece_at(sq, color);
+            println!("the p {:#?} ----> SQ {sq}, and the color is {color:?}", p);
+            println!("{:#?}", board.to_string());
+            let piece = p.unwrap();
 
-            boxed.manual_update::<ON>(board.get_piece_at(sq, color).unwrap(), sq);
+            boxed.manual_update::<ON>(piece, sq);
             board_sqs &= board_sqs - 1;
         }
 
