@@ -1115,30 +1115,151 @@ mod board_state_tests {
         assert_eq!(board.get_piece_at(C1, White).unwrap(), WR);
     }
 
+    #[cfg(test)]
+    mod do_and_undo_a_move {
+        use super::*;
+
+
+        #[test]
+        fn should_update_self_after_move() {
+            let mut board = BoardState::parse_fen("4kb2/3p1n2/1r2p3/3b1p1p/PpN5/8/BP1P3P/R2QK3 b -Q-- - 0 2").unwrap();
+            let mv = BitMove::new(D5 as u32, C4 as u32, BB, None, true, false, false, false);
+
+            let black_bishop_d5 = 1u64 << D5 as u64;
+            assert!(board.occupancies[Both] & black_bishop_d5 != 0);
+            assert!(board.occupancies[Black] & black_bishop_d5 != 0);
+            assert!(board.occupancies[White] & black_bishop_d5 == 0);
+            let white_knight_c4 = 1u64 << C4 as u64;
+            assert!(board.occupancies[Both] & white_knight_c4 != 0);
+            assert!(board.occupancies[Black] & white_knight_c4 == 0);
+            assert!(board.occupancies[White] & white_knight_c4 != 0);
+
+            println!("{:#?}", board.to_string());
+
+            board.play(mv, CapturesOnly);
+
+            println!("{:#?}", board.to_string());
+
+            assert!(board.occupancies[Both] & black_bishop_d5 == 0);
+            assert!(board.occupancies[Black] & black_bishop_d5 == 0);
+            assert!(board.occupancies[White] & black_bishop_d5 == 0);
+
+            assert!(board.occupancies[White] & white_knight_c4 == 0);
+            let black_knight_c4 = 1u64 << C4 as u64;
+
+            assert!(board.occupancies[White] & black_knight_c4 == 0);
+            assert!(board.occupancies[Both] & black_knight_c4 != 0);
+        }
+
+
+        #[test]
+        fn should_be_able_to_undo_a_regular_capture() {
+            let mut board = BoardState::parse_fen("4kb2/3p1n2/1r2p3/3b1p1p/PpN5/8/BP1P3P/R2QK3 b -Q-- - 0 2").unwrap();
+            let mv = BitMove::new(D5 as u32, C4 as u32, BB, None, true, false, false, false);
+
+            let black_bishop_d5 = 1u64 << D5 as u64;
+            assert!(board.occupancies[Both] & black_bishop_d5 != 0);
+            assert!(board.occupancies[Black] & black_bishop_d5 != 0);
+            assert!(board.occupancies[White] & black_bishop_d5 == 0);
+            let white_knight_c4 = 1u64 << C4 as u64;
+            assert!(board.occupancies[Both] & white_knight_c4 != 0);
+            assert!(board.occupancies[Black] & white_knight_c4 == 0);
+            assert!(board.occupancies[White] & white_knight_c4 != 0);
+
+            board.play(mv, CapturesOnly);
+            
+            assert!(board.occupancies[Both] & black_bishop_d5 == 0);
+            assert!(board.occupancies[Black] & black_bishop_d5 == 0);
+            assert!(board.occupancies[White] & black_bishop_d5 == 0);
+            
+            assert!(board.occupancies[White] & white_knight_c4 == 0);
+            let black_knight_c4 = 1u64 << C4 as u64;
+            
+            assert!(board.occupancies[White] & black_knight_c4 == 0);
+            assert!(board.occupancies[Both] & black_knight_c4 != 0);
+            
+            board.undo_move();
+            println!("{:#?}", board.to_string());
+            assert!(board.occupancies[Both] & black_bishop_d5 != 0);
+            assert!(board.occupancies[Black] & black_bishop_d5 != 0);
+            assert!(board.occupancies[White] & black_bishop_d5 == 0);
+
+
+            assert!(board.occupancies[Both] & white_knight_c4 != 0);
+            assert!(board.occupancies[Black] & white_knight_c4 == 0);
+            assert!(board.occupancies[White] & white_knight_c4 != 0);
+
+        }
+
+        #[test]
+        fn should_undo_an_enpassant_move() {
+            let mut board = BoardState::parse_fen("rnbqk1nr/p2p3p/4p3/8/Pp1P1B2/6Pp/1PP2P1P/R2QKB1R b KQkq a3 0 1").unwrap();
+            let zobrist_before_move = board.hash_key;
+
+            let mv = BitMove::new(B4 as u32, A3 as u32, BP, None, true, false, true, false);
+
+            let black_pawn_b4 = 1u64 << B4 as u64;
+            let white_pawn_a4 = 1u64 << A4 as u64;
+
+            assert!(board.occupancies[Black] & white_pawn_a4 == 0);
+            assert!(board.occupancies[White] & black_pawn_b4 == 0);
+            assert!(board.occupancies[Black] & black_pawn_b4 != 0);
+            assert!(board.occupancies[White] & white_pawn_a4 != 0);
+            assert_eq!(board.enpassant, Some(A3));
+            assert_eq!(board.turn, Black);
+
+            board.play(mv, CapturesOnly);
+            let zobrist_after_move = board.hash_key;
+
+            let black_pawn_on_a3 = 1u64 << A3 as u64;
+            assert!(board.occupancies[White] & white_pawn_a4 == 0);
+            assert!(board.occupancies[Black] & black_pawn_b4 == 0);
+            assert!(board.occupancies[Black] & black_pawn_on_a3 != 0);
+            assert!(board.occupancies[White] & black_pawn_on_a3 == 0);
+            assert_eq!(board.enpassant, None);
+            assert_eq!(board.turn, White);
+            assert_ne!(zobrist_before_move, zobrist_after_move);
+            
+            board.undo_move();
+            let zobrist_after_undo = board.hash_key;
+            assert!(board.occupancies[Black] & white_pawn_a4 == 0);
+            assert!(board.occupancies[White] & black_pawn_b4 == 0);
+            assert!(board.occupancies[Black] & black_pawn_b4 != 0);
+            assert!(board.occupancies[White] & white_pawn_a4 != 0);
+            assert_eq!(board.enpassant, Some(A3));
+            assert_eq!(board.turn, Black);
+            assert_ne!(zobrist_after_move, zobrist_after_undo);
+            assert_eq!(zobrist_before_move, zobrist_after_undo);
+
+
+            
+        }
+    }
+
 
     #[cfg(test)]
     mod undo_move {
-        #[test]
-        fn should_undo_a_regular_capturing_move() {
-            // assert!(false);
-        }
+        // #[test]
+        // fn should_undo_a_regular_capturing_move() {
+        //     // assert!(false);
+        // }
 
-        #[test]
-        fn should_undo_a_quiet_move() {
-            // assert!(false);
-        }
+        // #[test]
+        // fn should_undo_a_quiet_move() {
+        //     // assert!(false);
+        // }
 
-        #[test]
-        fn should_undo_an_enpassant_capture() {}
+        // #[test]
+        // fn should_undo_an_enpassant_capture() {}
 
-        #[test]
-        fn should_undo_a_double_move() {}
+        // #[test]
+        // fn should_undo_a_double_move() {}
 
-        #[test]
-        fn should_undo_a_pawn_promotion() {}
+        // #[test]
+        // fn should_undo_a_pawn_promotion() {}
 
-        #[test]
-        fn should_undo_a_castling_move() {}
+        // #[test]
+        // fn should_undo_a_castling_move() {}
     }
 
 

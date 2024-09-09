@@ -417,7 +417,8 @@ impl BoardState {
 
 
         if mv.get_enpassant() { // victim is a pawn of the opposite color
-            let sq = match piece.color() {Color::White => tgt + 16, _ => tgt - 16 }; // victim
+            let sq = match piece.color() {Color::White => tgt - 8, _ => tgt + 8 }; // victim
+            
             *self[Piece::pawn(!color)] |= 1 << sq;
             self.occupancies[!color] |= 1 << sq;
             self.occupancies[Color::Both] |= 1 << sq;
@@ -462,12 +463,15 @@ impl BoardState {
 
         if !mv.get_enpassant() && mv.get_capture() {
             //  get the captured piece back
+            println!("did we get a victiim????? {:#?}", victim);
             if let Some(captured_piece) = victim {
+                println!("there was a captured piuece>>>>>>>> {:#?}", captured_piece);
                 *self.board[captured_piece] |= 1 << tgt;
                 self.occupancies[!color] |= 1 << tgt;
                 self.occupancies[Color::Both] |= 1 << tgt; 
             };
         }
+        self.hash_key = hash;
 
         self.turn = color;
 
@@ -655,6 +659,19 @@ impl BoardState {
         }
     }
 
+    pub(crate) fn play(&mut self, mv: BitMove, mv_ty: MoveType) {
+        let captured = match mv.get_capture() {true => { self.get_piece_at(mv.get_target(), !mv.get_piece().color()) }, false => None};
+
+        if let Some(new_board) = self.make_move(mv, mv_ty) {
+            println!("before {:#?}", self.hash_key);
+            println!("AFTER {:#?}", new_board.hash_key);
+            let mv_history = (mv, self.hash_key, captured);
+            let _ = replace(self, new_board);
+            self.history.push(mv_history);
+        }
+    }
+
+
     pub(crate) fn play_with_nnue(&mut self, mv: BitMove, mv_ty: MoveType, nnue_state: &mut Box<NNUEState>) {
         let (src, tgt) = (mv.get_src(), mv.get_target());
         let tgt_sq = Square::from(tgt);
@@ -662,10 +679,12 @@ impl BoardState {
         if let Some(new_board) = self.make_move(mv, mv_ty) {
             nnue_state.push();
 
-            let captured: Option<Piece> = None;
-    
+            let mut captured: Option<Piece> = None;
+
+            
             if mv.get_enpassant() {
                 let enpass_tgt = Square::from(match !self.turn {Color::Black => tgt as u64 + 8, _ => tgt as u64 -  8});
+                captured = self.get_piece_at(enpass_tgt, !self.turn);
                 nnue_state.manual_update::<OFF>(Piece::pawn(!self.turn), enpass_tgt);
             } else if mv.get_capture() {
                 let captured = self.get_piece_at(tgt, !self.turn);
@@ -684,7 +703,10 @@ impl BoardState {
 
             let prev_hash = self.hash_key;
 
-            let captured = match mv.get_capture() {true => { self.get_piece_at(mv.get_target(), mv.get_piece().color()) }, false => None};
+            if mv.get_capture() && !mv.get_enpassant() {
+                captured = match mv.get_capture() {true => { self.get_piece_at(mv.get_target(), mv.get_piece().color()) }, false => None};
+
+            }
 
             let _prev_board = replace(self, new_board);
             self.history.push((mv, prev_hash, captured));
