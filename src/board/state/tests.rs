@@ -8,11 +8,11 @@ mod board_state_tests {
     use crate::move_type::MoveType::*;
 
     use crate::squares::Square::*;
-    use crate::{bitboard::Bitboard, board::{castling::Castling, state::board_state::BoardState}, color::Color, squares::Square};
+    use crate::{bitboard::Bitboard, board::{castling::Castling, state::board_state::Board}, color::Color, squares::Square};
 
     #[test]
     fn should_create_a_new_board_state() {
-        let board = BoardState::new();
+        let board = Board::new();
         assert_eq!(board.turn, Color::White);
         assert_eq!(board.castling_rights, Castling::all());
         assert_eq!(board.enpassant, None);
@@ -23,7 +23,7 @@ mod board_state_tests {
 
     #[test]
     fn basic_set_and_get_methods() {
-        let mut board = BoardState::new();
+        let mut board = Board::new();
 
         board.set_turn(Color::Black);
         board.set_enpassant(Some(Square::B3));
@@ -44,7 +44,7 @@ mod board_state_tests {
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_pawns() {
-            let board = BoardState::parse_fen("r3k3/8/2p5/8/2pP4/2P5/1p1P4/3Q1p1K w KQkq - 0 1").unwrap();
+            let board = Board::parse_fen("r3k3/8/2p5/8/2pP4/2P5/1p1P4/3Q1p1K w KQkq - 0 1").unwrap();
             
             let result = board.is_square_attacked(Square::D3 as u64, Color::Black);
             assert!(result);
@@ -54,7 +54,7 @@ mod board_state_tests {
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_knights() {
-            let board = BoardState::parse_fen("3qk3/8/2N5/8/3p4/8/1p2NPPP/2BQK2R b KQkq - 1 1").unwrap();
+            let board = Board::parse_fen("3qk3/8/2N5/8/3p4/8/1p2NPPP/2BQK2R b KQkq - 1 1").unwrap();
 
             println!("{:#?}", board.to_string());
             assert!(board.is_square_attacked(Square::D4 as u64, Color::White));
@@ -63,7 +63,7 @@ mod board_state_tests {
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_a_king() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
 
             let bk = 0x1000u64;  // e2
             board.board[Piece::BK] = Bitboard::from(bk);
@@ -75,7 +75,7 @@ mod board_state_tests {
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_a_bishop_or_queen() {
-            let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
+            let board = Board::parse_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
 
             assert!(board.is_square_attacked(Square::G4 as u64, White));
             assert!(board.is_square_attacked(Square::F1 as u64, White));
@@ -83,7 +83,7 @@ mod board_state_tests {
             assert!(board.is_square_attacked(Square::E1 as u64,White));
 
 
-            let board = BoardState::parse_fen("rnkb2nr/p1pp2pp/8/7q/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
+            let board = Board::parse_fen("rnkb2nr/p1pp2pp/8/7q/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
 
             assert!(board.is_square_attacked(Square::G4 as u64, Color::Black));
             assert!(board.is_square_attacked(Square::F3 as u64, Color::Black));
@@ -94,7 +94,7 @@ mod board_state_tests {
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_a_rook_or_queen() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
 
             let br = 0x400001000u64;
             board.board[Piece::BR] = Bitboard::from(br);
@@ -108,7 +108,7 @@ mod board_state_tests {
             assert!(board.is_square_attacked(Square::G5 as u64, Color::Black));
 
 
-            let mut board = BoardState::new();
+            let mut board = Board::new();
 
             let bq = 0x400001000u64;
             board.board[Piece::BQ] = Bitboard::from(bq);
@@ -128,11 +128,11 @@ mod board_state_tests {
 
     #[cfg(test)]
     mod  single_push_targets {
-        use crate::{bitboard::Bitboard, board::{piece::Piece, state::board_state::BoardState}, color::Color, squares::Square};
+        use crate::{bitboard::Bitboard, board::{piece::Piece, state::board_state::Board}, color::Color, squares::Square};
 
         #[test]
         fn single_push_target_for_white_pawn() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let wp = 0x200260000u64; // white pawns
             let enemy_pawns = 0x2002000u64; // black pawns
             board.board[Piece::WP] = Bitboard::from(wp);
@@ -152,7 +152,7 @@ mod board_state_tests {
 
         #[test]
         fn single_push_target_for_black_pawns() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let bp = 0x200260000u64; // black pawns
             let enemy_pawns = 0x2002000u64; // white pawns
             board.board[Piece::BP] = Bitboard::from(bp);
@@ -171,11 +171,11 @@ mod board_state_tests {
 
     #[cfg(test)]
     mod double_push_targets {
-        use crate::{bitboard::Bitboard, board::{piece::Piece, state::board_state::BoardState}, color::Color, squares::Square};
+        use crate::{bitboard::Bitboard, board::{piece::Piece, state::board_state::Board}, color::Color, squares::Square};
 
         #[test]
         fn double_push_for_white_pawns() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let wp = 0x9a00u64;
             let enemy = 0x200002040000u64;
             board.board[Piece::WP] = Bitboard::from(wp);
@@ -194,7 +194,7 @@ mod board_state_tests {
 
         #[test]
         fn double_push_for_black_pawns() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let bp = 0x35000000000000u64;
             let enemy =  0x500000042000u64;
             board.board[Piece::BP] = Bitboard::from(bp);
@@ -220,7 +220,7 @@ mod board_state_tests {
 
         #[test]
         fn white_pawns_eligible_to_double_push() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let wp = 0x500000042000u64;
             let enemy = 0x200002040000u64;
             board.board[Piece::WP] = Bitboard::from(wp);
@@ -238,7 +238,7 @@ mod board_state_tests {
 
         #[test]
         fn black_pawns_eligible_to_double_push() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let bp = 0x30000402000000u64;
             let enemy =  0x2000040000u64;
             board.board[Piece::BP] = Bitboard::from(bp);
@@ -262,7 +262,7 @@ mod board_state_tests {
 
         #[test]
         fn get_double_moves_for_white_pawns() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let wp = 0x500000042000u64;
             let enemy = 0x200002040000u64;
             board.board[Piece::WP] = Bitboard::from(wp);
@@ -282,7 +282,7 @@ mod board_state_tests {
 
         #[test]
         fn get_single_pawn_moves_for_black_pawns() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let bp = 0x30000402000000u64;
             let enemy =  0x2000060000u64;
             board.board[Piece::BP] = Bitboard::from(bp);
@@ -302,7 +302,7 @@ mod board_state_tests {
 
         #[test]
         fn should_get_the_promotions() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let bp = 0x82400u64;
             board.board[Piece::BP] = Bitboard::from(bp);
             board.set_occupancy(Color::Black, bp);
@@ -326,7 +326,7 @@ mod board_state_tests {
 
         #[test]
         fn should_return_pawn_attacks() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let black_pawns = 0x22002400u64; // attacker
             let white_pawns = 0x8000060000u64; //  victim B3, C3, H5
             let white_bishop = 0x40u64; // G1
@@ -352,7 +352,7 @@ mod board_state_tests {
 
         #[test]
         fn should_return_enpassant_pawn_attacks() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let black_pawns = 0x24000000u64; // attacker
             let white_pawns = 0x8002000400u64; //  victim B3, C3, H5
             let white_bishop = 0x40u64; // G1
@@ -383,7 +383,7 @@ mod board_state_tests {
 
         #[test]
         fn black_king_should_queen_castle() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let white_king = 0x10u64;
             let black_king = 1 << (Square::E8 as u64);
             let white_rooks = 0x81u64;
@@ -411,7 +411,7 @@ mod board_state_tests {
     
         #[test]
         fn black_king_can_castle_kingside() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let white_king = 0x10u64;
             let black_king = 1 << (Square::E8 as u64);
             let white_rooks = 0x81u64;
@@ -440,7 +440,7 @@ mod board_state_tests {
         #[test]
         /// Can kingside castle as a white king, but cannot queenside castle if the king would be under attack if it tries to move the queen direction
         fn white_king_can_castle_kingside() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let white_king = 0x10u64;
             let black_king = 1 << (Square::E8 as u64);
             let white_rooks = 0x81u64;
@@ -469,7 +469,7 @@ mod board_state_tests {
 
         #[test]
         fn white_king_can_castle_queenside() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let white_king = 0x10u64;
             let black_king = 1 << (Square::E8 as u64);
             let white_rooks = 0x81u64;
@@ -497,7 +497,7 @@ mod board_state_tests {
 
         #[test]
         fn king_cannot_castle_in_any_direction_if_it_is_under_attack() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
             let white_king = 0x10u64;
             let black_king = 1 << (Square::E8 as u64);
             let white_rooks = 0x81u64;
@@ -529,7 +529,7 @@ mod board_state_tests {
 
         #[test]
         fn should_return_all_possible_destinations_including_capturs_for_knight() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
 
             let black_pawns = 0x82000004200u64;
             let black_queen = 1 << B4 as u64;
@@ -556,7 +556,7 @@ mod board_state_tests {
 
         #[test]
         fn should_return_all_possible_destinations_including_capturs_for_bishop() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
 
             let black_pawns = 0x82000004200u64;
             let black_queen = 1 << H8 as u64;
@@ -582,7 +582,7 @@ mod board_state_tests {
 
         #[test]
         fn should_return_all_possible_destinations_including_captures_for_rook() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
 
             let white_pawns = 0x082000004200u64;
             let white_knights = 0x20020u64;
@@ -609,7 +609,7 @@ mod board_state_tests {
 
         #[test]
         fn should_return_all_possible_destinations_including_captures_for_queen() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
 
             let white_pawns = 0x082000004200u64;
             let white_knights = 0x20020u64;
@@ -649,7 +649,7 @@ mod board_state_tests {
         #[test]
         fn bishop_can_move_or_capture() {
 
-            let mut board = BoardState::new();
+            let mut board = Board::new();
 
             let white_pawns = 0x082000004200u64;
             let white_knights = 0x20020u64;
@@ -688,7 +688,7 @@ mod board_state_tests {
 
         #[test]
         fn queen_move_and_capture() {
-            let mut board = BoardState::new();
+            let mut board = Board::new();
 
             let black_pawns = 0x2000008800u64;
             let black_king = 1 << H8 as u64;
@@ -727,7 +727,7 @@ mod board_state_tests {
 
         #[test]
         fn king_move_and_capture() {
-            let board = BoardState::parse_fen("rnb1kbnr/p1p1p1pp/8/3p1N2/3K4/7q/PP1PPPPP/R2Q1BNR w KQkq - 0 1").unwrap();
+            let board = Board::parse_fen("rnb1kbnr/p1p1p1pp/8/3p1N2/3K4/7q/PP1PPPPP/R2Q1BNR w KQkq - 0 1").unwrap();
 
             let zobrist = board.hash_key;
             let bitmove = BitMove::new(D4 as u32, D5 as u32, WK, None, true, false, false, false);
@@ -749,7 +749,7 @@ mod board_state_tests {
 
         #[test]
         fn rook_move_and_capture() {
-            let board = BoardState::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/1NBQKBNR b KQk - 3 3").unwrap();
+            let board = Board::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/1NBQKBNR b KQk - 3 3").unwrap();
 
             let bitmove = BitMove::new(A8 as u32, A4 as u32, BR, None, false, false, false, false);
 
@@ -775,7 +775,7 @@ mod board_state_tests {
 
         #[test]
         fn knight_move_and_capture() {
-            let board = BoardState::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/N1BQKBNR w KQk - 3 3").unwrap();
+            let board = Board::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/N1BQKBNR w KQk - 3 3").unwrap();
 
             let bitmove = BitMove::new(A1 as u32, B3 as u32, WN, None, true, false, false, false);
 
@@ -809,7 +809,7 @@ mod board_state_tests {
 
         #[test]
         fn pawn_move_and_capture() {
-            let board = BoardState::parse_fen("r2qkbnr/4pppp/2R5/1p2P3/8/PP2P3/1P1P2PP/N1BQKBNR w KQk - 4 3").unwrap();
+            let board = Board::parse_fen("r2qkbnr/4pppp/2R5/1p2P3/8/PP2P3/1P1P2PP/N1BQKBNR w KQk - 4 3").unwrap();
             let bitmove = BitMove::new(A3 as u32, A4 as u32, WP, None, false, false, false, false);
 
             assert_eq!((*board.board[WP]).count_ones(), 8);
@@ -832,7 +832,7 @@ mod board_state_tests {
 
         #[test]
         fn enpassant_move_and_capture() { // double moves must always result in an enpassant
-            let board = BoardState::parse_fen("r2qkbnr/4pppp/2R5/4P3/1p6/1P2P3/PP1P2PP/N1BQKBNR w KQk - 0 4").unwrap();
+            let board = Board::parse_fen("r2qkbnr/4pppp/2R5/4P3/1p6/1P2P3/PP1P2PP/N1BQKBNR w KQk - 0 4").unwrap();
             let bitmove = BitMove::new(A2 as u32, A4 as u32, WP, None, false, true, false, false);
 
             assert_eq!((*board.board[WP]).count_ones(), 8);
@@ -863,7 +863,7 @@ mod board_state_tests {
 
         #[test]
         fn should_not_move_if_the_source_position_is_not_correct() {
-            let board = BoardState::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let src = C6;
             let bitmove = BitMove::new(src as u32, C5 as u32, BP, None, false, false, false, false);
 
@@ -876,7 +876,7 @@ mod board_state_tests {
 
         #[test]
         fn should_not_change_position_if_the_target_move_is_invalid() {
-            let board = BoardState::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let bitmove = BitMove::new(H4 as u32, H6 as u32, BN, None, false, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << H4 as u64) != 0);
@@ -892,7 +892,7 @@ mod board_state_tests {
 
         #[test]
         fn black_pawns_should_only_move_southwards() {
-            let board = BoardState::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let black_moving_north = BitMove::new(D6 as u32, D7 as u32, BP, None, false, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << D6 as u64) != 0);
@@ -907,7 +907,7 @@ mod board_state_tests {
 
         #[test]
         fn white_pawns_should_only_move_northwards() {
-            let board = BoardState::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let white_pawn_moving_south = BitMove::new(D4 as u32, D3 as u32, WP, None, false, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << D4 as u64) != 0);
@@ -922,7 +922,7 @@ mod board_state_tests {
 
         #[test]
         fn pawns_should_not_be_able_to_move_north_north_or_south_south_if_it_is_occupied() {
-            let board = BoardState::parse_fen("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::parse_fen("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let white_pawn_moving_south = BitMove::new(E6 as u32, E7 as u32, WP, None, false, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << E6 as u64) != 0);
@@ -945,7 +945,7 @@ mod board_state_tests {
 
         #[test]
         fn  should_return_none_if_it_is_not_the_players_turn() {
-            let board = BoardState::parse_fen("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::parse_fen("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let black_bishop_move = BitMove::new(B4 as u32, E1 as u32, BB, None, true, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << B4 as u32) != 0);
@@ -962,7 +962,7 @@ mod board_state_tests {
         use super::*;
         #[test]
         fn should_promote_a_pawn_move_to_queen() {
-            let board = BoardState::parse_fen("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
+            let board = Board::parse_fen("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
     
             let mv = BitMove::new(F7 as u32, F8 as u32, WP, Some(WQ), false, false, false, false);
             assert_eq!(board[WQ].count_ones(), 1);
@@ -980,7 +980,7 @@ mod board_state_tests {
     
         #[test]
         fn should_return_none_if_a_promotion_is_invalid() {
-            let board = BoardState::parse_fen("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
+            let board = Board::parse_fen("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
             let mv = BitMove::new(H5 as u32, H1 as u32, BP, Some(BQ), false, false, false, false);
     
             let result = board.make_move(mv, AllMoves);
@@ -989,7 +989,7 @@ mod board_state_tests {
     
         #[test]
         fn should_make_a_capture_and_promotion_at_the_same_time() {
-            let board = BoardState::parse_fen("2b5/k4P2/p7/8/8/1K6/1P1Pp3/3Q4 b k - 2 2").unwrap();
+            let board = Board::parse_fen("2b5/k4P2/p7/8/8/1K6/1P1Pp3/3Q4 b k - 2 2").unwrap();
             let mv = BitMove::new(E2 as u32, D1 as u32, BP, Some(BR), true, false, false, false);
     
             assert_eq!(board[WQ].count_ones(), 1);
@@ -1018,7 +1018,7 @@ mod board_state_tests {
 
         #[test]
         fn black_king_can_castle_queenside() {
-            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
+            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
             let mv = BitMove::new(E8 as u32, C8 as u32, BK, None, false, false, false, true);
 
             let result = board.make_move(mv, AllMoves).unwrap();
@@ -1029,7 +1029,7 @@ mod board_state_tests {
 
         #[test]
         fn black_king_can_castle_kingside() {
-            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
+            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
             let mv = BitMove::new(E8 as u32, G8 as u32, BK, None, false, false, false, true);
 
             let result = board.make_move(mv, AllMoves).unwrap();
@@ -1043,7 +1043,7 @@ mod board_state_tests {
 
         #[test]
         fn white_king_can_castle_kingside() {
-            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
+            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
 
             let mv = BitMove::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
             let result = board.make_move(mv, AllMoves).unwrap();
@@ -1062,7 +1062,7 @@ mod board_state_tests {
 
         #[test]
         fn should_fail_to_castle_whiteking_queenside_if_there_are_pieces_between_the_castling_sides() {
-            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
+            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
 
             let mv = BitMove::new(E1 as u32, C1 as u32, WK, None, false, false, false, true);
             let result = board.make_move(mv, AllMoves);
@@ -1071,7 +1071,7 @@ mod board_state_tests {
 
         #[test]
         fn should_fail_to_castle_blacking_kingside_if_there_are_pieces_between_the_king_and_the_rook() {
-            let board = BoardState::parse_fen("r3kq1r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
+            let board = Board::parse_fen("r3kq1r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
             let mv = BitMove::new(E8 as u32, G8 as u32, BK, None, false, false, false, true);
             println!("{:#?}", board.to_string());
 
@@ -1080,7 +1080,7 @@ mod board_state_tests {
 
         #[test]
         fn should_fail_to_castle_whiteking_kingside_if_there_are_pieces_between_the_king_and_the_rook() {
-            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/4KQ2 w KQkq - 1 2").unwrap();
+            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/4KQ2 w KQkq - 1 2").unwrap();
             let mv = BitMove::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
 
             let result = board.make_move(mv, AllMoves);
@@ -1090,7 +1090,7 @@ mod board_state_tests {
 
         #[test]
         fn should_fail_to_castle_blackking_queenside_if_there_are_pieces_between_the_king_and_the_rook() {
-            let board = BoardState::parse_fen("r1q1k2r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R3KQ1R b KQkq - 1 2").unwrap();
+            let board = Board::parse_fen("r1q1k2r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R3KQ1R b KQkq - 1 2").unwrap();
             let mv = BitMove::new(E8 as u32, C8 as u32, BK, None, false, false, false, true);
             println!("{:#?}", board.to_string());
             assert!(board.make_move(mv, AllMoves).is_none());
@@ -1098,7 +1098,7 @@ mod board_state_tests {
 
         #[test]
         fn should_fail_to_castle_if_side_does_not_have_castling_rights_anymore() {
-            let board = BoardState::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w ---- - 1 2").unwrap();
+            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w ---- - 1 2").unwrap();
 
             let mv = BitMove::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
             assert!(board.make_move(mv, AllMoves).is_none());
@@ -1110,7 +1110,7 @@ mod board_state_tests {
 
     #[test]
     fn returns_the_piece_at_a_particular_position() {
-        let board = BoardState::parse_fen("4rkn1/P5pp/8/7q/4P3/8/5PPP/2R1K1NR w KQkq e3 0 1").unwrap();
+        let board = Board::parse_fen("4rkn1/P5pp/8/7q/4P3/8/5PPP/2R1K1NR w KQkq e3 0 1").unwrap();
         
         assert_eq!(board.get_piece_at(C1, White).unwrap(), WR);
     }

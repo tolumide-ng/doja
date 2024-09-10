@@ -6,7 +6,7 @@ mod do_and_undo_a_move {
     // use crate::bit_move::BitMove;
     // use crate::board::piece::Piece::*;
     
-    use crate::board::state::board_state::BoardState;
+    use crate::board::state::board_state::Board;
     use crate::board::piece::Piece::*;
     use crate::color::Color::*;
     use crate::bit_move::BitMove;
@@ -17,7 +17,7 @@ mod do_and_undo_a_move {
 
     #[test]
     fn should_update_self_after_move() {
-        let board = BoardState::parse_fen("4kb2/3p1n2/1r2p3/3b1p1p/PpN5/8/BP1P3P/R2QK3 b -Q-- - 0 2").unwrap();
+        let board = Board::parse_fen("4kb2/3p1n2/1r2p3/3b1p1p/PpN5/8/BP1P3P/R2QK3 b -Q-- - 0 2").unwrap();
         let mv = BitMove::new(D5 as u32, C4 as u32, BB, None, true, false, false, false);
         let mut position = Position::with(board);
 
@@ -46,7 +46,7 @@ mod do_and_undo_a_move {
 
     #[test]
     fn should_be_able_to_undo_a_regular_capture() {
-        let board = BoardState::parse_fen("4kb2/3p1n2/1r2p3/3b1p1p/PpN5/8/BP1P3P/R2QK3 b -Q-- - 0 2").unwrap();
+        let board = Board::parse_fen("4kb2/3p1n2/1r2p3/3b1p1p/PpN5/8/BP1P3P/R2QK3 b -Q-- - 0 2").unwrap();
         let mv = BitMove::new(D5 as u32, C4 as u32, BB, None, true, false, false, false);
 
         let mut position = Position::with(board);
@@ -87,7 +87,7 @@ mod do_and_undo_a_move {
 
     #[test]
     fn should_undo_an_enpassant_move() {
-        let board = BoardState::parse_fen("rnbqk1nr/p2p3p/4p3/8/Pp1P1B2/6Pp/1PP2P1P/R2QKB1R b KQkq a3 0 1").unwrap();
+        let board = Board::parse_fen("rnbqk1nr/p2p3p/4p3/8/Pp1P1B2/6Pp/1PP2P1P/R2QKB1R b KQkq a3 0 1").unwrap();
         let zobrist_before_move = board.hash_key;
 
         let mv = BitMove::new(B4 as u32, A3 as u32, BP, None, true, false, true, false);
@@ -134,7 +134,7 @@ mod do_and_undo_a_move {
 
     #[test]
     fn should_be_able_to_undo_multiple_captures() {
-        let board = BoardState::parse_fen("r3k1n1/4p1pp/8/1p1p1Q2/P2p1N2/4P3/5P1P/R3KBNR w KQkq - 0 1").unwrap();
+        let board = Board::parse_fen("r3k1n1/4p1pp/8/1p1p1Q2/P2p1N2/4P3/5P1P/R3KBNR w KQkq - 0 1").unwrap();
         let mut position = Position::with(board);
         let white_knight_captures_pawn = BitMove::new(F4 as u32, D5 as u32, WN, None, true, false, false, false);
 

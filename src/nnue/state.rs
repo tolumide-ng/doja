@@ -1,6 +1,6 @@
 use std::alloc::{self, alloc_zeroed, Layout};
 
-use crate::{bitboard::Bitboard, board::{piece::Piece, state::board_state::BoardState}, color::Color, squares::Square};
+use crate::{bitboard::Bitboard, board::{piece::Piece, state::board_state::Board}, color::Color, squares::Square};
 use crate::color::Color::*;
 
 use super::{accumulator::Accumulator, commons::{Eval, HIDDEN, MAX_DEPTH, QA, QAB, SCALE}, net::{nnue_index, squared_crelu, MODEL}};
@@ -20,7 +20,7 @@ pub(crate) struct NNUEState {
 
 
 impl NNUEState {
-    pub fn from_board(board: &BoardState) -> Box<Self> {
+    pub fn from_board(board: &Board) -> Box<Self> {
         let mut boxed: Box<Self> = unsafe {
             let layout = Layout::new::<Self>();
             let ptr = alloc_zeroed(layout);
@@ -54,7 +54,7 @@ impl NNUEState {
 
 
     /// Refresh the accumulator stack to the given board
-    pub fn refresh(&mut self, board: &BoardState) {
+    pub fn refresh(&mut self, board: &Board) {
         // reset the accumualtor stack
         self.current_acc = 0;
         self.accumulator_stack[self.current_acc] = Accumulator::default();

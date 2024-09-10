@@ -28,10 +28,10 @@ mod tt;
 // use std::{sync::mpsc, time::Instant};
 // use std::{ptr, thread};
 
-use board::{fen::FEN, state::board_state::BoardState};
+use board::{fen::FEN, state::board_state::Board};
 // use bit_move::BitMove;   
 // use bitboard::Bitboard;
-// use board::{state::board_state::BoardState, fen::FEN};
+// use board::{state::board_state::Board, fen::FEN};
 // use color::Color;
 // use constants::{ALPHA, BETA, EMPTY_BOARD, REPETITIONS, START_POSITION, TRICKY_POSITION, ZOBRIST};
 // use masks::EvaluationMasks;
@@ -54,12 +54,12 @@ use search::evaluation::Evaluation;
 fn main() {
     // let _ = UCI::default().reader();
 
-    // let board = BoardState::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
-    // let board = BoardState::parse_fen("8/8/8/8/8/8/8/8 w - - ").unwrap();
+    // let board = Board::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
+    // let board = Board::parse_fen("8/8/8/8/8/8/8/8 w - - ").unwrap();
     
-    // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
-    let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
-    // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap();
+    // let board = Board::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
+    let board = Board::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
+    // let board = Board::parse_fen("r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap();
     println!("{}", board.to_string());
     println!("the score {}", Evaluation::evaluate(&board));
     // println!("{}", board.to_string());

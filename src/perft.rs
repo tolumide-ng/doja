@@ -2,14 +2,14 @@ use std::time::Instant;
 
 use crate::constants::TRICKY_POSITION;
 use crate::move_type::MoveType;
-use crate::board::state::board_state::BoardState;
+use crate::board::state::board_state::Board;
 use crate::board::fen::FEN;
 
 pub(crate) struct Perft;
 
 impl Perft {
     // #[inline(always)]
-    pub(crate) fn driver(depth: usize, nodes: &mut usize, board: BoardState) {
+    pub(crate) fn driver(depth: usize, nodes: &mut usize, board: Board) {
         if depth == 0 {
             *nodes += 1;
             return;
@@ -34,7 +34,7 @@ impl Perft {
         println!("STARTED!!");
         let mut nodes = 0;
         let instant = Instant::now();
-        let board = BoardState::parse_fen(TRICKY_POSITION).unwrap();
+        let board = Board::parse_fen(TRICKY_POSITION).unwrap();
         println!("{}", board.to_string());
         Self::test(depth, &mut nodes, board);
 
@@ -48,7 +48,7 @@ impl Perft {
         
     }
 
-    pub(crate) fn test(depth: usize, nodes: &mut usize, board: BoardState) {
+    pub(crate) fn test(depth: usize, nodes: &mut usize, board: Board) {
         let move_list = board.gen_movement();
 
         for index in 0..move_list.count_mvs() {

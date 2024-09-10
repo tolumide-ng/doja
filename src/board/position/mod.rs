@@ -5,7 +5,7 @@ use crate::color::Color::*;
 use crate::nnue::state::{ON, OFF};
 use crate::squares::Square::*;
 use super::castling::Castling;
-use super::{piece::{Piece, Piece::*}, state::board_state::BoardState};
+use super::{piece::{Piece, Piece::*}, state::board_state::Board};
 
 #[cfg(test)]
 #[path ="./position.tests.rs"]
@@ -24,7 +24,7 @@ impl History {
 }
 
 pub(crate) struct Position {
-    pub(crate) board: BoardState,
+    pub(crate) board: Board,
     pub(crate) nnue_state: Box<NNUEState>,
     pub(crate) history: Vec<History>,
 }
@@ -32,12 +32,12 @@ pub(crate) struct Position {
 
 impl Position {
     pub(crate) fn new() -> Self {
-        let board = BoardState::new();
+        let board = Board::new();
         let nnue_state = NNUEState::from_board(&board);
         Self { history: Vec::new(), board, nnue_state }
     }
 
-    pub(crate) fn with(board: BoardState) -> Self {
+    pub(crate) fn with(board: Board) -> Self {
         let nnue_state = NNUEState::from_board(&board);
         Self { board, nnue_state, history: Vec::new() }
     }

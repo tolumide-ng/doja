@@ -13,7 +13,7 @@ mod tests;
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BoardState {
+pub struct Board {
     pub(crate) turn: Color,
     pub(crate) board: PieceMap,
     pub(crate) castling_rights: Castling,
@@ -26,8 +26,8 @@ pub struct BoardState {
 }
 
 
-impl BoardState {
-    pub fn new() -> BoardState {
+impl Board {
+    pub fn new() -> Board {
         Self { board: PieceMap::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
             occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST, fifty: [0, 0],
             // prev: None, //  castling_table: CASTLING_TABLE,
@@ -620,9 +620,9 @@ impl BoardState {
 }
 
 
-impl FEN for BoardState {}
+impl FEN for Board {}
 
-impl Deref for BoardState {
+impl Deref for Board {
     type Target = PieceMap;
 
     fn deref(&self) -> &Self::Target {
@@ -630,14 +630,14 @@ impl Deref for BoardState {
     }
 }
 
-impl DerefMut for BoardState {
+impl DerefMut for Board {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.board
     }
 }
 
 
-impl Display for BoardState {
+impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.board.to_string())?;
         writeln!(f, "    Side:       {:?}", self.turn)?;

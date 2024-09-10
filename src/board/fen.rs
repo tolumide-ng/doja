@@ -1,7 +1,7 @@
 use thiserror::Error;
 use crate::{board::{castling::Castling, piece::Piece}, color::Color, squares::{Square, SQUARE_NAMES}};
 
-use crate::board::state::board_state::BoardState;
+use crate::board::state::board_state::Board;
 
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -19,8 +19,8 @@ pub enum FENError {
 }
 
 pub trait FEN {
-    fn parse_fen(fen: &str) -> Result<BoardState, FENError> {
-        let mut board = BoardState::new();
+    fn parse_fen(fen: &str) -> Result<Board, FENError> {
+        let mut board = Board::new();
 
         let fen_blocks = fen.split_whitespace().collect::<Vec<_>>();
         if fen_blocks.len() < 4 {
@@ -128,7 +128,7 @@ pub trait FEN {
 
 #[cfg(test)]
 mod fen_tests {
-    use crate::{board::{state::board_state::BoardState, castling::Castling, fen::FENError}, color::Color};
+    use crate::{board::{state::board_state::Board, castling::Castling, fen::FENError}, color::Color};
 
     use super::FEN;
 
@@ -160,7 +160,7 @@ mod fen_tests {
         fn the_fen_blocks_are_incomplete() {
             let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
-            let result: Result<BoardState, FENError> = TestStruct::parse_fen(fen);
+            let result: Result<Board, FENError> = TestStruct::parse_fen(fen);
             assert_eq!(result.unwrap_err(), FENError::NotEnoughBlocks { blocks: 1 });
         }
 
@@ -198,7 +198,7 @@ mod fen_tests {
     #[test]
     fn should_return_a_valid_board() {
         let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        let board = BoardState::parse_fen(fen).unwrap();
+        let board = Board::parse_fen(fen).unwrap();
         assert_eq!(board.castling_rights, Castling::from("KQkq"));
         assert_eq!(board.turn, Color::White);
         assert_eq!(board.enpassant, None);

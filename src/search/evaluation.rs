@@ -1,9 +1,9 @@
-use crate::{board::{state::board_state::BoardState, piece::Piece}, color::Color, constants::{BISHOP_MOBILITY_ENDGAME, BISHOP_MOBILITY_OPENING, BISHOP_UNIT, DOUBLE_PAWN_PENALTY_ENDGAME, DOUBLE_PAWN_PENALTY_OPENING, EVAL_MASKS, ISOLATED_PAWN_PENALTY_ENDGAME, ISOLATED_PAWN_PENALTY_OPENING, KING_SHIELD_BONUS, MATERIAL_SCORE, MIRROR_SCORE, OPENING_PHASE_SCORE, OPEN_FILE_SCORE, PASSED_PAWN_BONUS, PIECE_ATTACKS, PLAYER_PIECES, POSITIONAL_SCORES, QUEEN_MOBILITY_ENDGAME, QUEEN_MOBILITY_OPENING, QUEEN_UNIT, SEMI_OPEN_FILE_SCORE}, game_phase::GamePhase, squares::Square};
+use crate::{board::{state::board_state::Board, piece::Piece}, color::Color, constants::{BISHOP_MOBILITY_ENDGAME, BISHOP_MOBILITY_OPENING, BISHOP_UNIT, DOUBLE_PAWN_PENALTY_ENDGAME, DOUBLE_PAWN_PENALTY_OPENING, EVAL_MASKS, ISOLATED_PAWN_PENALTY_ENDGAME, ISOLATED_PAWN_PENALTY_OPENING, KING_SHIELD_BONUS, MATERIAL_SCORE, MIRROR_SCORE, OPENING_PHASE_SCORE, OPEN_FILE_SCORE, PASSED_PAWN_BONUS, PIECE_ATTACKS, PLAYER_PIECES, POSITIONAL_SCORES, QUEEN_MOBILITY_ENDGAME, QUEEN_MOBILITY_OPENING, QUEEN_UNIT, SEMI_OPEN_FILE_SCORE}, game_phase::GamePhase, squares::Square};
 
 pub(crate) struct Evaluation;
 
 impl Evaluation {
-    pub(crate) fn evaluate(board: &BoardState) -> i32 {
+    pub(crate) fn evaluate(board: &Board) -> i32 {
         let (mut score_opening, mut score_endgame): (i32, i32) = (0, 0);
 
         let game_phase_score = Self::get_game_phase_score(board);
@@ -199,7 +199,7 @@ impl Evaluation {
     /// (4 * bishop count *  material score in the opening) +
     /// (4 * rook count * material score in the opening) +
     /// (2 * queen count * material score in the opening)
-    pub(crate) fn get_game_phase_score(board: &BoardState) -> i32 {
+    pub(crate) fn get_game_phase_score(board: &Board) -> i32 {
         let white_rooks =   (*board[Piece::WR]).count_ones() as i32 * MATERIAL_SCORE[GamePhase::Opening][Piece::WR];
         let white_bishops = (*board[Piece::WB]).count_ones() as i32 * MATERIAL_SCORE[GamePhase::Opening][Piece::WB];
         let white_knights = (*board[Piece::WN]).count_ones() as i32 * MATERIAL_SCORE[GamePhase::Opening][Piece::WN];

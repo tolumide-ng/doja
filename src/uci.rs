@@ -2,7 +2,7 @@ use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread}
 
 use thiserror::Error;
 
-use crate::{bit_move::BitMove, board::{state::board_state::BoardState, fen::FEN}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{control::{self, Control}, alpha_beta::NegaMax, time_control::TimeControl}};
+use crate::{bit_move::BitMove, board::{state::board_state::Board, fen::FEN}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{control::Control, alpha_beta::NegaMax}};
 
 
 
@@ -17,7 +17,7 @@ pub enum UciError {
 }
 
 #[derive(Debug)]
-pub(crate) struct UCI { board: Option<BoardState>, controller: Arc<Mutex<Control>> }
+pub(crate) struct UCI { board: Option<Board>, controller: Arc<Mutex<Control>> }
 
 impl Default for UCI {
     fn default() -> Self {
@@ -26,7 +26,7 @@ impl Default for UCI {
 }
 
 impl UCI {
-    pub(crate) fn update_board_to(&mut self, board: BoardState) {
+    pub(crate) fn update_board_to(&mut self, board: Board) {
         self.board = Some(board);
         self.controller = Arc::new(Mutex::new(Control::default()));
     }
@@ -56,7 +56,7 @@ impl UCI {
                     }
                 }
                 Some("ucinewgame") => {
-                    self.update_board_to(BoardState::parse_fen(START_POSITION).unwrap());
+                    self.update_board_to(Board::parse_fen(START_POSITION).unwrap());
                     write!(stdout(), "{}", self.board.as_ref().unwrap().to_string())?;
                 }
                 Some("go") => {
@@ -106,7 +106,7 @@ impl UCI {
     }
 
 
-    fn apply_moves_to_board(board: BoardState, mut moves: SplitWhitespace) -> BoardState {
+    fn apply_moves_to_board(board: Board, mut moves: SplitWhitespace) -> Board {
         let mut b = board;
         while let Some(mv) = moves.next()  {
             if let Some(b_move) = Self::parse_move(&b, mv) {
@@ -117,7 +117,7 @@ impl UCI {
         b
     }
 
-    fn parse_move(board: &BoardState, mv: &str) -> Option<BitMove> {
+    fn parse_move(board: &Board, mv: &str) -> Option<BitMove> {
         let board_moves = board.gen_movement();
 
         for bmove in board_moves {
@@ -130,11 +130,11 @@ impl UCI {
         None
     }
 
-    fn parse_position(&self, mut input: SplitWhitespace) -> Result<Option<BoardState>, UciError> {
+    fn parse_position(&self, mut input: SplitWhitespace) -> Result<Option<Board>, UciError> {
         match input.next() {
             Some("startpos") => {
                 // create a startpos
-                let mut board = BoardState::parse_fen(START_POSITION).unwrap();
+                let mut board = Board::parse_fen(START_POSITION).unwrap();
                 match input.next() {
                     Some("moves") => {
                         // loop through and apply the moves
@@ -150,7 +150,7 @@ impl UCI {
                 // read the provided fen (all the remaining string after the text 'fen')
                 let remaning_input = input.into_iter().map(|s| format!("{s} ")).collect::<String>();
 
-                match BoardState::parse_fen(&remaning_input) {
+                match Board::parse_fen(&remaning_input) {
                     Ok(mut board) => {
                         // split remaining string at 'moves' and apply the moves to the boardState derived from the parsed fen string
                         if let Some((_, moves)) = remaning_input.split_once("moves") {

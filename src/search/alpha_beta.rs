@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::BitMove, board::{state::board_state::BoardState, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
+use crate::{bit_move::BitMove, board::{state::board_state::Board, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
 use super::{evaluation::Evaluation, time_control::TimeControl};
 
 
@@ -48,7 +48,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         x
     }
 
-    fn iterative_deepening(&mut self, limit: u8, alpha: i32, beta: i32, board: &BoardState) {
+    fn iterative_deepening(&mut self, limit: u8, alpha: i32, beta: i32, board: &Board) {
         let mut alpha = alpha;
         let mut beta = beta;
 
@@ -89,7 +89,7 @@ impl<T> NegaMax<T> where T: TimeControl {
     }
     
     // This method is currently VERY SLOW once the depth starts approaching 8, please work to improve it
-    pub(crate) fn run(controller: Arc<Mutex<T>>, alpha: i32, beta: i32, depth: u8, board: &BoardState) {
+    pub(crate) fn run(controller: Arc<Mutex<T>>, alpha: i32, beta: i32, depth: u8, board: &Board) {
         let mut negamax = Self::new(controller);
         negamax.iterative_deepening(depth, alpha, beta, board);
         // println!("{:?}", negamax.pv_table[0]);
@@ -123,7 +123,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
 
     /// mv: Move (please remove the mut later, and find a abtter way to write this)
-    pub(crate) fn score_move(&mut self, board: &BoardState, mv: BitMove) -> u32 {
+    pub(crate) fn score_move(&mut self, board: &Board, mv: BitMove) -> u32 {
         if self.score_pv {
             if self.pv_table[0][self.ply] == (*mv) as i32 {
                 self.score_pv = false;
@@ -161,7 +161,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
     /// todo! add target on the BitMove, so that this cmp method can be implenented directly on Moves(MvList), that way
     /// we wouldn't need this one anymore
-    pub(crate) fn sort_moves(&mut self, board: &BoardState, mv_list: Moves) -> Vec<BitMove> {
+    pub(crate) fn sort_moves(&mut self, board: &Board, mv_list: Moves) -> Vec<BitMove> {
         let mut sorted_moves: Vec<BitMove> = Vec::with_capacity(mv_list.count_mvs());
         // println!("the count is {}", mv_list.count_mvs());
         sorted_moves.extend_from_slice(&mv_list.list[..mv_list.count_mvs()]);
@@ -173,7 +173,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
 
   /// https://www.chessprogramming.org/Quiescence_Search
-    fn quiescence(&mut self, mut alpha: i32, beta: i32, board: &BoardState) -> i32 {
+    fn quiescence(&mut self, mut alpha: i32, beta: i32, board: &Board) -> i32 {
         // this action will be performed every 2048 nodes
         if (self.nodes & NODES_2047) == 0 {
             self.controller.as_ref().lock().unwrap().communicate();
@@ -213,7 +213,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         return alpha
     }
 
-    fn is_repetition(&self, board: &BoardState) -> bool {
+    fn is_repetition(&self, board: &Board) -> bool {
         for i in 0..self.repetition_index {
             if self.repetition_table[i] == board.hash_key {
                 return true
@@ -225,7 +225,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
     
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
-    fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &BoardState) -> i32 {
+    fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &Board) -> i32 {
         self.pv_length[self.ply] = self.ply;
         self.found_pv = false;
 

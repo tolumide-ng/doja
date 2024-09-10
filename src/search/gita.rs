@@ -1,6 +1,6 @@
 use std::{ops::Neg, sync::atomic::{AtomicBool, Ordering}};
 
-use crate::{board::{piece::Piece, state::board_state::BoardState}, constants::{INFINITY, MATE_VALUE}, move_type::MoveType::*, squares::Square};
+use crate::{board::{piece::Piece, state::board_state::Board}, constants::{INFINITY, MATE_VALUE}, move_type::MoveType::*, squares::Square};
 
 use super::{evaluation::Evaluation, gita_tt::{HashFlag, TTable}};
 
@@ -22,11 +22,11 @@ pub(crate) struct AlphaBeta {
 
 
 impl AlphaBeta {
-    pub(crate) fn evaluate(board: &BoardState) -> i32 {
+    pub(crate) fn evaluate(board: &Board) -> i32 {
         Evaluation::evaluate(board)
     }
 
-    pub(crate) fn iterative_deepening(&mut self, limit: usize, board: &BoardState) {
+    pub(crate) fn iterative_deepening(&mut self, limit: usize, board: &Board) {
         let mut alpha = -INFINITY; let mut beta = INFINITY;
         
         for depth in 1..=limit {
@@ -44,7 +44,7 @@ impl AlphaBeta {
         }
     }
 
-    pub(crate) fn alpha_beta(&mut self, depth: usize, alpha: &mut i32, beta: &mut i32, board: &BoardState) -> i32 {
+    pub(crate) fn alpha_beta(&mut self, depth: usize, alpha: &mut i32, beta: &mut i32, board: &Board) -> i32 {
         let mut hashf: HashFlag = HashFlag::Alpha;
 
         if let Some(val) = self.tt.probe(depth, *alpha, *beta, board.hash_key)  {
@@ -107,7 +107,7 @@ impl AlphaBeta {
     }
 
     /// A quiescent seasrch is an evaluation function that takes into account some dynamic possibilities
-    pub(crate) fn quiescence(&mut self, alpha: &mut i32, beta: &mut i32, board: &BoardState) -> i32 {
+    pub(crate) fn quiescence(&mut self, alpha: &mut i32, beta: &mut i32, board: &Board) -> i32 {
         let king_sq = board[Piece::king(board.turn)].trailing_zeros() as u64;
         let king_in_check = board.is_square_attacked(king_sq, !board.turn);
         if king_in_check {
