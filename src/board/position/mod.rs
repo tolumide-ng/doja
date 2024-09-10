@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 use crate::{bit_move::BitMove, move_type::MoveType, nnue::state::NNUEState, squares::Square};
@@ -24,9 +26,9 @@ impl History {
 }
 
 pub(crate) struct Position {
-    pub(crate) board: Board,
-    pub(crate) nnue_state: Box<NNUEState>,
-    pub(crate) history: Vec<History>,
+    board: Board,
+    nnue_state: Box<NNUEState>,
+    history: Vec<History>,
 }
 
 
@@ -201,5 +203,13 @@ impl Position {
         (self.board.board[WK].count_bits() + self.board.board[BK].count_bits()) as i32 * PIECE_VALUES[WK];
         
         (eval * (700 + total_material/32)) /1024
+    }
+}
+
+impl Deref for Position {
+    type Target = Board;
+
+    fn deref(&self) -> &Self::Target {
+        &self.board
     }
 }
