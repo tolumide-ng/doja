@@ -1,4 +1,4 @@
-use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread};
+use std::{io::{stdout, Seek, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread};
 
 use thiserror::Error;
 
@@ -37,23 +37,25 @@ impl UCI {
         self.controller = Arc::new(Mutex::new(control));
     }
 
-    pub(crate) fn process_input(&mut self, mut input: SplitWhitespace<'_>) -> std::io::Result<bool> {
+    pub(crate) fn process_input<W: Write + Send + 'static>(&mut self, input: String, mut writer: W) -> std::io::Result<bool> {
+        let mut input = input.trim().split_whitespace();
+        
         match input.next() {
             Some("position") => {
                 match self.parse_position(input) {
                     Ok(Some(board)) => {
-                            write!(stdout(), "{}", board.to_string())?;
+                            writeln!(writer, "{}", board.to_string())?;
                             self.update_board_to(board);
                     }
                     Ok(None) => {}
                     Err(e) => {
-                        write!(stdout(), "{}", e)?;
+                        write!(writer, "{}", e)?;
                     }
                 }
             }
             Some("ucinewgame") => {
                 self.update_board_to(Position::with(Board::parse_fen(START_POSITION).unwrap()));
-                write!(stdout(), "{}", self.position.as_ref().unwrap().to_string())?;
+                write!(writer, "{}", self.position.as_ref().unwrap().to_string())?;
             }
             Some("go") => {
                 match self.parse_go(input) {
@@ -67,28 +69,29 @@ impl UCI {
                             let depth = controller.lock().unwrap().depth();
                             NegaMax::run(controller, ALPHA, BETA, depth, &board);
                             println!("done done >>>>");
-                            write!(stdout(), "{}", board.to_string()).unwrap();
+                            write!(writer, "{}", board.to_string()).unwrap();
                         });
                      }
-                    Err(e) => {write!(stdout(), "{}", e)?;}
+                    Err(e) => {write!(writer, "{}", e)?;}
                     _ => {}
                 }
             }
             Some("quit") => { return  Ok(false); }
-            Some("isready") => {stdout().write(b"uci ok")?;}
+            Some("isready") => {writer.write(b"uci ok")?;}
             Some("uci") => { 
             for data in Self::identify() {
-                    writeln!(stdout(), "{}", data)?;
+                    writeln!(writer, "{}", data)?;
                 }
             }
-            Some("d") => {writeln!(stdout(), "{}", self.position.as_ref().unwrap().to_string())?;},
+            Some("d") => {writeln!(writer, "{}", self.position.as_ref().unwrap().to_string())?;},
             Some("stop") => {
                 // self.quit(); println!("told to quit")
                 self.controller.lock().as_mut().unwrap().stop();
-            },
-            Some("stop") => {
                 return Ok(false);
             },
+            // Some("stop") => {
+            //     return Ok(false);
+            // },
             _ => {}
         };
 
@@ -100,9 +103,9 @@ impl UCI {
             let mut buffer = String::new();
             std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
 
-            let input = buffer.trim().split_whitespace();
 
-            if !self.process_input(input)? {
+
+            if !self.process_input(buffer, stdout())? {
                 break;
             };
         }
@@ -112,7 +115,7 @@ impl UCI {
 
 
     pub(crate) fn identify() -> [&'static str; 4] {
-        ["id name: papa", "id author: Tolumide", "id email: tolumideshopein@gmail.com", ""]
+        ["id name: papa", "id author: Tolumide", "id email: tolumideshopein@gmail.com", "uciok"]
     }
 
 
