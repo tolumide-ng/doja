@@ -4,7 +4,6 @@ use crate::board::piece::Piece;
 use crate::bitboard::Bitboard;
 
 
-/// Rename this PieceSet/PieceMap
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PieceMap([Bitboard; 12]);
 

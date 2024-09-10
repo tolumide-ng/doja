@@ -4,7 +4,9 @@ use thiserror::Error;
 
 use crate::{bit_move::BitMove, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{alpha_beta::NegaMax, control::Control}};
 
-
+#[cfg(test)]
+#[path = "./uci.tests.rs"]
+mod uci_tests;
 
 #[derive(Error, Debug)]
 pub enum UciError {
@@ -35,65 +37,73 @@ impl UCI {
         self.controller = Arc::new(Mutex::new(control));
     }
 
+    pub(crate) fn process_input(&mut self, mut input: SplitWhitespace<'_>) -> std::io::Result<bool> {
+        match input.next() {
+            Some("position") => {
+                match self.parse_position(input) {
+                    Ok(Some(board)) => {
+                            write!(stdout(), "{}", board.to_string())?;
+                            self.update_board_to(board);
+                    }
+                    Ok(None) => {}
+                    Err(e) => {
+                        write!(stdout(), "{}", e)?;
+                    }
+                }
+            }
+            Some("ucinewgame") => {
+                self.update_board_to(Position::with(Board::parse_fen(START_POSITION).unwrap()));
+                write!(stdout(), "{}", self.position.as_ref().unwrap().to_string())?;
+            }
+            Some("go") => {
+                match self.parse_go(input) {
+                    Ok(control) if self.position.is_some() => {
+                        println!("the received contro  ller is -------- {}", control.depth());
+                        self.update_controller(control);
+                        println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
+                        let controller = Arc::clone(&self.controller);
+                        let board = self.position.clone().unwrap();
+                        thread::spawn(move || {
+                            let depth = controller.lock().unwrap().depth();
+                            NegaMax::run(controller, ALPHA, BETA, depth, &board);
+                            println!("done done >>>>");
+                            write!(stdout(), "{}", board.to_string()).unwrap();
+                        });
+                     }
+                    Err(e) => {write!(stdout(), "{}", e)?;}
+                    _ => {}
+                }
+            }
+            Some("quit") => { return  Ok(false); }
+            Some("isready") => {stdout().write(b"uci ok")?;}
+            Some("uci") => { 
+            for data in Self::identify() {
+                    writeln!(stdout(), "{}", data)?;
+                }
+            }
+            Some("d") => {writeln!(stdout(), "{}", self.position.as_ref().unwrap().to_string())?;},
+            Some("stop") => {
+                // self.quit(); println!("told to quit")
+                self.controller.lock().as_mut().unwrap().stop();
+            },
+            Some("stop") => {
+                return Ok(false);
+            },
+            _ => {}
+        };
+
+        Ok(true)
+    }
+
     pub(crate) fn reader(&mut self) -> std::io::Result<()> {
         loop {
             let mut buffer = String::new();
             std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
 
-            let mut input = buffer.trim().split_whitespace();
+            let input = buffer.trim().split_whitespace();
 
-            match input.next() {
-                Some("position") => {
-                    match self.parse_position(input) {
-                        Ok(Some(board)) => {
-                                write!(stdout(), "{}", board.to_string())?;
-                                self.update_board_to(board);
-                        }
-                        Ok(None) => {}
-                        Err(e) => {
-                            write!(stdout(), "{}", e)?;
-                        }
-                    }
-                }
-                Some("ucinewgame") => {
-                    self.update_board_to(Position::with(Board::parse_fen(START_POSITION).unwrap()));
-                    write!(stdout(), "{}", self.position.as_ref().unwrap().to_string())?;
-                }
-                Some("go") => {
-                    match self.parse_go(input) {
-                        Ok(control) if self.position.is_some() => {
-                            println!("the received contro  ller is -------- {}", control.depth());
-                            self.update_controller(control);
-                            println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
-                            let controller = Arc::clone(&self.controller);
-                            let board = self.position.clone().unwrap();
-                            thread::spawn(move || {
-                                let depth = controller.lock().unwrap().depth();
-                                NegaMax::run(controller, ALPHA, BETA, depth, &board);
-                                println!("done done >>>>");
-                                write!(stdout(), "{}", board.to_string()).unwrap();
-                            });
-                         }
-                        Err(e) => {write!(stdout(), "{}", e)?;}
-                        _ => {}
-                    }
-                }
-                Some("quit") => { break; }
-                Some("isready") => {stdout().write(b"uci ok")?; continue}
-                Some("uci") => { 
-                for data in Self::identify() {
-                        writeln!(stdout(), "{}", data)?;
-                    }
-                }
-                Some("d") => {writeln!(stdout(), "{}", self.position.as_ref().unwrap().to_string())?;},
-                Some("stop") => {
-                    // self.quit(); println!("told to quit")
-                    self.controller.lock().as_mut().unwrap().stop();
-                },
-                Some("stop") => {
-                    break;
-                },
-                _ => {}
+            if !self.process_input(input)? {
+                break;
             };
         }
 
@@ -101,7 +111,7 @@ impl UCI {
     }
 
 
-    fn identify() -> [&'static str; 4] {
+    pub(crate) fn identify() -> [&'static str; 4] {
         ["id name: papa", "id author: Tolumide", "id email: tolumideshopein@gmail.com", ""]
     }
 
