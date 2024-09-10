@@ -486,7 +486,7 @@ mod board_state_tests {
             board.board[Piece::BR] = Bitboard::from(black_rooks);
     
             let expected = [(Square::E1, Square::C1, Piece::WK)];
-            let received = board.get_castling(Color::White);
+        let received = board.get_castling(Color::White);
  
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {

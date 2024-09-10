@@ -6,9 +6,9 @@ use crate::bitboard::Bitboard;
 
 /// Rename this PieceSet/PieceMap
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Board([Bitboard; 12]);
+pub struct PieceMap([Bitboard; 12]);
 
-impl Deref for Board {
+impl Deref for PieceMap {
     type Target = [Bitboard; 12];
 
     fn deref(&self) -> &Self::Target {
@@ -16,14 +16,14 @@ impl Deref for Board {
     }
 }
 
-impl DerefMut for Board {
+impl DerefMut for PieceMap {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0   
     }
 }
 
 
-impl Board {
+impl PieceMap {
     pub fn new() -> Self {
         Self([Bitboard::new(); 12])
     }
@@ -35,7 +35,7 @@ impl Board {
 
 
 
-impl Display for Board {
+impl Display for PieceMap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // let pieces = Piece::unicode_pieces();
         let pieces = Piece::ascii_pieces();

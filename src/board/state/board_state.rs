@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{bit_move::BitMove, board::board::Board, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::START_POSITION_ZOBRIST};
+use crate::{bit_move::BitMove, board::piece_map::PieceMap, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::START_POSITION_ZOBRIST};
 
 use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
@@ -15,7 +15,7 @@ mod tests;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BoardState {
     pub(crate) turn: Color,
-    pub(crate) board: Board,
+    pub(crate) board: PieceMap,
     pub(crate) castling_rights: Castling,
     pub(crate) enpassant: Option<Square>,
     pub(crate) occupancies: [u64; OCCUPANCIES], // 0-white, 1-black, 2-both
@@ -28,7 +28,7 @@ pub struct BoardState {
 
 impl BoardState {
     pub fn new() -> BoardState {
-        Self { board: Board::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
+        Self { board: PieceMap::new(), turn: Color::White, enpassant: None, castling_rights: Castling::all(), 
             occupancies: [0; OCCUPANCIES], hash_key: START_POSITION_ZOBRIST, fifty: [0, 0],
             // prev: None, //  castling_table: CASTLING_TABLE,
         }
@@ -623,7 +623,7 @@ impl BoardState {
 impl FEN for BoardState {}
 
 impl Deref for BoardState {
-    type Target = Board;
+    type Target = PieceMap;
 
     fn deref(&self) -> &Self::Target {
         &self.board    
