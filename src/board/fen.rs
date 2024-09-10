@@ -1,7 +1,7 @@
 use thiserror::Error;
 use crate::{board::{castling::Castling, piece::Piece}, color::Color, squares::{Square, SQUARE_NAMES}};
 
-use crate::board::state::board_state::Board;
+use crate::board::state::board::Board;
 
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -128,7 +128,7 @@ pub trait FEN {
 
 #[cfg(test)]
 mod fen_tests {
-    use crate::{board::{state::board_state::Board, castling::Castling, fen::FENError}, color::Color};
+    use crate::{board::{state::board::Board, castling::Castling, fen::FENError}, color::Color};
 
     use super::FEN;
 

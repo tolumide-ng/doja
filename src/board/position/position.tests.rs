@@ -6,7 +6,7 @@ mod do_and_undo_a_move {
     // use crate::bit_move::BitMove;
     // use crate::board::piece::Piece::*;
     
-    use crate::board::state::board_state::Board;
+    use crate::board::state::board::Board;
     use crate::board::piece::Piece::*;
     use crate::color::Color::*;
     use crate::bit_move::BitMove;

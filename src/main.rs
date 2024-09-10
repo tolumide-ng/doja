@@ -28,7 +28,7 @@ mod tt;
 // use std::{sync::mpsc, time::Instant};
 // use std::{ptr, thread};
 
-use board::{fen::FEN, state::board_state::Board};
+use board::{fen::FEN, state::board::Board};
 // use bit_move::BitMove;   
 // use bitboard::Bitboard;
 // use board::{state::board_state::Board, fen::FEN};

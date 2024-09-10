@@ -2,7 +2,7 @@ use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread}
 
 use thiserror::Error;
 
-use crate::{bit_move::BitMove, board::{state::board_state::Board, fen::FEN}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{control::Control, alpha_beta::NegaMax}};
+use crate::{bit_move::BitMove, board::{state::board::Board, fen::FEN}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{control::Control, alpha_beta::NegaMax}};
 
 
 

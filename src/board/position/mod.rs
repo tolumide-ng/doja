@@ -5,7 +5,7 @@ use crate::color::Color::*;
 use crate::nnue::state::{ON, OFF};
 use crate::squares::Square::*;
 use super::castling::Castling;
-use super::{piece::{Piece, Piece::*}, state::board_state::Board};
+use super::{piece::{Piece, Piece::*}, state::board::Board};
 
 #[cfg(test)]
 #[path ="./position.tests.rs"]

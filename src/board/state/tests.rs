@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod board_state_tests {
+mod board_tests {
     use crate::board::piece::Piece;
     use crate::board::piece::Piece::*;
     use crate::color::Color::*;
@@ -8,10 +8,10 @@ mod board_state_tests {
     use crate::move_type::MoveType::*;
 
     use crate::squares::Square::*;
-    use crate::{bitboard::Bitboard, board::{castling::Castling, state::board_state::Board}, color::Color, squares::Square};
+    use crate::{bitboard::Bitboard, board::{castling::Castling, state::board::Board}, color::Color, squares::Square};
 
     #[test]
-    fn should_create_a_new_board_state() {
+    fn should_create_a_new_board() {
         let board = Board::new();
         assert_eq!(board.turn, Color::White);
         assert_eq!(board.castling_rights, Castling::all());
@@ -128,7 +128,7 @@ mod board_state_tests {
 
     #[cfg(test)]
     mod  single_push_targets {
-        use crate::{bitboard::Bitboard, board::{piece::Piece, state::board_state::Board}, color::Color, squares::Square};
+        use crate::{bitboard::Bitboard, board::{piece::Piece, state::board::Board}, color::Color, squares::Square};
 
         #[test]
         fn single_push_target_for_white_pawn() {
@@ -171,7 +171,7 @@ mod board_state_tests {
 
     #[cfg(test)]
     mod double_push_targets {
-        use crate::{bitboard::Bitboard, board::{piece::Piece, state::board_state::Board}, color::Color, squares::Square};
+        use crate::{bitboard::Bitboard, board::{piece::Piece, state::board::Board}, color::Color, squares::Square};
 
         #[test]
         fn double_push_for_white_pawns() {

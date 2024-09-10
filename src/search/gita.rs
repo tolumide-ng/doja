@@ -1,6 +1,6 @@
 use std::{ops::Neg, sync::atomic::{AtomicBool, Ordering}};
 
-use crate::{board::{piece::Piece, state::board_state::Board}, constants::{INFINITY, MATE_VALUE}, move_type::MoveType::*, squares::Square};
+use crate::{board::{piece::Piece, state::board::Board}, constants::{INFINITY, MATE_VALUE}, move_type::MoveType::*, squares::Square};
 
 use super::{evaluation::Evaluation, gita_tt::{HashFlag, TTable}};
 
