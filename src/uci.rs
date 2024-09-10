@@ -2,7 +2,7 @@ use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread}
 
 use thiserror::Error;
 
-use crate::{bit_move::BitMove, board::{state::board::Board, fen::FEN}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{control::Control, alpha_beta::NegaMax}};
+use crate::{bit_move::BitMove, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{alpha_beta::NegaMax, control::Control}};
 
 
 
@@ -17,17 +17,17 @@ pub enum UciError {
 }
 
 #[derive(Debug)]
-pub(crate) struct UCI { board: Option<Board>, controller: Arc<Mutex<Control>> }
+pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>> }
 
 impl Default for UCI {
     fn default() -> Self {
-        Self { board: None, controller: Arc::new(Mutex::new(Control::default())) }
+        Self { position: None, controller: Arc::new(Mutex::new(Control::default())) }
     }
 }
 
 impl UCI {
-    pub(crate) fn update_board_to(&mut self, board: Board) {
-        self.board = Some(board);
+    pub(crate) fn update_board_to(&mut self, board: Position) {
+        self.position = Some(board);
         self.controller = Arc::new(Mutex::new(Control::default()));
     }
 
@@ -56,17 +56,17 @@ impl UCI {
                     }
                 }
                 Some("ucinewgame") => {
-                    self.update_board_to(Board::parse_fen(START_POSITION).unwrap());
-                    write!(stdout(), "{}", self.board.as_ref().unwrap().to_string())?;
+                    self.update_board_to(Position::with(Board::parse_fen(START_POSITION).unwrap()));
+                    write!(stdout(), "{}", self.position.as_ref().unwrap().to_string())?;
                 }
                 Some("go") => {
                     match self.parse_go(input) {
-                        Ok(control) if self.board.is_some() => {
+                        Ok(control) if self.position.is_some() => {
                             println!("the received contro  ller is -------- {}", control.depth());
                             self.update_controller(control);
                             println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
                             let controller = Arc::clone(&self.controller);
-                            let board = self.board.clone().unwrap();
+                            let board = self.position.clone().unwrap();
                             thread::spawn(move || {
                                 let depth = controller.lock().unwrap().depth();
                                 NegaMax::run(controller, ALPHA, BETA, depth, &board);
@@ -85,7 +85,7 @@ impl UCI {
                         writeln!(stdout(), "{}", data)?;
                     }
                 }
-                Some("d") => {writeln!(stdout(), "{}", self.board.as_ref().unwrap().to_string())?;},
+                Some("d") => {writeln!(stdout(), "{}", self.position.as_ref().unwrap().to_string())?;},
                 Some("stop") => {
                     // self.quit(); println!("told to quit")
                     self.controller.lock().as_mut().unwrap().stop();
@@ -106,18 +106,21 @@ impl UCI {
     }
 
 
-    fn apply_moves_to_board(board: Board, mut moves: SplitWhitespace) -> Board {
-        let mut b = board;
+    fn apply_moves_to_board(state: &mut Position, mut moves: SplitWhitespace) {
+        // let mut p = state;
         while let Some(mv) = moves.next()  {
-            if let Some(b_move) = Self::parse_move(&b, mv) {
-                b = b.make_move(b_move, MoveType::AllMoves).unwrap();
+            // if let Some(b_move) = Self::parse_move(&b, mv) {
+            //     b = b.make_move(b_move, MoveType::AllMoves).unwrap();
+            // }
+
+            if let Some(b_move) = Self::parse_move(&state, mv) {
+                // b = b.make_move(b_move, MoveType::AllMoves).unwrap();
+                state.make_move(b_move, MoveType::AllMoves);
             }
         }
-
-        b
     }
 
-    fn parse_move(board: &Board, mv: &str) -> Option<BitMove> {
+    fn parse_move(board: &Position, mv: &str) -> Option<BitMove> {
         let board_moves = board.gen_movement();
 
         for bmove in board_moves {
@@ -130,34 +133,37 @@ impl UCI {
         None
     }
 
-    fn parse_position(&self, mut input: SplitWhitespace) -> Result<Option<Board>, UciError> {
+    fn parse_position(&self, mut input: SplitWhitespace) -> Result<Option<Position>, UciError> {
         match input.next() {
             Some("startpos") => {
                 // create a startpos
-                let mut board = Board::parse_fen(START_POSITION).unwrap();
+                // let mut board = Board::parse_fen(START_POSITION).unwrap();
+                // let board_state = Position::new();
+                let mut board_state = Position::with(Board::parse_fen(START_POSITION).unwrap());
                 match input.next() {
                     Some("moves") => {
                         // loop through and apply the moves
-                        board = Self::apply_moves_to_board(board, input);
-                        return Ok(Some(board))
+                        Self::apply_moves_to_board(&mut board_state, input);
+                        return Ok(Some(board_state))
                     }
                     _ => {}
                 }
                 // returns the created startpos
-                return Ok(Some(board))
+                return Ok(Some(board_state))
             }
             Some("fen") => {
                 // read the provided fen (all the remaining string after the text 'fen')
                 let remaning_input = input.into_iter().map(|s| format!("{s} ")).collect::<String>();
 
                 match Board::parse_fen(&remaning_input) {
-                    Ok(mut board) => {
+                    Ok(board) => {
+                        let mut board_state = Position::with(board);
                         // split remaining string at 'moves' and apply the moves to the boardState derived from the parsed fen string
                         if let Some((_, moves)) = remaning_input.split_once("moves") {
                             // loop through and apply the moves
-                            board = Self::apply_moves_to_board(board, moves.split_whitespace());
+                            Self::apply_moves_to_board(&mut board_state, moves.split_whitespace());
                         }
-                        return Ok(Some(board))
+                        return Ok(Some(board_state))
                     }
                     Err(e) => { return Err(UciError::FenError(e.to_string())) }
                 }
@@ -171,7 +177,7 @@ impl UCI {
 
     fn parse_go(&self, mut input: SplitWhitespace) -> Result<Control, UciError> {
         let mut controller = Control::default();
-        let b = self.board.as_ref().unwrap();
+        let b = self.position.as_ref().unwrap();
 
         match input.next() {
             // search until the "stop" command. Do not exit the search without being told so in this mode!

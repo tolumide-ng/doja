@@ -25,6 +25,7 @@ impl History {
     }
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct Position {
     board: Board,
     nnue_state: Box<NNUEState>,
