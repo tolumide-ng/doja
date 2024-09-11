@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::BitMove, board::{state::board::Board, piece::Piece}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
+use crate::{bit_move::BitMove, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
 use super::{evaluation::Evaluation, time_control::TimeControl};
 
 
@@ -13,6 +13,8 @@ pub struct NegaMax<T: TimeControl> {
     killer_moves: [[u32; 64]; 2],
     history_moves: [[u32; TOTAL_SQUARES]; TOTAL_PIECES],
     pv_length: [usize; 64],
+    /// The Principal variation (PV) is a sequence of moves that programs consider best and therefore expect to be played. All the nodes included by the PV are PV-nodes
+    /// [Principal Variation](https://www.chessprogramming.org/Principal_Variation)
     pv_table: [[i32; 64]; MAX_PLY],
     nodes: u64,
     ply: usize,
@@ -48,7 +50,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         x
     }
 
-    fn iterative_deepening(&mut self, limit: u8, alpha: i32, beta: i32, board: &Board) {
+    fn iterative_deepening(&mut self, limit: u8, alpha: i32, beta: i32, board: &mut Position) {
         let mut alpha = alpha;
         let mut beta = beta;
 
@@ -89,7 +91,7 @@ impl<T> NegaMax<T> where T: TimeControl {
     }
     
     // This method is currently VERY SLOW once the depth starts approaching 8, please work to improve it
-    pub(crate) fn run(controller: Arc<Mutex<T>>, alpha: i32, beta: i32, depth: u8, board: &Board) {
+    pub(crate) fn run(controller: Arc<Mutex<T>>, alpha: i32, beta: i32, depth: u8, board: &mut Position) {
         let mut negamax = Self::new(controller);
         negamax.iterative_deepening(depth, alpha, beta, board);
         // println!("{:?}", negamax.pv_table[0]);
@@ -173,7 +175,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
 
   /// https://www.chessprogramming.org/Quiescence_Search
-    fn quiescence(&mut self, mut alpha: i32, beta: i32, board: &Board) -> i32 {
+    fn quiescence(&mut self, mut alpha: i32, beta: i32, mut board: &mut Position) -> i32 {
         // this action will be performed every 2048 nodes
         if (self.nodes & NODES_2047) == 0 {
             self.controller.as_ref().lock().unwrap().communicate();
@@ -192,12 +194,16 @@ impl<T> NegaMax<T> where T: TimeControl {
         let sorted_moves = self.sort_moves(board, board.gen_movement().into_iter());
 
         for mv in sorted_moves {
-            let Some(new_board) = board.make_move(mv, MoveType::CapturesOnly) else {continue};
+            // println!("quiescenece");
+            if !board.make_move_nnue(mv, MoveType::CapturesOnly) {
+                continue;
+            };
             self.ply += 1;
             self.repetition_index+=1;
-            self.repetition_table[self.repetition_index] = new_board.hash_key;
+            self.repetition_table[self.repetition_index] = board.hash_key;
             // print!("{}, ", self.ply);
-            let score = -self.quiescence(-beta, -alpha, &new_board);
+            let score = -self.quiescence(-beta, -alpha, &mut board);
+            board.undo_move(true);
             self.ply -=1;
             self.repetition_index-=1;
 
@@ -225,7 +231,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
     
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
-    fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &Board) -> i32 {
+    fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, mut board: &mut Position) -> i32 {
         self.pv_length[self.ply] = self.ply;
         self.found_pv = false;
 
@@ -237,11 +243,13 @@ impl<T> NegaMax<T> where T: TimeControl {
         let pv_node = (beta - alpha) > 1;
         // if we had cached the score for this move before, we return it, and confirm that the current node is not a PV node(principal variation)
         if (self.ply > 0) && pv_node == false {
-            // read hash entry if we're not in a root ply and hash enret is available and current node is not a principal variation node
+            // read hash entry if we're not in a root ply and hash entry is available, current node is not a principal variation node
             if let Some(score) =  self.tt.probe(board.hash_key, depth, alpha, beta, self.ply) {
                 return score
             }
         }
+
+        
         // this action will be performed every 2048 nodes
         if (self.nodes & NODES_2047) == 0 {
             self.controller.as_ref().lock().unwrap().communicate();
@@ -273,6 +281,8 @@ impl<T> NegaMax<T> where T: TimeControl {
         // -- "Null-move forward pruning is not used, at least in endgames.  If you do try to use it in endgames, very bad things will happen very often."
         let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !king_in_check && self.ply> 0;
         // added 1 to the depth_reduction factor to be sure, there is atleast one more depth that would be checked
+        
+        
         if null_move_forward_pruning_conditions {
             // nmfp: null-move forward prunning (board)
             let mut nmfp_board = board.clone();
@@ -283,12 +293,14 @@ impl<T> NegaMax<T> where T: TimeControl {
             // update the zobrist hash accordingly, since this mutating actions do not direcly update the zobrist hash
             if let Some(enpass_sq) = nmfp_board.enpassant {
                 // we know that we're going to remove the enpass if it's available (see 4 lines below), so we remove it from the hashkey if it exists here
-                nmfp_board.hash_key ^= ZOBRIST.enpassant_keys[enpass_sq];
+                nmfp_board.set_zobrist(nmfp_board.hash_key ^ ZOBRIST.enpassant_keys[enpass_sq]);
             }
             nmfp_board.set_turn(!board.turn);
             nmfp_board.set_enpassant(None);
-            nmfp_board.hash_key ^= ZOBRIST.side_key;
-            let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &nmfp_board);
+            nmfp_board.set_zobrist(nmfp_board.hash_key ^ ZOBRIST.side_key);
+            let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut nmfp_board);
+
+
 
             self.ply -= 1;
             self.repetition_index-=1;
@@ -301,6 +313,9 @@ impl<T> NegaMax<T> where T: TimeControl {
             }
         }
 
+
+
+        
         let moves = board.gen_movement().into_iter();
         if self.follow_pv {
             self.enable_pv_scoring(&moves);
@@ -310,13 +325,18 @@ impl<T> NegaMax<T> where T: TimeControl {
         let mut moves_searched = 0;
 
         // loop through hte moves
+        // for mv in &sorted_moves {
+        //     println!("======================>>>>>>> src:::: {} target---{} castling****{}", mv.get_src(), mv.get_target(), mv.get_castling());
+        // }
         for mv in sorted_moves {
-            let play_moves = board.make_move(mv, MoveType::AllMoves);
+            let legal_move = board.make_move_nnue(mv, MoveType::AllMoves);
 
-            let Some(new_board) = play_moves else {continue};
+            // let Some(new_board) = play_moves else {continue};
+            if !legal_move { continue; }
+            
             self.ply +=1;
             self.repetition_index+=1;
-            self.repetition_table[self.repetition_index] = new_board.hash_key;
+            self.repetition_table[self.repetition_index] = board.hash_key;
             legal_moves += 1;
 
 
@@ -324,7 +344,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             let score = match moves_searched {
                 0 => {
                     // full depth search
-                    -self.negamax(-beta, -alpha, depth-1, &new_board)
+                    -self.negamax(-beta, -alpha, depth-1, &mut board)
                 },
                 _ => {
                     // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
@@ -332,22 +352,24 @@ impl<T> NegaMax<T> where T: TimeControl {
                     let ok_to_reduce = !king_in_check && mv.get_promotion().is_none() && !mv.get_capture();
 
                     let mut value =  if (moves_searched >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && ok_to_reduce {
-                        -self.negamax(-alpha-1, -alpha, depth-2, &new_board)
+                        -self.negamax(-alpha-1, -alpha, depth-2, &mut board)
                         // -self.negamax(-(alpha + 1), -alpha, depth-2, &new_board)
                     } else {
                         alpha +1
                     };
 
                     if value > alpha {
-                        value = -self.negamax(-alpha-1, -alpha, depth-1, &new_board);
+                        value = -self.negamax(-alpha-1, -alpha, depth-1, &mut board);
                         // value = -self.negamax(-(alpha+1), -alpha, depth-1, &new_board);
                         if (value > alpha) && (value < beta) {
-                            value = -self.negamax(-beta, -alpha, depth-1, &new_board);
+                            value = -self.negamax(-beta, -alpha, depth-1, &mut board);
                         }
                     }
                     value
                 }
             };
+
+            board.undo_move(true);
 
 
             

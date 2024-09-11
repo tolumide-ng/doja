@@ -173,8 +173,8 @@ impl Evaluation {
 
         }
 
-        println!("game phase>>>>>> {:?}", game_phase);
-        println!("::::opening >>> {score_opening} :::::endgame >>> {score_endgame}");
+        // println!("game phase>>>>>> {:?}", game_phase);
+        // println!("::::opening >>> {score_opening} :::::endgame >>> {score_endgame}");
 
         let score = match game_phase {
             GamePhase::MiddleGame => {

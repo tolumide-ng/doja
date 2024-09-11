@@ -28,24 +28,21 @@ mod tt;
 // use std::{sync::mpsc, time::Instant};
 // use std::{ptr, thread};
 
-use board::{fen::FEN, state::board::Board};
-use constants::TRICKY_POSITION;
+use std::sync::{Arc, Mutex};
+
+use board::{fen::FEN, position::Position, state::board::Board};
+use constants::{ALPHA, BETA, TRICKY_POSITION};
 // use bit_move::BitMove;   
 // use bitboard::Bitboard;
 // use board::{state::board_state::Board, fen::FEN};
 // use color::Color;
 // use constants::{ALPHA, BETA, EMPTY_BOARD, REPETITIONS, START_POSITION, TRICKY_POSITION, ZOBRIST};
-// use masks::EvaluationMasks;
-// use move_type::MoveType;
-use perft::Perft;
+// use masks::EvaluationMasks
 // use search::control::Control;
-use search::evaluation::Evaluation;
-// use squares::Square;
-// use tt::{HashFlag, TTable};
-use uci::UCI;
+use search::control::Control;
 // use zobrist::Zobrist;
 
-// use crate::{constants::CMK_POSITION, search::{negamax::NegaMax}};
+use crate::search::alpha_beta::NegaMax;
 
 
 
@@ -64,9 +61,9 @@ fn main() {
     // println!("{}", board.to_string());
     // println!("the score {}", Evaluation::evaluate(&board));
 
-    println!("STARTING>>>>>");
+    // println!("STARTING>>>>>");
 
-    Perft::start(6);
+    // Perft::start(6);
 
 
     
@@ -75,8 +72,18 @@ fn main() {
     // Evaluation::get_game_phase_score(&board);
 
     // let score = Evaluation::evaluate(&board);
-    // println!("the scoer now ius >>>> {}", score)
+    // println!("the scoer now ius >>>> {}", score)::::
     // EvaluationMasks::init();
+
+    let controller = Arc::new(Mutex::new(Control::default()));
+    let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+    println!("**********************BEFORE*****************************");
+    println!("{}", board.to_string());
+    NegaMax::run(controller, ALPHA, BETA, 8, &mut board);
+    println!("**********************AFTER*****************************");
+    println!("{}", board.to_string());
+
+
 
     // println!()
 }

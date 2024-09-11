@@ -80,6 +80,7 @@ impl NNUEState {
 
     /// Pop the top of the accumualtor stack
     pub(crate) fn pop(&mut self) {
+        // println!("the current accumulator is {}", self.current_acc);
         self.current_acc -=1;
     }
 

@@ -1,9 +1,9 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 use crate::{bit_move::BitMove, move_type::MoveType, nnue::state::NNUEState, squares::Square};
-use crate::color::Color::*;
+use crate::color::Color::{self, *};
 use crate::nnue::state::{ON, OFF};
 use crate::squares::Square::*;
 use super::castling::Castling;
@@ -70,23 +70,34 @@ impl Position {
         false
     }
 
+    pub(crate) fn set_enpassant(&mut self, enpass: Option<Square>) {
+        self.board.set_enpassant(enpass);
+    }
+
+    pub(crate) fn set_turn(&mut self, turn: Color) {
+        self.board.set_turn(turn);
+    }
+
+    pub(crate) fn set_zobrist(&mut self, key: u64) {
+        self.board.set_zobrist(key);
+    }
+
     pub(crate) fn make_move_nnue(&mut self, mv: BitMove, mv_ty: MoveType) -> bool {
         let (src, tgt) = (mv.get_src(), mv.get_target());
         let tgt_sq = Square::from(tgt);
-
         let turn = self.board.turn;
         let victim = self.board.get_piece_at(tgt, !turn);
-        let rook_mvs = self.board.validate_castling_move(&mv); // rook movements
 
         if self.make_move(mv, mv_ty) {
             self.nnue_state.push();
-    
+            
             if mv.get_enpassant() {
                 let enpass_tgt = Square::from(match !turn {Black => tgt as u64 + 8, _ => tgt as u64 -  8});
                 self.nnue_state.manual_update::<OFF>(Piece::pawn(!turn), enpass_tgt);
             } else if mv.get_capture() {
                 self.nnue_state.manual_update::<OFF>(victim.unwrap(), tgt_sq);
             } else if mv.get_castling() {
+                let rook_mvs = self.board.validate_castling_move(&mv); // rook movements
                 let (rook_src, rook_tgt) = rook_mvs.unwrap();
                 self.nnue_state.move_update(Piece::rook(turn), rook_src, rook_tgt);
             }
@@ -214,3 +225,10 @@ impl Deref for Position {
         &self.board
     }
 }
+
+
+// impl DerefMut for Position {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         &mut self.board
+//     }
+// }
