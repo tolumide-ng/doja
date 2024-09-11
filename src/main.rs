@@ -29,6 +29,7 @@ mod tt;
 // use std::{ptr, thread};
 
 use board::{fen::FEN, state::board::Board};
+use constants::TRICKY_POSITION;
 // use bit_move::BitMove;   
 // use bitboard::Bitboard;
 // use board::{state::board_state::Board, fen::FEN};
@@ -36,7 +37,7 @@ use board::{fen::FEN, state::board::Board};
 // use constants::{ALPHA, BETA, EMPTY_BOARD, REPETITIONS, START_POSITION, TRICKY_POSITION, ZOBRIST};
 // use masks::EvaluationMasks;
 // use move_type::MoveType;
-// use perft::Perft;
+use perft::Perft;
 // use search::control::Control;
 use search::evaluation::Evaluation;
 // use squares::Square;
@@ -52,7 +53,7 @@ use uci::UCI;
 
 // #[tokio::main]
 fn main() {
-    let _ = UCI::default().reader();
+    // let _ = UCI::default().reader();
 
     // // let board = Board::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
     // // let board = Board::parse_fen("8/8/8/8/8/8/8/8 w - - ").unwrap();
@@ -62,6 +63,10 @@ fn main() {
     // // let board = Board::parse_fen("r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap();
     // println!("{}", board.to_string());
     // println!("the score {}", Evaluation::evaluate(&board));
+
+    println!("STARTING>>>>>");
+
+    Perft::start(6);
 
 
     
