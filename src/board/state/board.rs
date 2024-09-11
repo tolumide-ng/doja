@@ -15,6 +15,7 @@ mod tests;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Board {
     pub(crate) turn: Color,
+    // change this name eventually to piece_map everywhere too
     pub(crate) board: PieceMap,
     pub(crate) castling_rights: Castling,
     pub(crate) enpassant: Option<Square>,

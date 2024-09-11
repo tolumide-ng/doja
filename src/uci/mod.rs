@@ -37,7 +37,7 @@ impl UCI {
         self.controller = Arc::new(Mutex::new(control));
     }
 
-    pub(crate) fn process_input<W: Write + Send + 'static>(&mut self, input: String, mut writer: W) -> std::io::Result<bool> {
+    pub(crate) fn process_input<W: Write>(&mut self, input: String, mut writer: W) -> std::io::Result<bool> {
         let mut input = input.trim().split_whitespace();
         
         match input.next() {
@@ -65,20 +65,25 @@ impl UCI {
                         println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
                         let controller = Arc::clone(&self.controller);
                         let board = self.position.clone().unwrap();
-                        thread::spawn(move || {
+                        let result = thread::spawn(move || {
                             let depth = controller.lock().unwrap().depth();
                             NegaMax::run(controller, ALPHA, BETA, depth, &board);
-                            println!("done done >>>>");
-                            write!(writer, "{}", board.to_string()).unwrap();
-                        });
+                            // println!("done done >>>>");
+                            // write!(writer, "{}", board.to_string()).unwrap();
+                            board
+                        }).join().unwrap();
+
+                        write!(writer, "{}", result.to_string()).unwrap();
+
+
                      }
                     Err(e) => {write!(writer, "{}", e)?;}
                     _ => {}
                 }
             }
             Some("quit") => { return  Ok(false); }
-            Some("isready") => {writer.write(b"uci ok")?;}
-            Some("uci") => { 
+            Some("isready") => {writeln!(writer, "readyok")?;}
+            Some("uci") => {
             for data in Self::identify() {
                     writeln!(writer, "{}", data)?;
                 }
@@ -151,7 +156,6 @@ impl UCI {
             Some("startpos") => {
                 // create a startpos
                 // let mut board = Board::parse_fen(START_POSITION).unwrap();
-                // let board_state = Position::new();
                 let mut board_state = Position::with(Board::parse_fen(START_POSITION).unwrap());
                 match input.next() {
                     Some("moves") => {
@@ -167,7 +171,7 @@ impl UCI {
             Some("fen") => {
                 // read the provided fen (all the remaining string after the text 'fen')
                 let remaning_input = input.into_iter().map(|s| format!("{s} ")).collect::<String>();
-
+                
                 match Board::parse_fen(&remaning_input) {
                     Ok(board) => {
                         let mut board_state = Position::with(board);

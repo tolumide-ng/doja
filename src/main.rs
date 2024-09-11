@@ -41,7 +41,7 @@ use board::{fen::FEN, state::board::Board};
 use search::evaluation::Evaluation;
 // use squares::Square;
 // use tt::{HashFlag, TTable};
-// use uci::UCI;
+use uci::UCI;
 // use zobrist::Zobrist;
 
 // use crate::{constants::CMK_POSITION, search::{negamax::NegaMax}};
@@ -52,16 +52,16 @@ use search::evaluation::Evaluation;
 
 // #[tokio::main]
 fn main() {
-    // let _ = UCI::default().reader();
+    let _ = UCI::default().reader();
 
-    // let board = Board::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
-    // let board = Board::parse_fen("8/8/8/8/8/8/8/8 w - - ").unwrap();
+    // // let board = Board::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
+    // // let board = Board::parse_fen("8/8/8/8/8/8/8/8 w - - ").unwrap();
     
-    // let board = Board::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
-    let board = Board::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
-    // let board = Board::parse_fen("r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap();
-    println!("{}", board.to_string());
-    println!("the score {}", Evaluation::evaluate(&board));
+    // // let board = Board::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
+    // let board = Board::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
+    // // let board = Board::parse_fen("r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap();
+    // println!("{}", board.to_string());
+    // println!("the score {}", Evaluation::evaluate(&board));
 
 
     

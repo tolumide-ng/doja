@@ -39,12 +39,11 @@ impl Display for PieceMap {
         // let pieces = Piece::unicode_pieces();
         let pieces = Piece::ascii_pieces();
 
-
-        println!("");
+        writeln!(f, "")?;
         for rank in (0..8).rev() {
             for file in 0..8 {
                 if file == 0 {
-                    print!("{}  ", rank+1)
+                    write!(f, "  {} ", rank+1)?;
                 }
                 let square = rank * 8 + file;
                 let mut piece = '\u{002E}';
@@ -58,13 +57,12 @@ impl Display for PieceMap {
                     }
                 }
                 
-                print!(" {} ", piece)
+                write!(f, " {piece} ")?;
             }
-            println!("");
+            writeln!(f, "")?;
         }
-        println!("    \n    a  b  c  d  e  f  g  h\n");
-
-        // println!("\n {}", self.0);
+        writeln!(f, "    \n     a  b  c  d  e  f  g  h\n")?;
+        
         Ok(())
     }
 }
