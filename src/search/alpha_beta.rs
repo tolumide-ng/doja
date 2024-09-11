@@ -1,7 +1,7 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
 use crate::{bit_move::BitMove, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
-use super::{evaluation::Evaluation, time_control::TimeControl};
+use super::{evaluation::{self, Evaluation}, time_control::TimeControl};
 
 
 /// Sometimes you can figure out what kind of node you are dealing with early on. If the first move you search fails high (returns a score greater than or equal to beta).
@@ -186,7 +186,12 @@ impl<T> NegaMax<T> where T: TimeControl {
         // println!("NODES====== {:?}", self.nodes);
         
         // evaluate position
+        // let evaluation = board.evaluate();
+        // println!("::::::::::::::::::: {}", e);
+        // let non_nnue = Evaluation::evaluate(board);
         let evaluation = Evaluation::evaluate(board);
+        // println!("^^^^^^^^^^^ {}", evaluation);
+        // println!("\n\n\n");
         // fail head beta cutoff
         if evaluation >= beta { return beta; } // node (move) fails high
         if evaluation > alpha { alpha = evaluation; } // found a better score
@@ -263,7 +268,11 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
 
         if self.ply > MAX_PLY -1 {
-            return Evaluation::evaluate(board);
+            // let e = board.evaluate();
+            // println!("::::::::::::::::::: {}", e);
+            let non_nnue = Evaluation::evaluate(board);
+            // println!("^^^^^^^^^^^ {}", non_nnue);
+            return non_nnue
         }
 
         self.nodes+=1;

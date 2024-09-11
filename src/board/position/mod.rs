@@ -81,13 +81,18 @@ impl Position {
     pub(crate) fn set_zobrist(&mut self, key: u64) {
         self.board.set_zobrist(key);
     }
-
+    
     pub(crate) fn make_move_nnue(&mut self, mv: BitMove, mv_ty: MoveType) -> bool {
         let (src, tgt) = (mv.get_src(), mv.get_target());
         let tgt_sq = Square::from(tgt);
         let turn = self.board.turn;
         let victim = self.board.get_piece_at(tgt, !turn);
-
+        
+        let mut rook_mvs = None;
+        if mv.get_castling() { 
+            rook_mvs = self.board.validate_castling_move(&mv); // rook movements
+        };
+        
         if self.make_move(mv, mv_ty) {
             self.nnue_state.push();
             
@@ -97,8 +102,10 @@ impl Position {
             } else if mv.get_capture() {
                 self.nnue_state.manual_update::<OFF>(victim.unwrap(), tgt_sq);
             } else if mv.get_castling() {
-                let rook_mvs = self.board.validate_castling_move(&mv); // rook movements
+                // println!("{}", self.board.to_string());
+                // println!("the mv src --->>> {:#?}, target ====>>>> {}", mv.get_src(), mv.get_target());
                 let (rook_src, rook_tgt) = rook_mvs.unwrap();
+                // println!("the return here is {:#?}", rook_mvs);
                 self.nnue_state.move_update(Piece::rook(turn), rook_src, rook_tgt);
             }
     
