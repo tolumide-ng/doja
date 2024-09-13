@@ -115,6 +115,9 @@ impl NNUEState {
         for (&value, &weight) in us.zip(&MODEL.output_weights[..HIDDEN]) {
             out += squared_crelu(value) * weight as i32;
         }
+        for (&value, &weight) in them.zip(&MODEL.output_weights[HIDDEN..]) {
+            out += squared_crelu(value) * (weight as i32)
+        }
 
         ((out / QA + MODEL.output_bias as i32) * SCALE / QAB ) as Eval
     }

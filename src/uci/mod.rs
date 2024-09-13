@@ -67,7 +67,7 @@ impl UCI {
                         let mut board = self.position.clone().unwrap();
                         let result = thread::spawn(move || {
                             let depth = controller.lock().unwrap().depth();
-                            NegaMax::run(controller, ALPHA, BETA, depth, &mut board);
+                            NegaMax::run(controller, depth, &mut board);
                             // println!("done done >>>>");
                             // write!(writer, "{}", board.to_string()).unwrap();
                             board

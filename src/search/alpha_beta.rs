@@ -50,9 +50,9 @@ impl<T> NegaMax<T> where T: TimeControl {
         x
     }
 
-    fn iterative_deepening(&mut self, limit: u8, alpha: i32, beta: i32, board: &mut Position) {
-        let mut alpha = alpha;
-        let mut beta = beta;
+    fn iterative_deepening(&mut self, limit: u8, board: &mut Position) {
+        let mut alpha = ALPHA;
+        let mut beta = BETA;
 
         for depth in 1..=(limit) {
             let start_time = Instant::now();
@@ -91,9 +91,9 @@ impl<T> NegaMax<T> where T: TimeControl {
     }
     
     // This method is currently VERY SLOW once the depth starts approaching 8, please work to improve it
-    pub(crate) fn run(controller: Arc<Mutex<T>>, alpha: i32, beta: i32, depth: u8, board: &mut Position) {
+    pub(crate) fn run(controller: Arc<Mutex<T>>, depth: u8, board: &mut Position) {
         let mut negamax = Self::new(controller);
-        negamax.iterative_deepening(depth, alpha, beta, board);
+        negamax.iterative_deepening(depth, board);
         // println!("{:?}", negamax.pv_table[0]);
         // println!("{:?}\n\n", negamax.pv_length);
         // let rr = Self::iterative_deepening(&mut self, limit, alpha, beta, board);
@@ -187,9 +187,9 @@ impl<T> NegaMax<T> where T: TimeControl {
         
         // evaluate position
         // let evaluation = board.evaluate();
-        // println!("::::::::::::::::::: {}", e);
-        // let non_nnue = Evaluation::evaluate(board);
+        // println!("::::::::::::::::::: {}", evaluation);
         let evaluation = Evaluation::evaluate(board);
+        // let evaluation = Evaluation::evaluate(board);
         // println!("^^^^^^^^^^^ {}", evaluation);
         // println!("\n\n\n");
         // fail head beta cutoff
@@ -268,11 +268,11 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
 
         if self.ply > MAX_PLY -1 {
+            let non_nnue = Evaluation::evaluate(board);
             // let e = board.evaluate();
             // println!("::::::::::::::::::: {}", e);
-            let non_nnue = Evaluation::evaluate(board);
             // println!("^^^^^^^^^^^ {}", non_nnue);
-            return non_nnue
+            return non_nnue;
         }
 
         self.nodes+=1;
