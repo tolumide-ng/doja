@@ -100,6 +100,7 @@ impl Position {
                 let enpass_tgt = Square::from(match !turn {Black => tgt as u64 + 8, _ => tgt as u64 -  8});
                 self.nnue_state.manual_update::<OFF>(Piece::pawn(!turn), enpass_tgt);
             } else if mv.get_capture() {
+                // println!("src {:#?}--- tgt {:#?}", src, tgt);
                 self.nnue_state.manual_update::<OFF>(victim.unwrap(), tgt_sq);
             } else if mv.get_castling() {
                 // println!("{}", self.board.to_string());
