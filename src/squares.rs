@@ -1,7 +1,7 @@
-use std::{fmt::Display, ops::Index};
+use std::{fmt::Display, ops::{Index, Sub}};
 
 
-// todo! square should have u8 values not u64
+// TODO! square should have u8 values not u64
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Square {
     NoSquare=64,
@@ -11,8 +11,8 @@ pub enum Square {
     A5=32, B5=33, C5=34, D5=35, E5=36, F5=37, G5=38, H5=39,
     A4=24, B4=25, C4=26, D4=27, E4=28, F4=29, G4=30, H4=31,
     A3=16, B3=17, C3=18, D3=19, E3=20, F3=21, G3=22, H3=23,
-    A2=8, B2=9, C2=10, D2=11, E2=12, F2=13, G2=14, H2=15,
-    A1=0, B1=1, C1=2, D1=3, E1=4, F1=5, G1=6, H1=7, 
+    A2=8,  B2=9,  C2=10, D2=11, E2=12, F2=13, G2=14, H2=15,
+    A1=0,  B1=1,  C1=2,  D1=3,  E1=4,  F1=5,  G1=6,  H1=7, 
 }
 
 impl From<Square> for u64 {
@@ -34,73 +34,8 @@ impl<T> Index<Square> for [T] {
     type Output = T;
     
     fn index(&self, index: Square) -> &Self::Output {
-        match index {
-            Square::NoSquare => &self[64],
-            Square::A8 => &self[56],
-            Square::B8 => &self[57],
-            Square::C8 => &self[58],
-            Square::D8 => &self[59],
-            Square::E8 => &self[60],
-            Square::F8 => &self[61],
-            Square::G8 => &self[62],
-            Square::H8 => &self[63],
-            Square::A7 => &self[48],
-            Square::B7 => &self[49],
-            Square::C7 => &self[50],
-            Square::D7 => &self[51],
-            Square::E7 => &self[52],
-            Square::F7 => &self[53],
-            Square::G7 => &self[54],
-            Square::H7 => &self[55],
-            Square::A6 => &self[40],
-            Square::B6 => &self[41],
-            Square::C6 => &self[42],
-            Square::D6 => &self[43],
-            Square::E6 => &self[44],
-            Square::F6 => &self[45],
-            Square::G6 => &self[46],
-            Square::H6 => &self[47],
-            Square::A5 => &self[32],
-            Square::B5 => &self[33],
-            Square::C5 => &self[34],
-            Square::D5 => &self[35],
-            Square::E5 => &self[36],
-            Square::F5 => &self[37],
-            Square::G5 => &self[38],
-            Square::H5 => &self[39],
-            Square::A4 => &self[24],
-            Square::B4 => &self[25],
-            Square::C4 => &self[26],
-            Square::D4 => &self[27],
-            Square::E4 => &self[28],
-            Square::F4 => &self[29],
-            Square::G4 => &self[30],
-            Square::H4 => &self[31],
-            Square::A3 => &self[16],
-            Square::B3 => &self[17],
-            Square::C3 => &self[18],
-            Square::D3 => &self[19],
-            Square::E3 => &self[20],
-            Square::F3 => &self[21],
-            Square::G3 => &self[22],
-            Square::H3 => &self[23],
-            Square::A2 => &self[8],
-            Square::B2 => &self[9],
-            Square::C2 => &self[10],
-            Square::D2 => &self[11],
-            Square::E2 => &self[12],
-            Square::F2 => &self[13],
-            Square::G2 => &self[14],
-            Square::H2 => &self[15],
-            Square::A1 => &self[0],
-            Square::B1 => &self[1],
-            Square::C1 => &self[2],
-            Square::D1 => &self[3],
-            Square::E1 => &self[4],
-            Square::F1 => &self[5],
-            Square::G1 => &self[6],
-            Square::H1 => &self[7],
-        }
+        let sq = index as u64;
+        &self[sq as usize]  
     }
 }
 
@@ -179,6 +114,14 @@ impl From<u64> for Square {
     }
 }
 
+impl Sub for Square {
+    type Output = u64;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self as u64 - rhs as u64
+    }
+}
+
 pub(crate) const BIT_TABLE: [u64; 64] = [
   63, 30, 3,  32, 25, 41, 22, 33,
   15, 50, 42, 13, 11, 53, 19, 34,
@@ -199,6 +142,11 @@ impl Square {
     pub(crate) fn rank(&self) -> usize {
         let value = u64::from(*self);
         return ((value / 8) + 1) as usize;
+    }
+
+    /// flip the square on the board vertically
+    pub(crate) fn flipv(&self) -> Self {
+        Self::from((*self as u8 ^ 56 & 63) as u64)
     }
 }
 

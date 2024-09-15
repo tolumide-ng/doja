@@ -1,3 +1,4 @@
+mod nnue;
 mod bitboard;
 mod masks;
 mod game_phase;
@@ -11,6 +12,7 @@ mod board;
 mod command;
 mod constants;
 // mod magic;
+mod search_;
 mod moves;
 // mod random_magic;
 mod piece_attacks;
@@ -22,27 +24,26 @@ mod uci;
 mod tt;
 
 
-use std::io::Read;
+// use std::io::Read;
+// use std::sync::{Arc, Mutex};
+// use std::{sync::mpsc, time::Instant};
+// use std::{ptr, thread};
+
 use std::sync::{Arc, Mutex};
-use std::{sync::mpsc, time::Instant};
-use std::{ptr, thread};
 
-use bit_move::BitMove;   
-use bitboard::Bitboard;
-use board::{board_state::BoardState, fen::FEN, piece::Piece};
-use color::Color;
-use constants::{ALPHA, BETA, EMPTY_BOARD, REPETITIONS, START_POSITION, TRICKY_POSITION, ZOBRIST};
-use masks::EvaluationMasks;
-use move_type::MoveType;
-use perft::Perft;
+use board::{fen::FEN, position::Position, state::board::Board};
+use constants::TRICKY_POSITION;
+// use bit_move::Move;   
+// use bitboard::Bitboard;
+// use board::{state::board_state::Board, fen::FEN};
+// use color::Color;
+// use constants::{ALPHA, BETA, EMPTY_BOARD, REPETITIONS, START_POSITION, TRICKY_POSITION, ZOBRIST};
+// use masks::EvaluationMasks
+// use search::control::Control;
 use search::control::Control;
-use search::evaluation::Evaluation;
-use squares::Square;
-use tt::{HashFlag, TTable};
-use uci::UCI;
-use zobrist::Zobrist;
+// use zobrist::Zobrist;
 
-use crate::{constants::CMK_POSITION, search::{negamax::NegaMax, zerosum::ZeroSum}};
+use crate::search::alpha_beta::NegaMax;
 
 
 
@@ -52,21 +53,38 @@ use crate::{constants::CMK_POSITION, search::{negamax::NegaMax, zerosum::ZeroSum
 fn main() {
     // let _ = UCI::default().reader();
 
-    // let board = BoardState::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
-    // let board = BoardState::parse_fen("8/8/8/8/8/8/8/8 w - - ").unwrap();
+    // // let board = Board::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
+    // // let board = Board::parse_fen("8/8/8/8/8/8/8/8 w - - ").unwrap();
     
-    // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
-    let board = BoardState::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
-    // let board = BoardState::parse_fen("r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap();
-    println!("{}", board.to_string());
-    println!("the score {}", Evaluation::evaluate(&board));
+    // // let board = Board::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
+    // let board = Board::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
+    // // let board = Board::parse_fen("r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap();
+    // println!("{}", board.to_string());
+    // println!("the score {}", Evaluation::evaluate(&board));
+
+    // println!("STARTING>>>>>");
+
+    // Perft::start(6);
+
+
+    
     // println!("{}", board.to_string());
     // Evaluation::evaluate(&board);
     // Evaluation::get_game_phase_score(&board);
 
     // let score = Evaluation::evaluate(&board);
-    // println!("the scoer now ius >>>> {}", score)
+    // println!("the scoer now ius >>>> {}", score)::::
     // EvaluationMasks::init();
+
+    let controller = Arc::new(Mutex::new(Control::default()));
+    let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+    println!("**********************BEFORE*****************************");
+    println!("{}", board.to_string());
+    NegaMax::run(controller, 7, &mut board);
+    println!("**********************AFTER*****************************");
+    println!("{}", board.to_string());
+
+
 
     // println!()
 }

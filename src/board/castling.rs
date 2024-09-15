@@ -89,8 +89,65 @@ impl From<&str> for Castling {
                 }
             }
         });
-
-
         result
+    }
+}
+
+
+#[cfg(test)]
+mod castling_tests {
+    use crate::board::castling::Castling;
+
+    #[test]
+    fn should_convert_str_to_castling() {
+        let black_king = "k";
+        let white_king = "K";
+        let black_queen = "q";
+        let white_queen = "Q";
+
+        assert_eq!(Castling::from(black_king), Castling::BLACK_KING);
+        assert_eq!(Castling::from(white_king), Castling::WHITE_KING);
+        assert_eq!(Castling::from(white_queen), Castling::WHITE_QUEEN);
+        assert_eq!(Castling::from(black_queen), Castling::BLACK_QUEEN);
+
+        let both_kings = format!("{}{}", black_king, white_king);
+        assert_eq!(Castling::from(both_kings.as_str()), Castling::WHITE_KING | Castling::BLACK_KING);
+        let white_queen_black_king = format!("{}{}", white_queen, black_king);
+        let all_castlers = format!("{}{}{}{}", black_king, white_queen, white_king, black_queen);
+
+        assert_eq!(Castling::from(white_queen_black_king.as_str()), Castling::WHITE_QUEEN | Castling::BLACK_KING);
+        assert_eq!(Castling::from(all_castlers.as_str()), Castling::WHITE_KING | Castling::BLACK_KING | Castling::WHITE_QUEEN | Castling::BLACK_QUEEN);
+    }
+
+    #[test]
+    #[should_panic(expected = "Unrecognized castling character p")]
+    fn should_fail_if_the_castling_str_contains_invalid_letter() {
+        let _ = Castling::from("p");
+    }
+
+    #[test]
+    fn should_convert_u8_to_castling() {
+        // black king can castle on the queen side
+        assert_eq!(Castling::from(8), Castling::BLACK_QUEEN);
+        // Black king can castle from the king side
+        assert_eq!(Castling::from(4), Castling::BLACK_KING);
+        // White king can castle from the king side
+        assert_eq!(Castling::from(1), Castling::WHITE_KING);
+        // White king can castle from the queen side
+        assert_eq!(Castling::from(2), Castling::WHITE_QUEEN);
+
+        // White king can castle on both sides
+        assert_eq!(Castling::from(3), Castling::WHITE_KING | Castling::WHITE_QUEEN);
+
+        // Black king can castle on both sides
+        assert_eq!(Castling::from(12), Castling::BLACK_KING | Castling::BLACK_QUEEN);
+    }
+
+    #[test]
+    fn should_convert_castling_to_string() {
+        assert_eq!((Castling::BLACK_KING | Castling::WHITE_KING).to_string(), String::from("K-k-"));
+        assert_eq!((Castling::WHITE_KING | Castling::BLACK_KING | Castling::WHITE_QUEEN | Castling::BLACK_QUEEN).to_string(), String::from("KQkq"));
+        assert_eq!((Castling::BLACK_QUEEN | Castling::WHITE_KING | Castling::WHITE_QUEEN).to_string(), String::from("KQ-q"));
+
     }
 }

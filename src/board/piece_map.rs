@@ -3,10 +3,11 @@ use std::{fmt::Display, ops::{Deref, DerefMut}};
 use crate::board::piece::Piece;
 use crate::bitboard::Bitboard;
 
-#[derive(Debug, Clone)]
-pub struct Board([Bitboard; 12]);
 
-impl Deref for Board {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PieceMap([Bitboard; 12]);
+
+impl Deref for PieceMap {
     type Target = [Bitboard; 12];
 
     fn deref(&self) -> &Self::Target {
@@ -14,14 +15,14 @@ impl Deref for Board {
     }
 }
 
-impl DerefMut for Board {
+impl DerefMut for PieceMap {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0   
     }
 }
 
 
-impl Board {
+impl PieceMap {
     pub fn new() -> Self {
         Self([Bitboard::new(); 12])
     }
@@ -33,17 +34,16 @@ impl Board {
 
 
 
-impl Display for Board {
+impl Display for PieceMap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // let pieces = Piece::unicode_pieces();
         let pieces = Piece::ascii_pieces();
 
-
-        println!("");
+        writeln!(f, "")?;
         for rank in (0..8).rev() {
             for file in 0..8 {
                 if file == 0 {
-                    print!("{}  ", rank+1)
+                    write!(f, "  {} ", rank+1)?;
                 }
                 let square = rank * 8 + file;
                 let mut piece = '\u{002E}';
@@ -57,13 +57,12 @@ impl Display for Board {
                     }
                 }
                 
-                print!(" {} ", piece)
+                write!(f, " {piece} ")?;
             }
-            println!("");
+            writeln!(f, "")?;
         }
-        println!("    \n    a  b  c  d  e  f  g  h\n");
-
-        // println!("\n {}", self.0);
+        writeln!(f, "    \n     a  b  c  d  e  f  g  h\n")?;
+        
         Ok(())
     }
 }

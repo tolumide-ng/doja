@@ -1,6 +1,6 @@
 use bitflags::Flags;
 
-use crate::{board::{board_state::BoardState, piece::Piece}, color::Color, constants::{RANDOM_STATE_SEED, TOTAL_PIECES, TOTAL_SQUARES}, squares::Square, utils::prng::PRNG};
+use crate::{board::piece::Piece, constants::{RANDOM_STATE_SEED, TOTAL_PIECES, TOTAL_SQUARES}, utils::prng::PRNG};
 
 
 type PieceKeys = [[u64; TOTAL_SQUARES]; TOTAL_PIECES];

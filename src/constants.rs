@@ -79,13 +79,13 @@ pub(crate) const AVOID_WRAP: [u64; 8] = [
 ];
 
 pub(crate) const SHIFT_DATA: [ShiftData; 8] = [
-    ShiftData::new(NOT_A_FILE_NOT_1_RANK, 9),
-    ShiftData::new(NOT_A_FILE, 1),
-    ShiftData::new(NOT_A_FILE_NOT_8_RANK, -7),
-    ShiftData::new(NOT_8_RANK, -8),
-    ShiftData::new(NOT_H_FILE_NOT_8_RANK, -9),
-    ShiftData::new(NOT_H_FILE, -1), //southwest
-    ShiftData::new(NOT_H_FILE_NOT_1_RANK, 7), //south
+    ShiftData::new(NOT_A_FILE_NOT_1_RANK, 9), // northeast
+    ShiftData::new(NOT_A_FILE, 1), //east
+    ShiftData::new(NOT_A_FILE_NOT_8_RANK, -7), // southeast
+    ShiftData::new(NOT_8_RANK, -8), // south
+    ShiftData::new(NOT_H_FILE_NOT_8_RANK, -9), // southwest
+    ShiftData::new(NOT_H_FILE, -1), // west
+    ShiftData::new(NOT_H_FILE_NOT_1_RANK, 7), //northwest
     ShiftData::new(NOT_1_RANK, 8), // north
 ];
 
@@ -103,17 +103,25 @@ pub const POSITION_4: &str = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1
 pub const REPETITIONS: &str = "2r3k1/R7/8/1R6/8/8/P4KPP/8 w - - 0 40 ";
 
 
+// A contempt factor is just another name for a a draw score, with the implication that the draw score is adjsted in order to reflect hte desirability
+// or undesirability of a draw -- high_value (don't draw), low value(draw is understandable)
+// I think a good opening-phase contempt value is -0.50 pawns.  A good general-purpose contempt factor is -0.25.  In endgames, 0.00 is suitable, 
+// or a value that is not very negative at all.  It is a bad idea to play into a pawn ending with a negative evaluation.
+
+
 // Score bounds for the range of mating scores
 /// [-infinity, -mate_value...-mate_score, ... score ... mate_score ... mate_value, infinity]
+/// -- "MATE" is in this case a constant with a large positive value, larger than any score created by summing material and positional factors could be.
+/// https://web.archive.org/web/20071031100110/http://www.brucemo.com/compchess/programming/matescore.htm
 pub(crate) const MATE_VALUE: i32 = 49_000;
-pub(crate) const MATE_SCORE: i32 = 48_000;
+pub(crate) const MATE_SCORE: i32 = 48_000; // i.e. MATE_VALUE - 1000
 pub(crate) const INFINITY: i32 = 50_000;
 
 pub(crate) const ALPHA: i32 = -INFINITY;
 pub(crate) const BETA: i32 = INFINITY;
 pub(crate) const FULL_DEPTH_MOVE: u8 = 4;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
 pub(crate) const REDUCTION_LIMIT: u8 = 3;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
-pub(crate) const DEPTH_REDUCTION_FACTOR: u8 = 2;
+pub(crate) const DEPTH_REDUCTION_FACTOR: u8 = 2; // (suggested deduction factor) https://web.archive.org/web/20071031095933/http://www.brucemo.com/compchess/programming/nullmove.htm
 pub(crate) const VAL_WINDOW: i32 = 50; // https://web.archive.org/web/20071031095918/http://www.brucemo.com/compchess/programming/aspiration.htm
 pub(crate) const NODES_2047: u64 = 2047;
 
@@ -169,6 +177,20 @@ pub(crate) const A1_E1_IS_FILLED: u64 = 0x11; // out of the white queen castling
 pub(crate) const BLACK_QUEEN_CASTLING_CELLS: u64 = 0x1f00000000000000;
 pub(crate) const A8_E8_IS_FILLED: u64  = 0x1100000000000000;
 // pub const 
+
+
+/// THIS WAS COPIED WORD-FOR-WORD FROM THE [CARP ENGINE](https://github.com/dede1751/carp/blob/main/chess/src/lib.rs)
+/// Contains certain engine parameters necessarily kept in the backend.
+pub mod params {
+    /// Maximum depth supported by the NNUE implementation within the crate.
+    pub const MAX_DEPTH: usize = 127;
+
+    /// Eval type returned by the network.
+    pub type Eval = i32;
+
+    /// Piece static values used in SEE.
+    pub const PIECE_VALUES: [Eval; 6] = [161, 446, 464, 705, 1322, 0];
+}
 
 // 0xFEFE_FEFE_FEFE_FEFE
 
@@ -388,66 +410,6 @@ pub(crate) const CASTLING_TABLE: [u8; 64] = [
 ];
 
 
-
-
-
-/// thanks to CodeMonkeyKing for this
-/// https://www.youtube.com/watch?v=E2JzRNI1ODI&list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs&index=49
-///  Pawn Positional Score
-pub(crate) const CMK_PAWN_SCORE: [i16; 64] = [
-    90,  90,  90,  90,  90,  90,  90,  90,
-    30,  30,  30,  40,  40,  30,  30,  30,
-    20,  20,  20,  30,  30,  30,  20,  20,
-    10,  10,  10,  20,  20,  10,  10,  10,
-     5,   5,  10,  20,  20,   5,   5,   5,
-     0,   0,   0,   5,   5,   0,   0,   0,
-     0,   0,   0, -10, -10,   0,   0,   0,
-     0,   0,   0,   0,   0,   0,   0,   0
-];
-/// Knight Positional Score
-pub(crate) const CMK_KNIGHT_SCORE: [i16; 64] = [
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    -5,   0,   0,  10,  10,   0,   0,  -5,
-    -5,   5,  20,  20,  20,  20,   5,  -5,
-    -5,  10,  20,  30,  30,  20,  10,  -5,
-    -5,  10,  20,  30,  30,  20,  10,  -5,
-    -5,   5,  20,  10,  10,  20,   5,  -5,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    -5, -10,   0,   0,   0,   0, -10,  -5
-];
-/// Bishop Positional Score
-pub(crate) const CMK_BISHOP_SCORE: [i16; 64] = [
-    0,   0,   0,   0,   0,   0,   0,   0,
-    0,   0,   0,   0,   0,   0,   0,   0,
-    0,   0,   0,  10,  10,   0,   0,   0,
-    0,   0,  10,  20,  20,  10,   0,   0,
-    0,   0,  10,  20,  20,  10,   0,   0,
-    0,  10,   0,   0,   0,   0,  10,   0,
-    0,  30,   0,   0,   0,   0,  30,   0,
-    0,   0, -10,   0,   0, -10,   0,   0
-];
-/// Rook Positional Score
-pub(crate) const CMK_ROOK_SCORE: [i16; 64]= [
-     50,  50,  50,  50,  50,  50,  50,  50,
-     50,  50,  50,  50,  50,  50,  50,  50,
-     0,   0,  10,  20,  20,  10,   0,   0,
-     0,   0,  10,  20,  20,  10,   0,   0,
-     0,   0,  10,  20,  20,  10,   0,   0,
-     0,   0,  10,  20,  20,  10,   0,   0,
-     0,   0,  10,  20,  20,  10,   0,   0,
-     0,   0,   0,  20,  20,   0,   0,   0
-];
-/// King Positional Score
-pub(crate) const CMK_KING_SCORE: [i16; 64] = [
-     0,   0,   0,   0,   0,   0,   0,   0,
-     0,   0,   5,   5,   5,   5,   0,   0,
-     0,   5,   5,  10,  10,   5,   5,   0,
-     0,   5,  10,  20,  20,  10,   5,   0,
-     0,   5,  10,  20,  20,  10,   5,   0,
-     0,   0,   5,  10,  10,   5,   0,   0,
-     0,   5,   5,  -5,  -5,   0,   5,   0,
-     0,   0,   5,   0, -15,   0,  10,   0
-];
 
 pub(crate) const MIRROR_SCORE: [Square; 64] = [
     Square::A8, Square::B8, Square::C8, Square::D8, Square::E8, Square::F8, Square::G8, Square::H8, 

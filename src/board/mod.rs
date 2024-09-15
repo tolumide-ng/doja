@@ -1,12 +1,10 @@
 
 pub mod piece;
-pub mod major; // major pieces
-// pub mod bits;
-pub mod occupancies;
+pub mod state;
 pub mod castling;
-pub mod board;
-pub mod board_state;
+pub mod piece_map;
 pub mod fen;
+pub mod position; // this would eventually be the real board state 
 
 
 
