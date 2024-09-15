@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
-use crate::{bit_move::BitMove, move_type::MoveType, nnue::state::NNUEState, squares::Square};
+use crate::{bit_move::Move, move_type::MoveType, nnue::state::NNUEState, squares::Square};
 use crate::color::Color::{self, *};
 use crate::nnue::state::{ON, OFF};
 use crate::squares::Square::*;
@@ -16,11 +16,11 @@ mod tests;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct History {
-    mv: BitMove, hash: u64, victim: Option<Piece>
+    mv: Move, hash: u64, victim: Option<Piece>
 }
 
 impl History {
-    pub(crate) fn new(mv: BitMove, hash: u64, victim: Option<Piece>) -> Self {
+    pub(crate) fn new(mv: Move, hash: u64, victim: Option<Piece>) -> Self {
         Self { mv, hash, victim }
     }
 }
@@ -45,7 +45,7 @@ impl Position {
         Self { board, nnue_state, history: Vec::new() }
     }
 
-    pub(crate) fn make_move(&mut self, mv: BitMove, mv_ty: MoveType) -> bool {
+    pub(crate) fn make_move(&mut self, mv: Move, mv_ty: MoveType) -> bool {
         if let Some(new_board) = self.board.make_move(mv, mv_ty) {
             let mut captured = None;
             let tgt = mv.get_target() as u64;
@@ -82,7 +82,7 @@ impl Position {
         self.board.set_zobrist(key);
     }
     
-    pub(crate) fn make_move_nnue(&mut self, mv: BitMove, mv_ty: MoveType) -> bool {
+    pub(crate) fn make_move_nnue(&mut self, mv: Move, mv_ty: MoveType) -> bool {
         let (src, tgt) = (mv.get_src(), mv.get_target());
         let tgt_sq = Square::from(tgt);
         let turn = self.board.turn;
@@ -97,7 +97,8 @@ impl Position {
             self.nnue_state.push();
             
             if mv.get_enpassant() {
-                let enpass_tgt = Square::from(match !turn {Black => tgt as u64 + 8, _ => tgt as u64 -  8});
+                // let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
+                let enpass_tgt = Square::from(match turn {White => tgt as u64 -  8, _ => tgt as u64 + 8});
                 self.nnue_state.manual_update::<OFF>(Piece::pawn(!turn), enpass_tgt);
             } else if mv.get_capture() {
                 // println!("src {:#?}--- tgt {:#?}", src, tgt);
@@ -217,12 +218,14 @@ impl Position {
     pub(crate) fn evaluate(&self) -> i32 {
         let eval = self.nnue_state.evaluate(self.board.turn);
 
-        let total_material = (self.board.board[WN].count_bits() + self.board.board[BK].count_bits()) as i32 * PIECE_VALUES[WN] +
-        (self.board.board[WB].count_bits() + self.board.board[BB].count_bits()) as i32 * PIECE_VALUES[WB] + 
-        (self.board.board[WQ].count_bits() + self.board.board[BQ].count_bits()) as i32 * PIECE_VALUES[WQ] + 
-        (self.board.board[WK].count_bits() + self.board.board[BK].count_bits()) as i32 * PIECE_VALUES[WK];
+        let total_material = 
+            (self.board.board[WN].count_ones() + self.board.board[BN].count_ones()) as i32 * PIECE_VALUES[WN] +
+            (self.board.board[WB].count_ones() + self.board.board[BB].count_ones()) as i32 * PIECE_VALUES[WB] + 
+            (self.board.board[WR].count_ones() + self.board.board[BR].count_ones()) as i32 * PIECE_VALUES[WR] + 
+            (self.board.board[WQ].count_ones() + self.board.board[BQ].count_ones()) as i32 * PIECE_VALUES[WQ];
+
         
-        (eval * (700 + total_material/32)) /1024
+        (eval * ((700 + total_material)/32)) /1024
     }
 }
 

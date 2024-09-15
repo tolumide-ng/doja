@@ -38,7 +38,10 @@ impl Accumulator {
     /// Adds in features for the destination and removes the features of the source
     pub(crate) fn add_sub_weights(&mut self, from: (usize, usize), to: (usize, usize)) {
         fn add_sub(acc: &mut SideAccumulator, from: usize, to: usize) {
-            let zip = acc.iter_mut().zip(MODEL.feature_weights[from..from+HIDDEN].iter().zip(&MODEL.feature_weights[to..to+HIDDEN]));
+            let zip = acc.iter_mut().zip(
+                MODEL.feature_weights[from..from+HIDDEN]
+                .iter()
+                .zip(&MODEL.feature_weights[to..to+HIDDEN]));
 
             for (acc_val, (&remove_weight, &add_weight)) in zip {
                 *acc_val += add_weight - remove_weight;

@@ -1,12 +1,12 @@
 use std::{fmt::Display, ops::Deref};
 
-use crate::{bit_move::BitMove, board::piece::Piece};
+use crate::{bit_move::Move, board::piece::Piece};
 
 
 
 #[derive(Debug, Clone, Copy)]
 pub struct Moves {
-    pub(crate) list: [BitMove; 256],
+    pub(crate) list: [Move; 256],
     count: usize,
     /// Only used internally for the implementation of the iterator
     at: usize
@@ -14,7 +14,7 @@ pub struct Moves {
 
 impl Default for Moves {
     fn default() -> Self {
-        Self { list: [BitMove::default(); 256], count: 0, at: 0 }
+        Self { list: [Move::default(); 256], count: 0, at: 0 }
     }
 }
 
@@ -24,15 +24,15 @@ impl Moves {
         Self::default()
     }
 
-    /// Addsa  bitmove to the move list
-    pub(crate) fn add(&mut self, m: BitMove) {
+    /// Addsa  Move to the move list
+    pub(crate) fn add(&mut self, m: Move) {
         self.list[self.count] = m;
         self.count+=1;
     }
 
     pub(crate) fn count_mvs(&self) -> usize {self.count}
 
-    pub(crate) fn add_many(&mut self, m: &[BitMove]) {
+    pub(crate) fn add_many(&mut self, m: &[Move]) {
         unsafe {
             let src_ptr = m.as_ptr();
             let dest_ptr = self.list.as_mut_ptr().add(self.count);
@@ -44,7 +44,7 @@ impl Moves {
 
 
 impl Iterator for Moves {
-    type Item = BitMove;
+    type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.at < self.count {

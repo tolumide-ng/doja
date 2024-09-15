@@ -2,9 +2,8 @@ pub(crate) const MAX_DEPTH: usize = 127;
 /// type returned by the network
 pub(crate) type Eval = i32;
 
-/// 768
+// Network Arch
 pub(crate) const FEATURES: usize = 768;
-/// 1024
 pub(crate) const HIDDEN: usize = 1024;
 
 

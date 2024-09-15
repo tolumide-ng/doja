@@ -33,7 +33,7 @@ use std::sync::{Arc, Mutex};
 
 use board::{fen::FEN, position::Position, state::board::Board};
 use constants::TRICKY_POSITION;
-// use bit_move::BitMove;   
+// use bit_move::Move;   
 // use bitboard::Bitboard;
 // use board::{state::board_state::Board, fen::FEN};
 // use color::Color;
@@ -80,7 +80,7 @@ fn main() {
     let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     println!("**********************BEFORE*****************************");
     println!("{}", board.to_string());
-    NegaMax::run(controller, 4, &mut board);
+    NegaMax::run(controller, 20, &mut board);
     println!("**********************AFTER*****************************");
     println!("{}", board.to_string());
 

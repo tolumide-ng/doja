@@ -1,4 +1,4 @@
-use crate::bit_move::BitMove;
+use crate::bit_move::Move;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum HashFlag {
@@ -11,7 +11,7 @@ pub(crate) enum HashFlag {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TTEntry {
-    key: u64, depth: usize, flags: HashFlag, value: i32, best: Option<BitMove>
+    key: u64, depth: usize, flags: HashFlag, value: i32, best: Option<Move>
 }
 
 
@@ -42,7 +42,7 @@ impl TTable {
         return None
     }
 
-    pub(crate) fn record(&mut self, depth: usize, value: i32, zobrist: u64, flag: HashFlag, best: Option<BitMove>) {
+    pub(crate) fn record(&mut self, depth: usize, value: i32, zobrist: u64, flag: HashFlag, best: Option<Move>) {
         let index = (zobrist as usize) % self.entries;
         let phashe = &self.table.as_mut_ptr();
 

@@ -10,7 +10,7 @@
 2. Write tests everywhere
 3. Performance optimizations (inlining where necessary)
 4. Properly implement Display traits where they're currently used (why are you printing inside Display? :eyes)
-5. Include the captured piece in BitMove
+5. Include the captured piece in Move
     i. This makes it easier to get the captured piece when scoring(score_move) the move
     ii. Or when trying to pop the piece from the board during `make_move`
     iii. If this is implemented, we can easily implement a [std::ord::Cmp trait](https://doc.rust-lang.org/std/cmp/trait.Ord.html) which makes it easier to sort the mvList without creating a new one

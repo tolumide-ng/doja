@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::BitMove, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
+use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
 use super::{evaluation::Evaluation, time_control::TimeControl};
 
 
@@ -10,12 +10,6 @@ use super::{evaluation::Evaluation, time_control::TimeControl};
 /// Ofcourse, you could be wrong in two of tyhe case. Once you fail high, you return beta, so you can't make a mistake about that, 
 #[derive(Debug, Clone)]
 pub struct NegaMax<T: TimeControl> {
-    killer_moves: [[u32; 64]; 2],
-    history_moves: [[u32; TOTAL_SQUARES]; TOTAL_PIECES],
-    pv_length: [usize; 64],
-    /// The Principal variation (PV) is a sequence of moves that programs consider best and therefore expect to be played. All the nodes included by the PV are PV-nodes
-    /// [Principal Variation](https://www.chessprogramming.org/Principal_Variation)
-    pv_table: [[i32; 64]; MAX_PLY],
     nodes: u64,
     ply: usize,
     follow_pv: bool,
@@ -25,13 +19,21 @@ pub struct NegaMax<T: TimeControl> {
     tt: TTable,
     repetition_index: usize,
     repetition_table: [u64; 500],
+    
+    // MOVE ORDERING HEURISTICS
+    killer_moves: [[u32; 64]; 2],
+    history_moves: [[u32; TOTAL_SQUARES]; TOTAL_PIECES], //[[target_sq; 64]; moving_piece];
+    /// The Principal variation (PV) is a sequence of moves that programs consider best and therefore expect to be played. All the nodes included by the PV are PV-nodes
+    /// [Principal Variation](https://www.chessprogramming.org/Principal_Variation)
+    pv_table: [[i32; MAX_PLY]; MAX_PLY],
+    pv_length: [usize; MAX_PLY],
 }
 
 
 impl<T> NegaMax<T> where T: TimeControl {
     fn new(controller: Arc<Mutex<T>>) -> Self {
         let x = Self {
-            killer_moves: [[9; 64]; 2], 
+            killer_moves: [[0; 64]; 2], 
             history_moves: [[0; 64]; 12], 
             pv_length: [0; 64], 
             pv_table: [[0; 64]; 64], 
@@ -64,6 +66,8 @@ impl<T> NegaMax<T> where T: TimeControl {
             
             alpha = score - VAL_WINDOW;
             beta = score + VAL_WINDOW;
+
+            println!(":XXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
             
 
             if score > -MATE_VALUE && score < -MATE_SCORE {
@@ -77,7 +81,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             }
 
             for count in 0..self.pv_length[0] as usize {
-                print!("{}, ", BitMove::from(self.pv_table[0][count] as u32))
+                print!("-->>> {}, ", Move::from(self.pv_table[0][count] as u32))
             }
             // println!("");
             println!("\n-------------------------- {:#?}", start_time.elapsed().as_millis());
@@ -90,18 +94,6 @@ impl<T> NegaMax<T> where T: TimeControl {
     pub(crate) fn run(controller: Arc<Mutex<T>>, depth: u8, board: &mut Position) {
         let mut negamax = Self::new(controller);
         negamax.iterative_deepening(depth, board);
-        // println!("{:?}", negamax.pv_table[0]);
-        // println!("{:?}\n\n", negamax.pv_length);
-        // let rr = Self::iterative_deepening(&mut self, limit, alpha, beta, board);
-
-        // for count in 0..negamax.pv_length[0] as usize {
-        //     println!("PV TABLE {}", BitMove::from(negamax.pv_table[0][count] as u32))
-        // }
-        // if negamax.pv_length[0] == 0 {
-        //     println!("PV table is none");
-        // }
-        // println!("number of nodes is {}", negamax.nodes)
-        // (r.0, Some(BitMove::from(nega_max.pv_table[0][0]as u32)))
     }
 
     
@@ -110,10 +102,9 @@ impl<T> NegaMax<T> where T: TimeControl {
         self.follow_pv = false;
 
         for mv in moves .into_iter(){
+            // if this move is the best move at that specific ply(self.ply), then enable `score_pv`, and `follow_pv`
             if self.pv_table[0][self.ply] == (*mv) as i32 {
-                // enable scoring
                 self.score_pv = true;
-                // enable following pv
                 self.follow_pv = true;
             }
         }
@@ -121,7 +112,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
 
     /// mv: Move (please remove the mut later, and find a abtter way to write this)
-    pub(crate) fn score_move(&mut self, board: &Board, mv: BitMove) -> u32 {
+    pub(crate) fn score_move(&mut self, board: &Board, mv: Move) -> u32 {
         if self.score_pv {
             if self.pv_table[0][self.ply] == (*mv) as i32 {
                 self.score_pv = false;
@@ -129,14 +120,11 @@ impl<T> NegaMax<T> where T: TimeControl {
             }
         }
         if let Some(victim) = board.get_move_capture(mv, !board.turn) {
-            // println!("{} >>>>>> |||| captured piece is {}", mv, victim.to_string());
-            // score move by MVV LVA lookup
             let attacker = mv.get_piece();
             let score = attacker.get_mvv_lva(&victim)  + 10_000;
             return score;
         } else {
             if let Some(kill_move) = self.killer_moves[0].get(self.ply) {
-                // score 1st killer move
                 if *kill_move == *mv {
                     return 9_000
                 }
@@ -157,10 +145,10 @@ impl<T> NegaMax<T> where T: TimeControl {
         // return 0
     }
 
-    /// todo! add target on the BitMove, so that this cmp method can be implenented directly on Moves(MvList), that way
+    /// todo! add target on the Move, so that this cmp method can be implenented directly on Moves(MvList), that way
     /// we wouldn't need this one anymore
-    pub(crate) fn sort_moves(&mut self, board: &Board, mv_list: Moves) -> Vec<BitMove> {
-        let mut sorted_moves: Vec<BitMove> = Vec::with_capacity(mv_list.count_mvs());
+    pub(crate) fn sort_moves(&mut self, board: &Board, mv_list: Moves) -> Vec<Move> {
+        let mut sorted_moves: Vec<Move> = Vec::with_capacity(mv_list.count_mvs());
         // println!("the count is {}", mv_list.count_mvs());
         sorted_moves.extend_from_slice(&mv_list.list[..mv_list.count_mvs()]);
         sorted_moves.sort_by(|a, b| self.score_move(board, *b).cmp(&self.score_move(board, *a)));
@@ -177,10 +165,17 @@ impl<T> NegaMax<T> where T: TimeControl {
 
         self.nodes+=1;
 
-        if self.ply > MAX_PLY - 1 { return Evaluation::evaluate(board) }
+        if self.ply > MAX_PLY - 1 { 
+            // let evaluation = Evaluation::evaluate(board); 
+            // println!("nevaluation = {nevaluation}|||||||||||||| evaluation = {evaluation}");
+            // return evaluation;
+            return board.evaluate();
+        }
 
 
-        let evaluation = Evaluation::evaluate(board);
+        let evaluation = board.evaluate();
+        // let evaluation = Evaluation::evaluate(board);
+        // println!("nevaluation = {nevaluation}|||||||||||||| evaluation = {evaluation}");
         if evaluation >= beta { return beta; } // node (move) fails high
         if evaluation > alpha { alpha = evaluation; } // found a better score
 
@@ -236,7 +231,6 @@ impl<T> NegaMax<T> where T: TimeControl {
         if (self.ply > 0) && pv_node == false {
             // read hash entry if we're not in a root ply and hash entry is available, current node is not a principal variation node
             if let Some(score) =  self.tt.probe(board.hash_key, depth, alpha, beta, self.ply) {
-                println!(":::::::::::::::::&&&&&&& probable");
                 return score
             }
         }
@@ -254,10 +248,13 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
 
         if self.ply > MAX_PLY -1 {
-            // let e = board.evaluate();
+            let evaluation = board.evaluate();
             // println!("::::::::::::::::::: {}", e);
             // println!("^^^^^^^^^^^ {}", non_nnue);
-            return Evaluation::evaluate(board);
+            // let evaluation = Evaluation::evaluate(board);
+            // let nevaluation = board.evaluate();
+            // println!("nevaluation = {nevaluation}|||||||||||||| evaluation = {evaluation}");
+            return evaluation;
         }
 
         self.nodes+=1;
@@ -394,17 +391,19 @@ impl<T> NegaMax<T> where T: TimeControl {
                 
                 if !mv.get_capture() {
                     // store history moves
-                    *self.history_moves[mv.get_piece()].get_mut(mv.get_target() as usize).unwrap() += depth as u32;
+                    self.history_moves[mv.get_piece()][mv.get_target() as usize] += depth as u32;
+                    // *self.history_moves[mv.get_piece()].get_mut(mv.get_target() as usize).unwrap() += depth as u32;
                 }
                 alpha = score; // PV move (position)
 
                 // println!("ply @2 is {}", self.ply);
                 // write PV move
+                // Traingular PV-Table
                 self.pv_table[self.ply][self.ply] =  *mv as i32;
 
-                for next_ply in (self.ply+1)..self.pv_length[self.ply+1] {
+                for j in (self.ply+1)..self.pv_length[self.ply+1] {
                     // copy move from deeper ply into current ply's line
-                    self.pv_table[self.ply][next_ply] = self.pv_table[self.ply+1][next_ply];
+                    self.pv_table[self.ply][j] = self.pv_table[self.ply+1][j];
                 }
                 self.pv_length[self.ply] = self.pv_length[self.ply + 1];
             } 

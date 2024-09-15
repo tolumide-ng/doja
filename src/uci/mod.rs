@@ -2,7 +2,7 @@ use std::{io::{stdout, Seek, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, t
 
 use thiserror::Error;
 
-use crate::{bit_move::BitMove, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{alpha_beta::NegaMax, control::Control}};
+use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{alpha_beta::NegaMax, control::Control}};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -138,7 +138,7 @@ impl UCI {
         }
     }
 
-    fn parse_move(board: &Position, mv: &str) -> Option<BitMove> {
+    fn parse_move(board: &Position, mv: &str) -> Option<Move> {
         let board_moves = board.gen_movement();
 
         for bmove in board_moves {

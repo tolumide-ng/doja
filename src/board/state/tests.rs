@@ -3,7 +3,7 @@ mod board_tests {
     use crate::board::piece::Piece;
     use crate::board::piece::Piece::*;
     use crate::color::Color::*;
-    use crate::bit_move::BitMove;
+    use crate::bit_move::Move;
     use crate::board::fen::FEN;
     use crate::move_type::MoveType::*;
 
@@ -275,7 +275,7 @@ mod board_tests {
             assert_eq!(result.len(), targets.len());
 
             for (src, target) in targets {
-                let expected = BitMove::new(src as u32, target  as u32, Piece::WP, None, false, true, false, false);
+                let expected = Move::new(src as u32, target  as u32, Piece::WP, None, false, true, false, false);
                 assert!(result.contains(&expected));
             }
         }
@@ -295,7 +295,7 @@ mod board_tests {
 
             assert_eq!(result.len(), targets.len());
             for (src, target) in targets {
-                let expected = BitMove::new(src as u32, target  as u32, Piece::BP, None, false, false, false, false);
+                let expected = Move::new(src as u32, target  as u32, Piece::BP, None, false, false, false, false);
                 assert!(result.contains(&expected));
             }
         }
@@ -313,7 +313,7 @@ mod board_tests {
             assert_eq!(result.len(), targets.len());
 
             for (src, target, promoted_to) in targets {
-                let expected = BitMove::new(src as u32, target as u32, Piece::BP, promoted_to, false, false, false, false);
+                let expected = Move::new(src as u32, target as u32, Piece::BP, promoted_to, false, false, false, false);
                 assert!(result.contains(&expected));
             }
         }
@@ -344,7 +344,7 @@ mod board_tests {
         
             assert_eq!(result.len(), targets.len());
             for (src, target, promoted_to) in targets {
-                let expected = BitMove::new(src as u32, target as u32, Piece::BP, promoted_to, true, false, false, false);
+                let expected = Move::new(src as u32, target as u32, Piece::BP, promoted_to, true, false, false, false);
                 assert!(result.contains(&expected));
             }
         }
@@ -371,7 +371,7 @@ mod board_tests {
         
             assert_eq!(result.len(), targets.len());
             for (src, target) in targets {
-                let expected = BitMove::new(src as u32, target as u32, Piece::BP, None, true, false, true, false);
+                let expected = Move::new(src as u32, target as u32, Piece::BP, None, true, false, true, false);
                 assert!(result.contains(&expected));
             }
         }
@@ -404,8 +404,8 @@ mod board_tests {
     
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
-                let bitmove = BitMove::new(src as u32, target as u32, piece, None, false, false, false, true);
-                assert!(received.contains(&bitmove));
+                let Move = Move::new(src as u32, target as u32, piece, None, false, false, false, true);
+                assert!(received.contains(&Move));
             }
         }
     
@@ -432,8 +432,8 @@ mod board_tests {
     
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
-                let bitmove = BitMove::new(src as u32, target as u32, piece, None, false, false, false, true);
-                assert!(received.contains(&bitmove));
+                let Move = Move::new(src as u32, target as u32, piece, None, false, false, false, true);
+                assert!(received.contains(&Move));
             } 
         }
 
@@ -461,8 +461,8 @@ mod board_tests {
     
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
-                let bitmove = BitMove::new(src as u32, target as u32, piece, None, false, false, false, true);
-                assert!(received.contains(&bitmove));
+                let Move = Move::new(src as u32, target as u32, piece, None, false, false, false, true);
+                assert!(received.contains(&Move));
             } 
         }
 
@@ -490,8 +490,8 @@ mod board_tests {
  
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
-                let bitmove = BitMove::new(src as u32, target as u32, piece, None, false, false, false, true);
-                assert!(received.contains(&bitmove));
+                let Move = Move::new(src as u32, target as u32, piece, None, false, false, false, true);
+                assert!(received.contains(&Move));
             } 
         }
 
@@ -549,7 +549,7 @@ mod board_tests {
             assert_eq!(received.len(), targets.len());
 
             for (target, captured) in targets {
-                let expected = BitMove::new(D3 as u32, target as u32, WN, None, captured.is_some(), false, false, false);
+                let expected = Move::new(D3 as u32, target as u32, WN, None, captured.is_some(), false, false, false);
                 assert!(received.contains(&expected));
             }
         }
@@ -575,7 +575,7 @@ mod board_tests {
 
             assert_eq!(received.len(), targets.len());
             for (target, captured) in targets {
-                let expected = BitMove::new(E5 as u32 as u32, target as u32, WB, None, captured, false, false, false);
+                let expected = Move::new(E5 as u32 as u32, target as u32, WB, None, captured, false, false, false);
                 assert!(received.contains(&expected));
             }
         }
@@ -601,7 +601,7 @@ mod board_tests {
             assert_eq!(received.len(), targets.len());
 
             for (src, target, is_capture) in targets {
-                let expected = BitMove::new(src as u32, target as u32, BR, None, is_capture, false, false, false);
+                let expected = Move::new(src as u32, target as u32, BR, None, is_capture, false, false, false);
                 assert!(received.contains(&expected));
             }
         }
@@ -628,7 +628,7 @@ mod board_tests {
             assert_eq!(received.len(), targets.len());
 
             for (src, target, is_capture) in targets {
-                let expected = BitMove::new(src as u32, target as u32, BQ, None, is_capture, false, false, false);
+                let expected = Move::new(src as u32, target as u32, BQ, None, is_capture, false, false, false);
                 assert!(received.contains(&expected));
             }
         }
@@ -667,17 +667,17 @@ mod board_tests {
             board.board[WK] = Bitboard::from(white_king);
             board.turn = Black;
 
-            let bitmove = BitMove::new(D2 as u32, D3 as u32, BB, None, false, false, false, false);
+            let Move = Move::new(D2 as u32, D3 as u32, BB, None, false, false, false, false);
             assert_eq!(Square::from((*board.board[BB]).trailing_zeros() as u64), D2);
 
             let zobrist_key = board.hash_key;
-            let result = board.make_move(bitmove, MoveType::AllMoves).unwrap();
+            let result = board.make_move(Move, MoveType::AllMoves).unwrap();
 
             assert_ne!(result.hash_key, zobrist_key);
             assert_eq!(Square::from((*result.board[BB]).trailing_zeros() as u64), D3);
 
-            let bitmove = BitMove::new(A6 as u32, D3 as u32, WB, None, true, false, false, false);
-            let capture_result = result.make_move(bitmove, MoveType::CapturesOnly).unwrap();
+            let Move = Move::new(A6 as u32, D3 as u32, WB, None, true, false, false, false);
+            let capture_result = result.make_move(Move, MoveType::CapturesOnly).unwrap();
 
             assert_ne!(capture_result.hash_key, zobrist_key);
             assert_ne!(capture_result.hash_key, result.hash_key);
@@ -706,17 +706,17 @@ mod board_tests {
             board.board[BQ] = Bitboard::from(black_queen);
 
             let zobrist = board.hash_key;
-            let bitmove = BitMove::new(E4 as u32, F5 as u32, WQ, None, true, false, false, false);
+            let Move = Move::new(E4 as u32, F5 as u32, WQ, None, true, false, false, false);
 
             assert_eq!((*board.board[BP]).count_ones(), 3);
-            let result = board.make_move(bitmove, MoveType::AllMoves).unwrap();
+            let result = board.make_move(Move, MoveType::AllMoves).unwrap();
             
             assert_ne!(result.hash_key, zobrist);
             assert_eq!(Square::from((*result.board[WQ]).trailing_zeros() as u64), F5);
             assert_eq!((*result.board[BP]).count_ones(), 2);
             
-            let bitmove = BitMove::new(C8 as u32, F5 as u32, BQ, None, true, false, false, false);
-            let capture_result = result.make_move(bitmove, MoveType::CapturesOnly).unwrap();
+            let Move = Move::new(C8 as u32, F5 as u32, BQ, None, true, false, false, false);
+            let capture_result = result.make_move(Move, MoveType::CapturesOnly).unwrap();
 
             assert_ne!(capture_result.hash_key, zobrist);
             assert_ne!(capture_result.hash_key, result.hash_key);
@@ -730,17 +730,17 @@ mod board_tests {
             let board = Board::parse_fen("rnb1kbnr/p1p1p1pp/8/3p1N2/3K4/7q/PP1PPPPP/R2Q1BNR w KQkq - 0 1").unwrap();
 
             let zobrist = board.hash_key;
-            let bitmove = BitMove::new(D4 as u32, D5 as u32, WK, None, true, false, false, false);
+            let Move = Move::new(D4 as u32, D5 as u32, WK, None, true, false, false, false);
 
             assert_eq!((*board.board[WK]).count_ones(), 1);
             assert_eq!(Square::from((*board.board[WK]).trailing_zeros() as u64), D4);
 
-            let result = board.make_move(bitmove, MoveType::AllMoves).unwrap();
+            let result = board.make_move(Move, MoveType::AllMoves).unwrap();
             assert_ne!(result.hash_key, board.hash_key);
             assert_eq!(Square::from((*result.board[WK]).trailing_zeros()  as u64), D5);
             
-            let bitmove = BitMove::new(E8 as u32, D7 as u32, BK, None, false, false, false, false);
-            let black_king_move = result.make_move(bitmove, MoveType::AllMoves).unwrap();
+            let Move = Move::new(E8 as u32, D7 as u32, BK, None, false, false, false, false);
+            let black_king_move = result.make_move(Move, MoveType::AllMoves).unwrap();
 
             assert_ne!(black_king_move.hash_key, result.hash_key);
             assert_ne!(black_king_move.hash_key, zobrist);
@@ -751,19 +751,19 @@ mod board_tests {
         fn rook_move_and_capture() {
             let board = Board::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/1NBQKBNR b KQk - 3 3").unwrap();
 
-            let bitmove = BitMove::new(A8 as u32, A4 as u32, BR, None, false, false, false, false);
+            let Move = Move::new(A8 as u32, A4 as u32, BR, None, false, false, false, false);
 
             assert_eq!((*board.board[BR]).count_ones(), 2);
             assert_eq!((*board.board[WR]).count_ones(), 2);
 
-            let black_move = board.make_move(bitmove, AllMoves).unwrap();
+            let black_move = board.make_move(Move, AllMoves).unwrap();
 
             
             assert_eq!((*black_move.board[BR]).count_ones(), 2);
             assert_eq!((*black_move.board[WR]).count_ones(), 2);
 
-            let bitmove = BitMove::new(C4 as u32, A4 as u32, WR, None, true, false, false, false);;
-            let white_captures = black_move.make_move(bitmove, AllMoves).unwrap();
+            let Move = Move::new(C4 as u32, A4 as u32, WR, None, true, false, false, false);;
+            let white_captures = black_move.make_move(Move, AllMoves).unwrap();
             
             println!("{:#?}", white_captures.to_string());
 
@@ -777,14 +777,14 @@ mod board_tests {
         fn knight_move_and_capture() {
             let board = Board::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/N1BQKBNR w KQk - 3 3").unwrap();
 
-            let bitmove = BitMove::new(A1 as u32, B3 as u32, WN, None, true, false, false, false);
+            let Move = Move::new(A1 as u32, B3 as u32, WN, None, true, false, false, false);
 
             assert_eq!((*board.board[BN]).count_ones(), 1);
             assert_eq!((*board.board[WN]).count_ones(), 2);
             assert_eq!((*board.board[BP]).count_ones(), 5);
             assert_eq!((*board.board[WP]).count_ones(), 8);
 
-            let white_captures = board.make_move(bitmove, AllMoves).unwrap();
+            let white_captures = board.make_move(Move, AllMoves).unwrap();
 
 
             assert_eq!((*white_captures.board[BN]).count_ones(), 1);
@@ -794,8 +794,8 @@ mod board_tests {
             
 
             println!("{:#?}", white_captures.to_string());
-            let bitmove = BitMove::new(G8 as u32, F6 as u32, BN, None, false, false, false, false);
-            let black_move = white_captures.make_move(bitmove, AllMoves).unwrap();
+            let Move = Move::new(G8 as u32, F6 as u32, BN, None, false, false, false, false);
+            let black_move = white_captures.make_move(Move, AllMoves).unwrap();
             
             
             assert_ne!(black_move.hash_key, white_captures.hash_key);
@@ -810,21 +810,21 @@ mod board_tests {
         #[test]
         fn pawn_move_and_capture() {
             let board = Board::parse_fen("r2qkbnr/4pppp/2R5/1p2P3/8/PP2P3/1P1P2PP/N1BQKBNR w KQk - 4 3").unwrap();
-            let bitmove = BitMove::new(A3 as u32, A4 as u32, WP, None, false, false, false, false);
+            let Move = Move::new(A3 as u32, A4 as u32, WP, None, false, false, false, false);
 
             assert_eq!((*board.board[WP]).count_ones(), 8);
             assert_eq!((*board.board[BP]).count_ones(), 5);
 
-            let mut white_moves = board.make_move(bitmove, AllMoves).unwrap();
+            let mut white_moves = board.make_move(Move, AllMoves).unwrap();
 
             assert_eq!((*white_moves.board[BP]).count_ones(), 5);
             assert_eq!((*white_moves.board[WP]).count_ones(), 8);
 
-            let bitmove = BitMove::new(B5 as u32, A4 as u32, BP, None, true, false, false, false);
+            let Move = Move::new(B5 as u32, A4 as u32, BP, None, true, false, false, false);
             white_moves.set_turn(Black);
             println!("{:#?}", white_moves.to_string());
             // println!()
-            let black_captures = white_moves.make_move(bitmove, AllMoves).unwrap();
+            let black_captures = white_moves.make_move(Move, AllMoves).unwrap();
 
             assert_eq!((*black_captures.board[BP]).count_ones(), 5);
             assert_eq!((*black_captures.board[WP]).count_ones(), 7);
@@ -833,7 +833,7 @@ mod board_tests {
         #[test]
         fn enpassant_move_and_capture() { // double moves must always result in an enpassant
             let board = Board::parse_fen("r2qkbnr/4pppp/2R5/4P3/1p6/1P2P3/PP1P2PP/N1BQKBNR w KQk - 0 4").unwrap();
-            let bitmove = BitMove::new(A2 as u32, A4 as u32, WP, None, false, true, false, false);
+            let Move = Move::new(A2 as u32, A4 as u32, WP, None, false, true, false, false);
 
             assert_eq!((*board.board[WP]).count_ones(), 8);
             assert_eq!((*board.board[BP]).count_ones(), 5);
@@ -841,7 +841,7 @@ mod board_tests {
             assert!((1 <<  A4 as u64) & board.occupancies[Both] == 0);
             assert!(board.enpassant.is_none());
 
-            let white_moves = board.make_move(bitmove, AllMoves).unwrap();
+            let white_moves = board.make_move(Move, AllMoves).unwrap();
 
             assert_eq!((*white_moves.board[WP]).count_ones(), 8);
             assert_eq!((*white_moves.board[BP]).count_ones(), 5);
@@ -849,8 +849,8 @@ mod board_tests {
             assert!((1 <<  A4 as u64) & white_moves.occupancies[Both] != 0);
             assert!(white_moves.enpassant == Some(A3));
 
-            let bitmove = BitMove::new(B4 as u32, A3 as u32, BP, None, true, false, true, false);
-            let black_captures = white_moves.make_move(bitmove, AllMoves).unwrap();
+            let Move = Move::new(B4 as u32, A3 as u32, BP, None, true, false, true, false);
+            let black_captures = white_moves.make_move(Move, AllMoves).unwrap();
             
             assert_eq!((*black_captures.board[WP]).count_ones(), 7);
             assert_eq!((*black_captures.board[BP]).count_ones(), 5);
@@ -865,24 +865,24 @@ mod board_tests {
         fn should_not_move_if_the_source_position_is_not_correct() {
             let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let src = C6;
-            let bitmove = BitMove::new(src as u32, C5 as u32, BP, None, false, false, false, false);
+            let Move = Move::new(src as u32, C5 as u32, BP, None, false, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << C6 as u64) == 0);
             assert!(board.occupancies[Both] & (1 << C5 as u64) == 0);
 
-            let result = board.make_move(bitmove, AllMoves);
+            let result = board.make_move(Move, AllMoves);
             assert!(result.is_none());
         }
 
         #[test]
         fn should_not_change_position_if_the_target_move_is_invalid() {
             let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
-            let bitmove = BitMove::new(H4 as u32, H6 as u32, BN, None, false, false, false, false);
+            let Move = Move::new(H4 as u32, H6 as u32, BN, None, false, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << H4 as u64) != 0);
             assert!(board.occupancies[Both] & (1 << H6 as u64) == 0);
             
-            let result = board.make_move(bitmove, AllMoves);
+            let result = board.make_move(Move, AllMoves);
          
             assert!(result.is_none());
             assert!(board.occupancies[Both] & (1 << H4 as u64) != 0);
@@ -893,7 +893,7 @@ mod board_tests {
         #[test]
         fn black_pawns_should_only_move_southwards() {
             let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
-            let black_moving_north = BitMove::new(D6 as u32, D7 as u32, BP, None, false, false, false, false);
+            let black_moving_north = Move::new(D6 as u32, D7 as u32, BP, None, false, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << D6 as u64) != 0);
             assert!(board.occupancies[Both] & (1 << D7 as u64) == 0);
@@ -908,7 +908,7 @@ mod board_tests {
         #[test]
         fn white_pawns_should_only_move_northwards() {
             let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
-            let white_pawn_moving_south = BitMove::new(D4 as u32, D3 as u32, WP, None, false, false, false, false);
+            let white_pawn_moving_south = Move::new(D4 as u32, D3 as u32, WP, None, false, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << D4 as u64) != 0);
             assert!(board.occupancies[Both] & (1 << D3 as u64) == 0);
@@ -923,7 +923,7 @@ mod board_tests {
         #[test]
         fn pawns_should_not_be_able_to_move_north_north_or_south_south_if_it_is_occupied() {
             let board = Board::parse_fen("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
-            let white_pawn_moving_south = BitMove::new(E6 as u32, E7 as u32, WP, None, false, false, false, false);
+            let white_pawn_moving_south = Move::new(E6 as u32, E7 as u32, WP, None, false, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << E6 as u64) != 0);
             assert!(board.occupancies[Both] & (1 << E7 as u64) != 0);
@@ -932,7 +932,7 @@ mod board_tests {
             
             assert!(result.is_none());
 
-            let black_pawn_moving_north = BitMove::new(E7 as u32, E6 as u32, WP, None, false, false, false, false);
+            let black_pawn_moving_north = Move::new(E7 as u32, E6 as u32, WP, None, false, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << E6 as u64) != 0);
             assert!(board.occupancies[Both] & (1 << E7 as u64) != 0);
@@ -946,7 +946,7 @@ mod board_tests {
         #[test]
         fn  should_return_none_if_it_is_not_the_players_turn() {
             let board = Board::parse_fen("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
-            let black_bishop_move = BitMove::new(B4 as u32, E1 as u32, BB, None, true, false, false, false);
+            let black_bishop_move = Move::new(B4 as u32, E1 as u32, BB, None, true, false, false, false);
 
             assert!(board.occupancies[Both] & (1 << B4 as u32) != 0);
             assert!(board.occupancies[Both] & (1 << E1 as u32) != 0);
@@ -964,7 +964,7 @@ mod board_tests {
         fn should_promote_a_pawn_move_to_queen() {
             let board = Board::parse_fen("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
     
-            let mv = BitMove::new(F7 as u32, F8 as u32, WP, Some(WQ), false, false, false, false);
+            let mv = Move::new(F7 as u32, F8 as u32, WP, Some(WQ), false, false, false, false);
             assert_eq!(board[WQ].count_ones(), 1);
             assert_eq!(board[WP].count_ones(), 3);
             assert_eq!(board[BQ].count_ones(), 0);
@@ -981,7 +981,7 @@ mod board_tests {
         #[test]
         fn should_return_none_if_a_promotion_is_invalid() {
             let board = Board::parse_fen("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
-            let mv = BitMove::new(H5 as u32, H1 as u32, BP, Some(BQ), false, false, false, false);
+            let mv = Move::new(H5 as u32, H1 as u32, BP, Some(BQ), false, false, false, false);
     
             let result = board.make_move(mv, AllMoves);
             assert!(result.is_none());
@@ -990,7 +990,7 @@ mod board_tests {
         #[test]
         fn should_make_a_capture_and_promotion_at_the_same_time() {
             let board = Board::parse_fen("2b5/k4P2/p7/8/8/1K6/1P1Pp3/3Q4 b k - 2 2").unwrap();
-            let mv = BitMove::new(E2 as u32, D1 as u32, BP, Some(BR), true, false, false, false);
+            let mv = Move::new(E2 as u32, D1 as u32, BP, Some(BR), true, false, false, false);
     
             assert_eq!(board[WQ].count_ones(), 1);
             assert_eq!(board[WP].count_ones(), 3);
@@ -1019,7 +1019,7 @@ mod board_tests {
         #[test]
         fn black_king_can_castle_queenside() {
             let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
-            let mv = BitMove::new(E8 as u32, C8 as u32, BK, None, false, false, false, true);
+            let mv = Move::new(E8 as u32, C8 as u32, BK, None, false, false, false, true);
 
             let result = board.make_move(mv, AllMoves).unwrap();
             assert_eq!(Square::from(result[BK].trailing_zeros() as u64), C8);
@@ -1030,7 +1030,7 @@ mod board_tests {
         #[test]
         fn black_king_can_castle_kingside() {
             let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
-            let mv = BitMove::new(E8 as u32, G8 as u32, BK, None, false, false, false, true);
+            let mv = Move::new(E8 as u32, G8 as u32, BK, None, false, false, false, true);
 
             let result = board.make_move(mv, AllMoves).unwrap();
             println!("{:#?}", result.to_string());
@@ -1045,7 +1045,7 @@ mod board_tests {
         fn white_king_can_castle_kingside() {
             let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
 
-            let mv = BitMove::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
+            let mv = Move::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
             let result = board.make_move(mv, AllMoves).unwrap();
 
             assert_eq!(result[WR].count_ones(), 2);
@@ -1064,7 +1064,7 @@ mod board_tests {
         fn should_fail_to_castle_whiteking_queenside_if_there_are_pieces_between_the_castling_sides() {
             let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
 
-            let mv = BitMove::new(E1 as u32, C1 as u32, WK, None, false, false, false, true);
+            let mv = Move::new(E1 as u32, C1 as u32, WK, None, false, false, false, true);
             let result = board.make_move(mv, AllMoves);
             assert!(result.is_none());
         }
@@ -1072,7 +1072,7 @@ mod board_tests {
         #[test]
         fn should_fail_to_castle_blacking_kingside_if_there_are_pieces_between_the_king_and_the_rook() {
             let board = Board::parse_fen("r3kq1r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
-            let mv = BitMove::new(E8 as u32, G8 as u32, BK, None, false, false, false, true);
+            let mv = Move::new(E8 as u32, G8 as u32, BK, None, false, false, false, true);
             println!("{:#?}", board.to_string());
 
             assert!(board.make_move(mv, AllMoves).is_none());
@@ -1081,7 +1081,7 @@ mod board_tests {
         #[test]
         fn should_fail_to_castle_whiteking_kingside_if_there_are_pieces_between_the_king_and_the_rook() {
             let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/4KQ2 w KQkq - 1 2").unwrap();
-            let mv = BitMove::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
+            let mv = Move::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
 
             let result = board.make_move(mv, AllMoves);
 
@@ -1091,7 +1091,7 @@ mod board_tests {
         #[test]
         fn should_fail_to_castle_blackking_queenside_if_there_are_pieces_between_the_king_and_the_rook() {
             let board = Board::parse_fen("r1q1k2r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R3KQ1R b KQkq - 1 2").unwrap();
-            let mv = BitMove::new(E8 as u32, C8 as u32, BK, None, false, false, false, true);
+            let mv = Move::new(E8 as u32, C8 as u32, BK, None, false, false, false, true);
             println!("{:#?}", board.to_string());
             assert!(board.make_move(mv, AllMoves).is_none());
         }
@@ -1100,7 +1100,7 @@ mod board_tests {
         fn should_fail_to_castle_if_side_does_not_have_castling_rights_anymore() {
             let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w ---- - 1 2").unwrap();
 
-            let mv = BitMove::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
+            let mv = Move::new(E1 as u32, G1 as u32, WK, None, false, false, false, true);
             assert!(board.make_move(mv, AllMoves).is_none());
         }
     }

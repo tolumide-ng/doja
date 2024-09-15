@@ -1,6 +1,6 @@
 use std::alloc::{self, alloc_zeroed, Layout};
 
-use crate::{bitboard::Bitboard, board::{piece::Piece, state::board::Board}, color::Color, squares::Square};
+use crate::{board::{piece::Piece, state::board::Board}, color::Color, squares::Square};
 use crate::color::Color::*;
 
 use super::{accumulator::Accumulator, commons::{Eval, HIDDEN, MAX_DEPTH, QA, QAB, SCALE}, net::{nnue_index, squared_crelu, MODEL}};
@@ -39,11 +39,11 @@ impl NNUEState {
 
         while board_sqs != 0 {
             let sq = board_sqs.trailing_zeros() as u64;
-            let is_white = (board.get_occupancy(White) & (1 << sq as u64)) != 0;
+            let is_white = (board.get_occupancy(White) & (1 << sq)) != 0;
+
             let sq = Square::from(sq);
             let color = if is_white { White } else { Black };
-            let p = board.get_piece_at(sq, color);
-            let piece = p.unwrap();
+            let piece = board.get_piece_at(sq, color).unwrap();
 
             boxed.manual_update::<ON>(piece, sq);
             board_sqs &= board_sqs - 1;
