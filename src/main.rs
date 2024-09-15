@@ -7,6 +7,7 @@ mod squares;
 mod zobrist;
 mod color;
 mod search;
+mod nnue_;
 mod shift;
 mod board;
 mod command;
@@ -20,6 +21,7 @@ mod perft;
 mod kogge_stone;
 mod uci;
 mod tt;
+
 
 
 // use std::io::Read;
