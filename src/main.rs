@@ -11,8 +11,6 @@ mod shift;
 mod board;
 mod command;
 mod constants;
-// mod magic;
-mod search_;
 mod moves;
 // mod random_magic;
 mod piece_attacks;
