@@ -270,6 +270,8 @@ impl<T> NegaMax<T> where T: TimeControl {
         let depth = if king_in_check {depth +1} else {depth};
         let mut legal_moves = 0;
 
+        let static_eval = board.evaluate();
+
         // Null-Move Forward Pruning
         // Null-move forward pruning is a step you perform prior to searching any of the moves.  You ask the question, "If I do nothing here, can the opponent do anything?"
         // In order to test this, we allow the opponent play this turn(even though its ours), if they play and we're not in harms way (greater than beat), then we're good.
@@ -309,6 +311,24 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
 
 
+        // [Strelka's Razoring](https://www.chessprogramming.org/Razoring)
+        if !pv_node && !king_in_check && depth <= 3 {
+            let mut value = static_eval + 125;
+
+            if value < beta {
+                if depth == 1 {
+                    let new_value = self.quiescence(alpha, beta, board);
+                    return i32::max(value, new_value);
+                }
+                value += 175;
+                if value < beta && depth <= 32 {
+                    let new_value = self.quiescence(alpha, beta, board);
+                    if new_value < beta {
+                        return i32::max(new_value, value);
+                    }
+                }
+            }
+        }
 
         
         let moves = board.gen_movement().into_iter();
@@ -316,7 +336,6 @@ impl<T> NegaMax<T> where T: TimeControl {
             self.enable_pv_scoring(&moves);
         }
 
-        // println!("\n\n provided with >....>>>>>>");
         // for mv in moves 
         let sorted_moves = self.sort_moves(board, moves);
         
