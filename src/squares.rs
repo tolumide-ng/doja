@@ -146,7 +146,7 @@ impl Square {
 
     /// flip the square on the board vertically
     pub(crate) fn flipv(&self) -> Self {
-        Self::from(((*self as u8 ^ 56) & 63) as u64)
+        Self::from((*self as u8 ^ 56 & 63) as u64)
     }
 }
 

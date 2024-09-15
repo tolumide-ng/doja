@@ -33,7 +33,7 @@ pub(crate) fn nnue_index(piece: Piece, sq: Square) -> (usize, usize) {
 
 /// Squared Clipped ReLu activation function
 pub(crate) fn squared_crelu(value: i16) -> i32 {
-    let v = value.clamp(CR_MIN, CR_MAX) as i32;
-    
+    let v = if value < CR_MIN {CR_MIN} else if value < CR_MAX {CR_MAX} else {value} as i32;
+    // let v = value.clamp(CR_MIN, CR_MAX) as i32;
     v * v
 }

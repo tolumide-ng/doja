@@ -83,6 +83,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             for count in 0..self.pv_length[0] as usize {
                 print!("-->>> {}, ", Move::from(self.pv_table[0][count] as u32))
             }
+
             // println!("");
             println!("\n-------------------------- {:#?}", start_time.elapsed().as_millis());
             // println!("{:?}", self.pv_table);
@@ -101,7 +102,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         // disable following pv
         self.follow_pv = false;
 
-        for mv in moves .into_iter(){
+        for mv in moves.into_iter() {
             // if this move is the best move at that specific ply(self.ply), then enable `score_pv`, and `follow_pv`
             if self.pv_table[0][self.ply] == (*mv) as i32 {
                 self.score_pv = true;
@@ -183,15 +184,18 @@ impl<T> NegaMax<T> where T: TimeControl {
         for mv in sorted_moves {
             if mv.get_capture() {
                 // println!("quiescenece");
+                // if mv.to_string() == String::from("e2a6x") {
+                //     println!("::::::::::::COOOL:::::::::::::::::::::");
+                // }
                 if board.make_move_nnue(mv, MoveType::CapturesOnly) {
                     self.ply += 1;
                     self.repetition_index += 1;
                     self.repetition_table[self.repetition_index] = board.hash_key;
                     
                     let score = -self.quiescence(-beta, -alpha, &mut board);
-                    board.undo_move(true);
                     self.ply -=1;
                     self.repetition_index-=1;
+                    board.undo_move(true);
         
                     // return 0 if time is up
                     if self.controller.as_ref().lock().unwrap().stopped() { return 0}
@@ -311,7 +315,11 @@ impl<T> NegaMax<T> where T: TimeControl {
         if self.follow_pv {
             self.enable_pv_scoring(&moves);
         }
+
+        // println!("\n\n provided with >....>>>>>>");
+        // for mv in moves 
         let sorted_moves = self.sort_moves(board, moves);
+        
         // https://www.chessprogramming.org/Principal_Variation_Search#Pseudo_Code
         let mut moves_searched = 0;
 
@@ -321,6 +329,8 @@ impl<T> NegaMax<T> where T: TimeControl {
         // }
         for mv in sorted_moves {
             let legal_move = board.make_move_nnue(mv, MoveType::AllMoves);
+
+            
 
             // let Some(new_board) = play_moves else {continue};
             if !legal_move { continue; }
@@ -344,14 +354,12 @@ impl<T> NegaMax<T> where T: TimeControl {
 
                     let mut value =  if (moves_searched >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && ok_to_reduce {
                         -self.negamax(-alpha-1, -alpha, depth-2, &mut board)
-                        // -self.negamax(-(alpha + 1), -alpha, depth-2, &new_board)
                     } else {
                         alpha +1
                     };
 
                     if value > alpha {
                         value = -self.negamax(-alpha-1, -alpha, depth-1, &mut board);
-                        // value = -self.negamax(-(alpha+1), -alpha, depth-1, &new_board);
                         if (value > alpha) && (value < beta) {
                             value = -self.negamax(-beta, -alpha, depth-1, &mut board);
                         }
@@ -370,9 +378,13 @@ impl<T> NegaMax<T> where T: TimeControl {
             // return 0 if time is up
             if self.controller.as_ref().lock().unwrap().stopped() { return 0}
 
-
+            
+            
             // fail-hard beta cutoff
             if score >= beta {
+                // if mv.to_string() == String::from("e2a6x") {
+                //     println!("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< score={score:10} alpha={alpha:10}, and beta={beta:10} >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+                // }
                 self.tt.record(board.hash_key, depth, beta, self.ply, HashFlag::LowerBound);
                 // println!("ply @3 is {}", self.ply);
                 if !mv.get_capture() { // quiet move (non-capturing quiet move that beats the opponent)
@@ -385,8 +397,14 @@ impl<T> NegaMax<T> where T: TimeControl {
             
             // best score so far
             if score > alpha {
+                // if mv.to_string() == String::from("e2a6x") {
+                //     println!("*******************************************************>>>>>> score={score:10} alpha={alpha:10}, and beta={beta:10}");
+                // }
 
 
+                // if mv.to_string() == String::from("d5e6x") {
+                //     println!("-------------------------------------||||||||||||||||||| score = {:10},alpha={alpha:10}, and beta={beta:10}", score);
+                // }
                 hash_flag = HashFlag::Exact;
                 
                 if !mv.get_capture() {
@@ -401,17 +419,25 @@ impl<T> NegaMax<T> where T: TimeControl {
                 // Traingular PV-Table
                 self.pv_table[self.ply][self.ply] =  *mv as i32;
 
+                // if mv.to_string() == String::from("e2a6x") {
+                //     println!("::::::::::::COOOL::::::********:::::::::::::::");
+                // }
+
+                
                 for j in (self.ply+1)..self.pv_length[self.ply+1] {
                     // copy move from deeper ply into current ply's line
                     self.pv_table[self.ply][j] = self.pv_table[self.ply+1][j];
                 }
                 self.pv_length[self.ply] = self.pv_length[self.ply + 1];
-            } 
-
-
-            
-            // if let Some(new_board) = play_moves {}
-
+                
+                for xx in self.pv_table {
+                    for yy in xx {
+                        if yy.to_string() == String::from("e2a6x") {
+                            println!("YAAAAAaaaayyyyy");
+                        } 
+                    }
+                }
+            }
         }
 
 

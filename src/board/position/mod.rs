@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
@@ -219,12 +219,12 @@ impl Position {
         let eval = self.nnue_state.evaluate(self.board.turn);
 
         let total_material = 
-            (self.board.board[WN].count_ones() + self.board.board[BN].count_ones()) as i32 * PIECE_VALUES[WN] +
-            (self.board.board[WB].count_ones() + self.board.board[BB].count_ones()) as i32 * PIECE_VALUES[WB] + 
-            (self.board.board[WR].count_ones() + self.board.board[BR].count_ones()) as i32 * PIECE_VALUES[WR] + 
-            (self.board.board[WQ].count_ones() + self.board.board[BQ].count_ones()) as i32 * PIECE_VALUES[WQ];
+            (self.board[WN].count_ones() + self.board[BN].count_ones()) as i32 * PIECE_VALUES[WN] +
+            (self.board[WB].count_ones() + self.board[BB].count_ones()) as i32 * PIECE_VALUES[WB] + 
+            (self.board[WR].count_ones() + self.board[BR].count_ones()) as i32 * PIECE_VALUES[WR] + 
+            (self.board[WQ].count_ones() + self.board[BQ].count_ones()) as i32 * PIECE_VALUES[WQ];
 
-        
+
         (eval * ((700 + total_material)/32)) /1024
     }
 }

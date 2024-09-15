@@ -80,7 +80,7 @@ fn main() {
     let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     println!("**********************BEFORE*****************************");
     println!("{}", board.to_string());
-    NegaMax::run(controller, 20, &mut board);
+    NegaMax::run(controller, 7, &mut board);
     println!("**********************AFTER*****************************");
     println!("{}", board.to_string());
 
