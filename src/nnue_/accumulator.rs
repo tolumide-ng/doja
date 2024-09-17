@@ -40,8 +40,26 @@ impl Accumulator {
     }
 
 
-    pub(crate) fn update<T, const U: usize, const M: usize>(&self, color: Color, layer: LinearLayer<T, U, M>, removed_features: Vec<FeatureIdx>, added_features: Vec<FeatureIdx>) -> Self {
-        let new_acc = Self::default();
+    pub(crate) fn update<const U: usize, const M: usize>(&self, color: Color, layer: LinearLayer<i16, U, M>, removed_features: Vec<FeatureIdx>, added_features: Vec<FeatureIdx>) -> Self {
+        let mut new_acc = Self::default();
+
+        // First we copy the previous values, that's our starting point
+        for i in 0..M {
+            [&mut new_acc.white, &mut new_acc.black][color][i] = [&self.white, &self.white][color][i];
+        }
+
+        // Then we subtract the weights of the removed features
+        for r in removed_features {
+            for i in 0..M {
+                [&mut new_acc.white, &mut new_acc.black][color][i] -= layer.weight[*r][i];
+            }
+        }
+
+        for a in added_features {
+            for i in 0..M {
+                [&mut new_acc.white, &mut new_acc.black][color][i] += layer.weight[*a][i];
+            }
+        }
 
         new_acc
     }

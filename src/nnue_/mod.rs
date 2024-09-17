@@ -9,3 +9,6 @@ pub(crate) mod feature_idx;
 
 
 // All layers are linear, and all hidden neurons use ClippedReLU activation function
+
+// HalfKP is just P taken 64 times, once for each king square
+
