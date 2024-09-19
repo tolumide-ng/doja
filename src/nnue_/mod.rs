@@ -12,7 +12,7 @@ pub(crate) mod calc;
 pub(crate) mod accumulator;
 pub(crate) mod network;
 pub(crate) mod feature_idx;
-
+pub(crate) mod constants;
 
 // All layers are linear, and all hidden neurons use ClippedReLU activation function
 
