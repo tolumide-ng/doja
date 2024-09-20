@@ -31,14 +31,18 @@ pub(crate) mod simpleHalfKP {
     pub(crate) const L4_WEIGHTS: usize = 1 * 32;
     pub(crate) const L4_BIAS: usize = 1;
 
+    
 }
 
 
 
 pub(crate) mod halfKA {
+    pub(crate) const SCALING_FACTOR: usize = 410;
+    /// 2^(6)
+    pub(crate) const LOG2_WEIGHT_SCALE: i32 = 64; 
     pub(crate) const INPUT: usize = 768;
     
-
+    
     // TEST LATER WITH STOCKFISH: L1 size increased to 2560.
     pub(crate) const L1_SIZE: usize = 2048 * 2;
     pub(crate) const L2_SIZE: usize = 16;
@@ -49,7 +53,7 @@ pub(crate) mod halfKA {
     pub(crate) const L2_WEIGHTS: usize = 16 * 32;
     pub(crate) const L3_WEIGHTS: usize = 32 * 16;
     pub(crate) const L4_WEIGHTS: usize = 32 * 1;
-
+    
     pub(crate) const L1_BIAS: usize = 4096;
     pub(crate) const L2_BIAS: usize = 16;
     pub(crate) const L3_BIAS: usize = 32;
