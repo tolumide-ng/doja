@@ -25,8 +25,8 @@ impl Default for Accumualator<Feature, L1_SIZE> {
 }
 
 impl Accumualator<Feature, L1_SIZE> {
-    pub(crate) fn refresh_accumulator<const U: usize, const V: usize>(
-        layer: LinearLayer<U, V>, 
+    pub(crate) fn refresh_accumulator<const U: usize, const V: usize, W: Copy>(
+        layer: LinearLayer<U, V, W>, 
         new_acc: &mut Self,
         active_features: &Vec<FeatureIdx>,
         color: Color
@@ -49,6 +49,7 @@ impl Accumualator<Feature, L1_SIZE> {
         for a in active_features {
             for i in 0..NUM_CHUNKS {
                 unsafe {
+                    // let xx = (*(layer.weight.as_ptr().add(**a))).as_ptr().add(i * REGISTER_WIDTH);
                     let weights = (*(layer.weight.as_ptr().add(**a))).as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
                     *regs.as_mut_ptr().add(i) = _mm256_add_epi16(regs[i], _mm256_load_si256(weights));
                 };
@@ -61,9 +62,9 @@ impl Accumualator<Feature, L1_SIZE> {
         }
     }
 
-    pub(crate) fn update_accumulator<const U: usize, const V: usize>(
+    pub(crate) fn update_accumulator<const U: usize, const V: usize, W: Copy>(
         &self,
-        layer: LinearLayer<U, V>,
+        layer: LinearLayer<U, V, W>,
         removed_features: &Vec<FeatureIdx>,
         added_features: &Vec<FeatureIdx>,
         color: Color 
@@ -71,7 +72,7 @@ impl Accumualator<Feature, L1_SIZE> {
         const REGISTER_WIDTH: usize = 256/16;
         const NUM_CHUNKS: usize = L1_SIZE /REGISTER_WIDTH;
         
-        let mut regs: [__m256i; NUM_CHUNKS];
+        let mut regs: [__m256i; NUM_CHUNKS] = unsafe {[_mm256_setzero_si256(); NUM_CHUNKS]};
         let mut new_acc = self.clone();
 
         for i in 0..NUM_CHUNKS {
