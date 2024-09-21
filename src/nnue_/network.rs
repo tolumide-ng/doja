@@ -1,4 +1,4 @@
-use std::arch::x86_64::{__m128i, __m256, __m256i, _mm256_add_epi32, _mm256_castsi256_si128, _mm256_cmpeq_epi8, _mm256_cmpgt_epi32, _mm256_extracti128_si256, _mm256_hadd_epi32, _mm256_load_si256, _mm256_maddubs_epi16, _mm256_movemask_epi8, _mm256_movemask_ps, _mm256_set1_epi16, _mm256_set1_epi32, _mm256_setzero_si256, _mm256_store_si256, _mm_add_epi32, _mm_cvtepi8_epi32, _mm_load_si128, _mm_loadl_epi64, _mm_movemask_ps, _mm_srai_epi32, _mm_store_si128};
+use std::arch::x86_64::{__m128i, __m256, __m256i, _mm256_add_epi32, _mm256_castsi256_si128, _mm256_cmpeq_epi8, _mm256_cmpgt_epi32, _mm256_cmpgt_epi8, _mm256_extracti128_si256, _mm256_hadd_epi32, _mm256_load_si256, _mm256_madd_epi16, _mm256_maddubs_epi16, _mm256_movemask_epi8, _mm256_movemask_ps, _mm256_set1_epi16, _mm256_set1_epi32, _mm256_setzero_si256, _mm256_srai_epi32, _mm256_store_si256, _mm256_unpackhi_epi16, _mm256_unpacklo_epi16, _mm_add_epi32, _mm_cvtepi8_epi32, _mm_load_si128, _mm_loadl_epi64, _mm_movemask_ps, _mm_srai_epi32, _mm_store_si128};
 
 use crate::{color::Color, nnue_::constants::halfKA::LOG2_WEIGHT_SCALE};
 
@@ -157,10 +157,12 @@ impl<const M: usize, const N: usize, T: Copy> LinearLayer<M, N, T> {
         // Find the indices of the non-zero(nnz) inputs
         let mut nnz_input_indices = vec![];
 
+
         for i in (0..self.num_inputs).step_by(INPUT_REGISTER_WIDTH) {
             let input_chunk = _mm256_load_si256(input.as_ptr().add(i) as *const __m256i);
+            // let mut nnz = _mm256_movemask_epi8(_mm256_cmpeq_epi8(input_chunk, _mm256_setzero_si256()));
+            let mut nnz = _mm256_movemask_epi8(_mm256_cmpgt_epi8(input_chunk, _mm256_setzero_si256()));
             
-            let mut nnz = _mm256_movemask_epi8(_mm256_cmpeq_epi8(input_chunk, _mm256_setzero_si256()));
 
             while nnz > 0 {
                 let lsb_index = nnz.trailing_zeros() as usize;
@@ -206,4 +208,91 @@ impl<const M: usize, const N: usize, T: Copy> LinearLayer<M, N, T> {
         output
     }
 
+    pub(crate) fn nnz_block_ids(input_id: usize, j: usize) -> usize {
+        0
+    }
+
+
+
+    /// The `load_weight`  method for this approach needs to be loaded differently from the one currently used above
+    pub(crate) unsafe fn linear_sparse_input_block_output(&self, side: Color, input: Vec<i8>) -> Vec<i32> {
+        let mut output: Vec<i32> = vec![];
+
+        assert!(std::mem::size_of::<T>() == std::mem::size_of::<i16>(), 
+            "This approach requires weights to be 16-bit. Otherwise, it's hard to widen the multiplication output to 32-bits.");
+
+        const REGISTER_WIDTH: usize = 256/8; // 32
+        const INPUT_REGISTER_WIDTH: usize = REGISTER_WIDTH; // 32 (u8)
+        const OUTPUT_REGISTER_WIDTH: usize = REGISTER_WIDTH / 4; // 8 (int32)
+        const OUTPUT_CHUNK_SIZE: usize = OUTPUT_REGISTER_WIDTH * 2; // 16
+        
+        assert!(self.num_outputs % OUTPUT_CHUNK_SIZE == 0, "We're processing 16 output elements at a time");
+        assert!(self.num_inputs % INPUT_REGISTER_WIDTH == 0);
+
+        let mut nnz_input_indices: Vec<usize> = vec![];
+
+        for i in (0..self.num_inputs).step_by(INPUT_REGISTER_WIDTH) { // 32 -> 64 -> 96 -> 128 -> ...
+            let input_chunk: __m256i = _mm256_load_si256(input.as_ptr().add(i) as *const __m256i);
+            let mut nnz = _mm256_movemask_epi8(_mm256_cmpgt_epi8(input_chunk, _mm256_setzero_si256()));
+
+            while nnz > 0 {
+                let lsb_index: usize = nnz.trailing_zeros() as usize;
+                nnz &= nnz - 1;
+                nnz_input_indices.push(i + lsb_index);
+            }
+        }
+
+        for i in 0..self.num_outputs {
+            *output.as_mut_ptr().add(i) = *(self.bias.as_ptr().add(i) as *const i32);
+        }
+
+        let num_chunks = self.num_outputs / OUTPUT_CHUNK_SIZE; // 1024/16 = 64
+
+        // There are always tradeoffs. We cannot process two inputs at a time, because
+        // they might have different non-zero weight blocks. Makes it visibly slower.
+        // There might be some tricks with AVX512, but AVX2 is fairly limited for this use case.
+        let nnz_ptr = nnz_input_indices.as_ptr();
+        let input_ptr = input.as_ptr();
+        let weights = (*self.weight.as_ptr().add(side as usize)).as_ptr();
+        for i in 0..nnz_input_indices.len() {
+            let input_id = *nnz_ptr.add(i);
+            let factor = _mm256_set1_epi32(input_ptr.add(input_id) as i32);
+
+            // We have hardcoded 4 16-wide non-zero weight blocks per input.
+            for j in 0..4 {
+                let block_id = Self::nnz_block_ids(input_id, j);
+                let output_offset0 = (block_id * 2 + 0) * OUTPUT_REGISTER_WIDTH;
+                let output_offset1 = (block_id * 2 + 1) * OUTPUT_REGISTER_WIDTH;
+
+                let weight_offset = (block_id * 1 + 0) * OUTPUT_REGISTER_WIDTH;
+
+                let sum0 = _mm256_load_si256(output.as_ptr().add(output_offset0)  as *const __m256i);
+                let sum1 = _mm256_load_si256(output.as_ptr().add(output_offset1)  as *const __m256i);
+
+                let col0 = _mm256_load_si256(weights.add(input_id * self.num_outputs + weight_offset) as *const __m256i);
+
+                let (sum0, sum1) = Self::m256_process_chunk(sum0, sum1, col0, _mm256_setzero_si256(), factor);
+
+                _mm256_store_si256(output.as_mut_ptr().add(output_offset0) as *mut __m256i, sum0);
+                _mm256_store_si256(output.as_mut_ptr().add(output_offset1) as *mut __m256i, sum1);
+
+                
+            }
+        }
+
+        let outptr = output.as_mut_ptr() as *mut __m256i;
+        for i in (0..self.num_outputs).step_by(OUTPUT_REGISTER_WIDTH) {
+            _mm256_store_si256(outptr.add(i), _mm256_srai_epi32::<LOG2_WEIGHT_SCALE>(_mm256_load_si256(outptr.add(i))));
+        }
+
+        output
+    }
+
+
+    pub(crate) unsafe fn m256_process_chunk(sum0: __m256i, sum1: __m256i, col0: __m256i, col1: __m256i, factor: __m256i) -> (__m256i, __m256i) {
+        let sum0 = _mm256_add_epi32(sum0, _mm256_madd_epi16(factor, _mm256_unpacklo_epi16(col0, col1)));
+        let sum1 = _mm256_add_epi32(sum1, _mm256_madd_epi16(factor, _mm256_unpackhi_epi16(col0, col1)));
+
+        (sum0, sum1)
+    }
 }
