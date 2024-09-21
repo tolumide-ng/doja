@@ -2,7 +2,7 @@
 
 use accumulator::{Accumualator, Feature};
 use feature_idx::FeatureIdx;
-use network::LinearLayer;
+use linear_layer::LinearLayer;
 
 use crate::color::Color;
 
@@ -10,9 +10,11 @@ use crate::color::Color;
 pub mod quantmoid;
 pub(crate) mod calc;
 pub(crate) mod accumulator;
-pub(crate) mod network;
+pub(crate) mod linear_layer;
 pub(crate) mod feature_idx;
 pub(crate) mod constants;
+pub(crate) mod network;
+pub(crate) mod relu;
 
 // All layers are linear, and all hidden neurons use ClippedReLU activation function
 

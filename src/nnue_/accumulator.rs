@@ -5,7 +5,7 @@ use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_load_si256, _mm256_loa
 use crate::{color::Color, constants::PLAYERS_COUNT};
 use crate::nnue_::constants::halfKA::*;
 
-use super::{feature_idx::FeatureIdx, network::LinearLayer};
+use super::{feature_idx::FeatureIdx, linear_layer::LinearLayer};
 
 
 // A single AVX2 register can fit 16 i16 values, and there are 16AVX2 registers (32 since AVX512) (stockfish docs)
