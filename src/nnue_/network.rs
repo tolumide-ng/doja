@@ -1,4 +1,4 @@
-use std::arch::x86_64::{__m128i, __m256i, _mm256_add_epi32, _mm256_castsi256_si128, _mm256_extracti128_si256, _mm256_hadd_epi32, _mm256_load_si256, _mm256_maddubs_epi16, _mm256_set1_epi16, _mm256_setzero_si256, _mm_add_epi32, _mm_load_si128, _mm_srai_epi32, _mm_store_si128};
+use std::arch::x86_64::{__m128i, __m256, __m256i, _mm256_add_epi32, _mm256_castsi256_si128, _mm256_cmpeq_epi8, _mm256_cmpgt_epi32, _mm256_extracti128_si256, _mm256_hadd_epi32, _mm256_load_si256, _mm256_maddubs_epi16, _mm256_movemask_epi8, _mm256_movemask_ps, _mm256_set1_epi16, _mm256_set1_epi32, _mm256_setzero_si256, _mm256_store_si256, _mm_add_epi32, _mm_cvtepi8_epi32, _mm_load_si128, _mm_loadl_epi64, _mm_movemask_ps, _mm_srai_epi32, _mm_store_si128};
 
 use crate::{color::Color, nnue_::constants::halfKA::LOG2_WEIGHT_SCALE};
 
@@ -22,8 +22,12 @@ pub(crate) struct LinearLayer<const M: usize, const N: usize, T: Copy> {
     pub(crate) num_outputs: usize,
 }
 
-
+/// M: is the input size
+/// N: is the output_size
 impl<const M: usize, const N: usize, T: Copy> LinearLayer<M, N, T> {
+    const CHUNK_SIZE: usize = 4;
+
+
     pub(crate) fn new(weight: [[T; M]; 2], bias: [T; N]) -> Self {
         Self { weight, bias, num_inputs: weight[0].len()/bias.len(), num_outputs : bias.len() }
     }
@@ -71,10 +75,10 @@ impl<const M: usize, const N: usize, T: Copy> LinearLayer<M, N, T> {
                     sum1 = Self::m256_add_dpbusd_epi32(sum1, inp, _mm256_load_si256(mem_addr1));
 
                     let mem_addr2 = (*self.weight.as_ptr().add(color as usize)).as_ptr().add(offset_2 + j * REGISTER_WIDTH) as *const __m256i;
-                    sum1 = Self::m256_add_dpbusd_epi32(sum2, inp, _mm256_load_si256(mem_addr2));
+                    sum2 = Self::m256_add_dpbusd_epi32(sum2, inp, _mm256_load_si256(mem_addr2));
 
                     let mem_addr3 = (*self.weight.as_ptr().add(color as usize)).as_ptr().add(offset_3 + j * REGISTER_WIDTH) as *const __m256i;
-                    sum2 = Self::m256_add_dpbusd_epi32(sum3, inp, _mm256_load_si256(mem_addr3));
+                    sum3 = Self::m256_add_dpbusd_epi32(sum3, inp, _mm256_load_si256(mem_addr3));
                 };
             }
 
@@ -119,4 +123,87 @@ impl<const M: usize, const N: usize, T: Copy> LinearLayer<M, N, T> {
         
         _mm_add_epi32(_mm_add_epi32(sum_128lo, sum_128hi), bias)
     }
+
+
+    /// We will be processing 4 inputs at a time, so to do it efficiently we need to permute the weights
+    pub(crate) fn get_weight_index_scrambled(&self, index: usize) -> usize {
+        let value = (index / Self::CHUNK_SIZE) % (self.num_inputs / Self::CHUNK_SIZE) * 
+        self.num_outputs * Self::CHUNK_SIZE + index / self.num_inputs * Self::CHUNK_SIZE + index % Self::CHUNK_SIZE;
+        return value;
+    }
+
+
+    pub(crate) fn load_weights(&mut self, side: Color, data: Vec<T>) { // assuming the input(T) is i8
+        for i in 0..(self.num_inputs * self.num_outputs) {
+            unsafe {
+                let index = self.get_weight_index_scrambled(i);
+                *(*(self.weight.as_mut_ptr().add(side as usize))).as_mut_ptr().add(index) = *(data.as_ptr().add(i));
+            }
+        }
+    }
+
+    pub(crate) unsafe fn linear_sparse_input(&self, side: Color, input: Vec<i8>) -> Vec<i32> {
+        let mut output = Vec::with_capacity(N);
+
+        assert_eq!(std::mem::size_of::<T>(), std::mem::size_of::<i8>(), 
+            "This approach requires weights to be 8-bit.");
+
+        const REGISTER_WIDTH: usize = 256/8; // 32
+        const INPUT_REGISTER_WIDTH: usize = REGISTER_WIDTH; // u8 (4 * u8) =32
+        const OUTPUT_REGISTER_WIDTH: usize = REGISTER_WIDTH/4; // i32
+
+        assert!(self.num_inputs % INPUT_REGISTER_WIDTH == 0);
+
+        // Find the indices of the non-zero(nnz) inputs
+        let mut nnz_input_indices = vec![];
+
+        for i in (0..self.num_inputs).step_by(INPUT_REGISTER_WIDTH) {
+            let input_chunk = _mm256_load_si256(input.as_ptr().add(i) as *const __m256i);
+            
+            let mut nnz = _mm256_movemask_epi8(_mm256_cmpeq_epi8(input_chunk, _mm256_setzero_si256()));
+
+            while nnz > 0 {
+                let lsb_index = nnz.trailing_zeros() as usize;
+                nnz &= nnz - 1;
+                nnz_input_indices.push(i + lsb_index);
+            }
+        }
+
+        // this time, we will hold all outputs in registers, since we don't expect many of them.
+        let num_regs = self.num_outputs / OUTPUT_REGISTER_WIDTH;
+        let mut acc: Vec<__m256i> = Vec::with_capacity(num_regs);
+
+        // Initialize the accs with biases
+        let biasesvec = self.bias.as_ptr();
+        for k in 0..num_regs { *(acc.as_mut_ptr().add(k)) = _mm256_load_si256(biasesvec.add(k) as *const __m256i); }
+
+
+        let input32 = input.as_ptr() as *const i32;
+        let weights = (*self.weight.as_ptr().add(side as usize)).as_ptr();
+
+        let nnz = nnz_input_indices.as_ptr();
+        for i in 0..nnz_input_indices.len() {
+            let input_id = *nnz.add(i);
+            // We load 4 inputs at a time
+            let factor = _mm256_set1_epi32(*input32.add(input_id));
+            
+            // Find the corresponding weights
+            let col = weights.add(input_id * Self::CHUNK_SIZE * self.num_outputs) as *const __m256i;
+            
+            for k in 0..num_regs {
+                let result = Self::m256_add_dpbusd_epi32(*acc.as_ptr().add(k), factor, *col.add(k));
+                _mm256_store_si256(acc.as_mut_ptr().add(k), result);
+            }
+        }
+        
+        // Store the accumualtors directly into the output
+        let outptr = output.as_mut_ptr() as *mut __m256i;
+        for k in 0..num_regs {
+            _mm256_store_si256(outptr.add(k), *acc.as_ptr().add(k));
+        }
+        
+
+        output
+    }
+
 }
