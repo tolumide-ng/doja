@@ -1,8 +1,10 @@
 // The purpose of the ClippedReLu is to introduce non-linearity to the network.
 
+use calc::halfka::halfka_index;
 use constants::customKA0::*;
-use linear_layer::LinearLayer;
 use network::NNUEParams;
+
+use crate::{board::piece::Piece, nnue::{commons::HIDDEN, net::nnue_index}, squares::Square};
 
 pub mod quantmoid;
 pub(crate) mod calc;
@@ -52,9 +54,25 @@ pub(crate) fn checkings() {
     // Accumualator::refresh_accumulator(linear, &mut acc,
     //      &vec![FeatureIdx::new(3), FeatureIdx::new(4), FeatureIdx::new(5), FeatureIdx::new(18)],
     //      Color::White);
+
+    use crate::board::piece::Piece::*;
     
     let network = &PARAMS;
-    println!("linear layer xxx {:?}", network);
+    // println!("((((((((((((((((((moddd:::::::::::::::::::::: {:?}
+    //     {}, {}, {}, {}, {}", PARAMS.input_weight[2], 
+    // PARAMS.input_weight[70000],
+    // PARAMS.input_weight[76],
+    // PARAMS.input_weight[28],
+    // PARAMS.input_weight[201],
+    // PARAMS.input_weight[99],);
+
+    // println!("linear layer xxx {:?}", network.input_weight.len());
+    // // let xxo = halfka_index(Piece::BK, Square::E8, Square::A5);
+    // let xxo = nnue_index(WB    , Square::A4);
+
+    // println!(">>>> xxxx w={:#?} \t b={}", xxo.0, xxo.1);
+
+    // println!("{}", 63 + (64 * (5 + 6 * 1)));
     // let params = &
 }
 

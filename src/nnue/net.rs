@@ -21,10 +21,19 @@ pub(crate) fn nnue_index(piece: Piece, sq: Square) -> (usize, usize) {
     const COLOR_STRIDE: usize = 64 * 6; // number_of_squares * number of pieces per side
     const PIECE_STRIDE: usize = 64;
     let p = (piece as usize) % 6;
-    let c = piece.color();
+    let c = piece.color() as usize;
 
-    let white_idx = c as usize * COLOR_STRIDE + p * PIECE_STRIDE + sq.flipv() as usize;
-    let black_idx = (1 ^ c as usize) * COLOR_STRIDE + p * PIECE_STRIDE + sq as usize;
+    println!("sqqqqq ::::: {}", sq as usize);
+
+    let sqfv =sq.flipv() as usize;
+
+    let white_idx = c * COLOR_STRIDE + p * PIECE_STRIDE + sqfv;
+    let black_idx = (1 ^ c) * COLOR_STRIDE + p * PIECE_STRIDE + sq as usize;
+
+
+    println!("|||||||||||| p =>> {p}, cc---- {c} -- white_idx {white_idx} ::::: black_idx ::: {black_idx}, sqqqq |||| {sqfv}");
+
+
 
     (white_idx * HIDDEN, black_idx * HIDDEN)
 }

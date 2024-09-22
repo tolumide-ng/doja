@@ -1,8 +1,9 @@
 // when the king moves, the accumulator is refreshed
 
 use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_load_si256, _mm256_loadu_si256, _mm256_setzero_si256, _mm256_store_si256, _mm256_sub_epi16};
+use std::ops::{Index, IndexMut};
 
-use crate::{color::Color, constants::PLAYERS_COUNT};
+use crate::color::Color;
 use crate::nnue_::constants::halfKA::*;
 
 use super::{feature_idx::FeatureIdx, linear_layer::LinearLayer};
@@ -15,12 +16,13 @@ pub(crate) type Feature = __m256i;
 #[derive(Debug, Clone, Copy)]
 #[repr(align(64))]
 pub(crate) struct Accumualator<T, const U: usize> {
-    v: [[T; U]; PLAYERS_COUNT]
+    white: [T; U],
+    black: [T; U],
 }
 
 impl Default for Accumualator<Feature, L1_SIZE> {
     fn default() -> Self {
-        unsafe { Self { v: [[_mm256_setzero_si256(); L1_SIZE]; PLAYERS_COUNT] } }
+        unsafe { Self { white: [_mm256_setzero_si256(); L1_SIZE], black: [_mm256_setzero_si256(); L1_SIZE] } }
     }
 }
 
@@ -58,7 +60,7 @@ impl Accumualator<Feature, L1_SIZE> {
 
         // Only after all the accumulation is done do the write.
         for i in 0..NUM_CHUNKS {
-            unsafe { _mm256_store_si256(&mut new_acc.v[color][i], regs[i]) }
+            unsafe { _mm256_store_si256(&mut new_acc[color][i], regs[i]) }
         }
     }
 
@@ -77,7 +79,7 @@ impl Accumualator<Feature, L1_SIZE> {
 
         for i in 0..NUM_CHUNKS {
             unsafe { 
-                let bias = (*(new_acc.v.as_ptr().add(color as usize))).as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
+                let bias = new_acc[color].as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
                 *regs.as_mut_ptr().add(i) = _mm256_load_si256(bias) 
             };
         }
@@ -104,7 +106,7 @@ impl Accumualator<Feature, L1_SIZE> {
          for i in 0..NUM_CHUNKS {
              unsafe {
                 let src = *(regs.as_ptr().add(i));
-                let dst = &mut new_acc.v[color as usize][i * REGISTER_WIDTH];
+                let dst = &mut new_acc[color][i * REGISTER_WIDTH];
                 _mm256_store_si256(dst, src);
             }
          }
@@ -112,3 +114,28 @@ impl Accumualator<Feature, L1_SIZE> {
         new_acc
     }
 }
+
+
+impl<T, const U: usize> Index<Color> for Accumualator<T, U> {
+    type Output = [T; U];
+
+    fn index(&self, index: Color) -> &Self::Output {
+        match index {
+            Color::White => &self.white,
+            Color::Black => &self.black,
+            _ => panic!("unrecognized color")
+        }
+    }
+}
+
+
+
+impl<T, const U: usize> IndexMut<Color> for Accumualator<T, U> {
+    fn index_mut(&mut self, index: Color) -> &mut Self::Output {
+        match index {
+            Color::White => &mut self.white,
+            Color::Black => &mut self.black,
+            _ => panic!("unrecognized color")
+        }
+    }
+} 

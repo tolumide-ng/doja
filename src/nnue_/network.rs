@@ -1,4 +1,4 @@
-use super::align64::Align64;
+use super::{accumulator::Accumualator, align64::Align64};
 
 #[derive(Debug)] 
 #[repr(C)]
@@ -9,4 +9,8 @@ pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: 
 
     pub(crate) output_weights: [i16; P],
     pub(crate) output_bias: i16,
+}
+
+pub(crate) struct NNUEState {
+    accumulator_stack: [Accumualator<>]
 }
