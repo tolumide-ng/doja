@@ -2,6 +2,8 @@ use std::arch::x86_64::{__m128i, __m256i, _mm256_add_epi32, _mm256_castsi256_si1
 
 use crate::{color::Color, nnue_::constants::halfKA::LOG2_WEIGHT_SCALE};
 
+use super::align64::Align64;
+
 // / U: is the size of the layer e.g. L1_size can be 518, or 768 e.t.c
 // / M: is the size of the each column in the layer, e.g. on AVX-2 with 256 register 
 // / if we are using i32, then M = 8 (i.e, 8 x 32 = 256)
@@ -13,10 +15,19 @@ use crate::{color::Color, nnue_::constants::halfKA::LOG2_WEIGHT_SCALE};
 /// L0.weight[column_index][row_index]
 // #[repr(align(32))]
 /// M = INPUT_SIZE * OUTPUT_SIZE
-/// N = OUTPUT_SIZE 
+/// N = OUTPUT_SIZE
+#[derive(Debug)] 
+#[repr(C)]
 pub(crate) struct LinearLayer<const M: usize, const N: usize, T: Copy> {
-    pub(crate) weight: [[T; M]; 2], // where U = 2(colors) * layer's size
-    pub(crate) bias: [T; N],
+    // pub(crate) weight: [[T; M]; 2], // where U = 2(colors) * layer's size
+    pub(crate) weight: Align64<[T; M]>,
+    pub(crate) bias: Align64<[T; N]>,
+    
+    
+    pub(crate) output_weights: [i16; 2048],
+    pub(crate) output_bias: i16,
+    
+    
     pub(crate) num_inputs: usize,
     pub(crate) num_outputs: usize,
 }
@@ -27,9 +38,9 @@ impl<const M: usize, const N: usize, T: Copy> LinearLayer<M, N, T> {
     const CHUNK_SIZE: usize = 4;
 
 
-    pub(crate) fn new(weight: [[T; M]; 2], bias: [T; N]) -> Self {
-        Self { weight, bias, num_inputs: weight[0].len()/bias.len(), num_outputs : bias.len() }
-    }
+    // pub(crate) fn new(weight: [[T; M]; 2], bias: [T; N]) -> Self {
+    //     Self { weight, bias, num_inputs: weight[0].len()/bias.len(), num_outputs : bias.len() }
+    // }
 
     pub(crate) fn run(&self, input: Vec<i8>, output: &mut Vec<__m128i>, color: Color) {
         // Assuming the expected output is size i32
@@ -67,16 +78,16 @@ impl<const M: usize, const N: usize, T: Copy> LinearLayer<M, N, T> {
 
                     // This function processes a 32*1 chunk of i8, and produces 8*1 chunk of i32
                     // For definition see below
-                    let mem_addr0 = (*self.weight.as_ptr().add(color as usize)).as_ptr().add(offset_0 + j * REGISTER_WIDTH) as *const __m256i;
+                    let mem_addr0 = self.weight.as_ptr().add(offset_0 + j * REGISTER_WIDTH) as *const __m256i;
                     sum0 = Self::m256_add_dpbusd_epi32(sum0, inp, _mm256_load_si256(mem_addr0));
                     
-                    let mem_addr1 = (*self.weight.as_ptr().add(color as usize)).as_ptr().add(offset_1 + j * REGISTER_WIDTH) as *const __m256i;
+                    let mem_addr1 = self.weight.as_ptr().add(offset_1 + j * REGISTER_WIDTH) as *const __m256i;
                     sum1 = Self::m256_add_dpbusd_epi32(sum1, inp, _mm256_load_si256(mem_addr1));
 
-                    let mem_addr2 = (*self.weight.as_ptr().add(color as usize)).as_ptr().add(offset_2 + j * REGISTER_WIDTH) as *const __m256i;
+                    let mem_addr2 = self.weight.as_ptr().add(offset_2 + j * REGISTER_WIDTH) as *const __m256i;
                     sum2 = Self::m256_add_dpbusd_epi32(sum2, inp, _mm256_load_si256(mem_addr2));
 
-                    let mem_addr3 = (*self.weight.as_ptr().add(color as usize)).as_ptr().add(offset_3 + j * REGISTER_WIDTH) as *const __m256i;
+                    let mem_addr3 = self.weight.as_ptr().add(offset_3 + j * REGISTER_WIDTH) as *const __m256i;
                     sum3 = Self::m256_add_dpbusd_epi32(sum3, inp, _mm256_load_si256(mem_addr3));
                 };
             }
@@ -136,7 +147,7 @@ impl<const M: usize, const N: usize, T: Copy> LinearLayer<M, N, T> {
         for i in 0..(self.num_inputs * self.num_outputs) {
             unsafe {
                 let index = self.get_weight_index_scrambled(i);
-                *(*(self.weight.as_mut_ptr().add(side as usize))).as_mut_ptr().add(index) = *(data.as_ptr().add(i));
+                *self.weight.as_mut_ptr().add(index) = *(data.as_ptr().add(i));
             }
         }
     }
@@ -180,7 +191,7 @@ impl<const M: usize, const N: usize, T: Copy> LinearLayer<M, N, T> {
 
 
         let input32 = input.as_ptr() as *const i32;
-        let weights = (*self.weight.as_ptr().add(side as usize)).as_ptr();
+        let weights = self.weight.as_ptr();
 
         let nnz = nnz_input_indices.as_ptr();
         for i in 0..nnz_input_indices.len() {
@@ -252,7 +263,7 @@ impl<const M: usize, const N: usize, T: Copy> LinearLayer<M, N, T> {
         // There might be some tricks with AVX512, but AVX2 is fairly limited for this use case.
         let nnz_ptr = nnz_input_indices.as_ptr();
         let input_ptr = input.as_ptr();
-        let weights = (*self.weight.as_ptr().add(side as usize)).as_ptr();
+        let weights = self.weight.as_ptr();
         for i in 0..nnz_input_indices.len() {
             let input_id = *nnz_ptr.add(i);
             let factor = _mm256_set1_epi32(input_ptr.add(input_id) as i32);

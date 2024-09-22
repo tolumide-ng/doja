@@ -50,7 +50,7 @@ impl Accumualator<Feature, L1_SIZE> {
             for i in 0..NUM_CHUNKS {
                 unsafe {
                     // let xx = (*(layer.weight.as_ptr().add(**a))).as_ptr().add(i * REGISTER_WIDTH);
-                    let weights = (*(layer.weight.as_ptr().add(**a))).as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
+                    let weights = layer.weight.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
                     *regs.as_mut_ptr().add(i) = _mm256_add_epi16(regs[i], _mm256_load_si256(weights));
                 };
             }
@@ -85,7 +85,7 @@ impl Accumualator<Feature, L1_SIZE> {
         for r in removed_features {
             for i in 0..NUM_CHUNKS {
                 unsafe {
-                    let weights = (*(layer.weight.as_ptr().add(**r))).as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
+                    let weights = layer.weight.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
                     *regs.as_mut_ptr().add(i) = _mm256_sub_epi16(*regs.as_ptr().add(i), _mm256_load_si256(weights));
                 }
             }
@@ -94,7 +94,7 @@ impl Accumualator<Feature, L1_SIZE> {
         for a in added_features {
             for i in 0..NUM_CHUNKS {
                 unsafe {
-                    let weights = (*(layer.weight.as_ptr().add(**a))).as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
+                    let weights = layer.weight.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
                     *regs.as_mut_ptr().add(i) = _mm256_sub_epi16(*regs.as_ptr().add(i), _mm256_load_si256(weights));
                 }
             }

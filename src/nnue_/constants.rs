@@ -59,3 +59,10 @@ pub(crate) mod halfKA {
     pub(crate) const L3_BIAS: usize = 32;
     pub(crate) const L4_BIAS: usize = 1;
 }
+
+
+pub(crate) mod customKA0 {
+    pub(crate) const INPUT: usize = 768;
+    pub(crate) const L1_SIZE: usize = 1024;
+    pub(crate) const OUTPUT: usize = 2048;
+}

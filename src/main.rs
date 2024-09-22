@@ -85,7 +85,7 @@ fn main() {
     // println!("**********************AFTER*****************************");
     // println!("{}", board.to_string());
 
-    // checkings();
+    checkings();
 
 
 

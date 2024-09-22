@@ -1,11 +1,7 @@
 // The purpose of the ClippedReLu is to introduce non-linearity to the network.
 
-use accumulator::{Accumualator, Feature};
-use feature_idx::FeatureIdx;
+use constants::customKA0::*;
 use linear_layer::LinearLayer;
-
-use crate::color::Color;
-
 
 pub mod quantmoid;
 pub(crate) mod calc;
@@ -15,10 +11,18 @@ pub(crate) mod feature_idx;
 pub(crate) mod constants;
 pub(crate) mod network;
 pub(crate) mod relu;
+pub(crate) mod align64;
 
 // All layers are linear, and all hidden neurons use ClippedReLU activation function
 
 // HalfKP is just P taken 64 times, once for each king square
+
+pub(crate) static MODEL: LinearLayer<{INPUT*L1_SIZE}, L1_SIZE, i16> = unsafe {
+    let bytes: &[u8] = include_bytes!("../../bins/net.bin");
+    // const _: () = assert_eq!(BYTES.len(), std::mem::size_of::<LinearLayer<{768*1024}, 1024, i16>>());
+    std::ptr::read_unaligned(bytes.as_ptr() as *const LinearLayer<{INPUT*L1_SIZE}, L1_SIZE, i16>)
+};
+
 
 pub(crate) fn checkings() {
     // let linear = LinearLayer {
@@ -42,4 +46,10 @@ pub(crate) fn checkings() {
     // Accumualator::refresh_accumulator(linear, &mut acc,
     //      &vec![FeatureIdx::new(3), FeatureIdx::new(4), FeatureIdx::new(5), FeatureIdx::new(18)],
     //      Color::White);
+
+
+// pub(crate) static MODEL: LinearLayer<(768*1024), 1024, i16> = unsafe { std::mem::transmute(*include_bytes!("../../bins/net.bin")) };
+    let layer = &MODEL;
+    println!("linear layer xxx {:?}", layer.output_bias);
 }
+
