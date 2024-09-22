@@ -2,6 +2,7 @@
 
 use constants::customKA0::*;
 use linear_layer::LinearLayer;
+use network::NNUEParams;
 
 pub mod quantmoid;
 pub(crate) mod calc;
@@ -17,10 +18,15 @@ pub(crate) mod align64;
 
 // HalfKP is just P taken 64 times, once for each king square
 
-pub(crate) static MODEL: LinearLayer<{INPUT*L1_SIZE}, L1_SIZE, i16> = unsafe {
+// pub(crate) static MODEL: LinearLayer<{INPUT*L1_SIZE}, L1_SIZE, i16> = unsafe {
+//     let bytes: &[u8] = include_bytes!("../../bins/net.bin");
+//     // const _: () = assert_eq!(BYTES.len(), std::mem::size_of::<LinearLayer<{768*1024}, 1024, i16>>());
+//     std::ptr::read_unaligned(bytes.as_ptr() as *const LinearLayer<{INPUT*L1_SIZE}, L1_SIZE, i16>)
+// };
+
+pub(crate) static PARAMS: NNUEParams<{INPUT * L1_SIZE}, L1_SIZE, {L1_SIZE*2}, i16> = unsafe {
     let bytes: &[u8] = include_bytes!("../../bins/net.bin");
-    // const _: () = assert_eq!(BYTES.len(), std::mem::size_of::<LinearLayer<{768*1024}, 1024, i16>>());
-    std::ptr::read_unaligned(bytes.as_ptr() as *const LinearLayer<{INPUT*L1_SIZE}, L1_SIZE, i16>)
+    std::ptr::read_unaligned(bytes.as_ptr() as *const NNUEParams<{INPUT*L1_SIZE}, {L1_SIZE}, {L1_SIZE * 2}, i16>)
 };
 
 
@@ -46,10 +52,9 @@ pub(crate) fn checkings() {
     // Accumualator::refresh_accumulator(linear, &mut acc,
     //      &vec![FeatureIdx::new(3), FeatureIdx::new(4), FeatureIdx::new(5), FeatureIdx::new(18)],
     //      Color::White);
-
-
-// pub(crate) static MODEL: LinearLayer<(768*1024), 1024, i16> = unsafe { std::mem::transmute(*include_bytes!("../../bins/net.bin")) };
-    let layer = &MODEL;
-    println!("linear layer xxx {:?}", layer.output_bias);
+    
+    let network = &PARAMS;
+    println!("linear layer xxx {:?}", network);
+    // let params = &
 }
 

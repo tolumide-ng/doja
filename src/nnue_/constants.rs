@@ -64,5 +64,5 @@ pub(crate) mod halfKA {
 pub(crate) mod customKA0 {
     pub(crate) const INPUT: usize = 768;
     pub(crate) const L1_SIZE: usize = 1024;
-    pub(crate) const OUTPUT: usize = 2048;
+    // pub(crate) const L2_SIZE: usize = 1024*2;
 }
