@@ -3,6 +3,7 @@
 use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_load_si256, _mm256_loadu_si256, _mm256_setzero_si256, _mm256_store_si256, _mm256_sub_epi16};
 use std::ops::{Index, IndexMut};
 
+
 use crate::color::Color;
 use crate::nnue_::constants::halfKA::*;
 
@@ -20,11 +21,13 @@ pub(crate) struct Accumualator<T, const U: usize> {
     black: [T; U],
 }
 
-impl Default for Accumualator<Feature, L1_SIZE> {
+impl<const U: usize> Default for Accumualator<Feature, U> {
     fn default() -> Self {
-        unsafe { Self { white: [_mm256_setzero_si256(); L1_SIZE], black: [_mm256_setzero_si256(); L1_SIZE] } }
+        unsafe { Self { white: [_mm256_setzero_si256(); U], black: [_mm256_setzero_si256(); U] } }
     }
 }
+
+
 
 impl Accumualator<Feature, L1_SIZE> {
     pub(crate) fn refresh_accumulator<const U: usize, const V: usize, W: Copy>(
@@ -36,9 +39,6 @@ impl Accumualator<Feature, L1_SIZE> {
         const REGISTER_WIDTH: usize = 256/16;
         const NUM_CHUNKS: usize = L1_SIZE / REGISTER_WIDTH;
         let mut regs: [__m256i; NUM_CHUNKS] = unsafe { [_mm256_setzero_si256(); NUM_CHUNKS] };
-
-        println!("the register is {:?}", regs);
-        println!("num_chunks is {}", NUM_CHUNKS);
 
         // Load bias to registers and operate on registers only
         for i in 0..NUM_CHUNKS {
