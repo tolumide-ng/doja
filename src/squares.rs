@@ -40,9 +40,8 @@ impl<T> Index<Square> for [T] {
 }
 
 
-
-impl From<u64> for Square {
-    fn from(value: u64) -> Self {
+impl From<u8> for Square {
+    fn from(value: u8) -> Self {
         match value {
             64 => Square::NoSquare,
             56 => Square::A8,
@@ -111,6 +110,13 @@ impl From<u64> for Square {
             7 => Square::H1,
             _ => panic!("Unrecognized value: {value}")
         }
+    }
+}
+
+
+impl From<u64> for Square {
+    fn from(value: u64) -> Self {
+        Square::from(value as u8)
     }
 }
 

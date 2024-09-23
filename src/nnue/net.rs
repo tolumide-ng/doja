@@ -1,4 +1,4 @@
-use crate::{board::piece::Piece, squares::Square};
+use crate::{board::piece::Piece, nnue_::feature_idx::FeatureIdx, squares::Square};
 
 use super::{align64::Align64, commons::{CR_MAX, CR_MIN, FEATURES, HIDDEN}};
 
@@ -32,22 +32,20 @@ pub(crate) fn nnue_index(piece: Piece, sq: Square) -> (usize, usize) {
 }
 
 
-pub(crate) fn halfka_index(piece: Piece, sq: Square) -> (usize, usize) {
-    const COLOR_STRIDE: usize = 64 * 6; // number_of_squares * number of pieces per side
+pub(crate) fn halfka_idx(piece: Piece, sq: Square) -> FeatureIdx {
+    // const COLOR_STRIDE: usize = 64 * 6; // number_of_squares * number of pieces per side
     const PIECE_STRIDE: usize = 64;
     let p = (piece as usize) % 6;
     let c = piece.color() as usize;
 
     let sqfv =sq.flipv() as usize;
 
-    let idx = (c );
+    let white_idx = p * PIECE_STRIDE + sqfv;
+    let black_idx = p * PIECE_STRIDE + sq as usize;
 
-    let white_idx = c * COLOR_STRIDE + p * PIECE_STRIDE + sqfv;
-    let black_idx = (1 ^ c) * COLOR_STRIDE + p * PIECE_STRIDE + sq as usize;
-
-    (white_idx * HIDDEN, black_idx * HIDDEN)
+    let idx = (1 - c) * white_idx + c * black_idx; // Choose based on the color
+    FeatureIdx::from(idx * HIDDEN)
 }
-
 
 
 /// Squared Clipped ReLu activation function

@@ -1,10 +1,11 @@
 use std::alloc::{self, alloc_zeroed, Layout};
-use std::arch::x86_64::{__m256i, _mm256_load_si256, _mm256_setzero_si256};
+use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_load_si256, _mm256_setzero_si256, _mm256_store_si256};
 
 use crate::board::{piece::Piece, state::board::Board};
 use crate::color::Color::*;
-use crate::nnue::net::{nnue_index, MODEL};
+use crate::nnue::net::{halfka_idx, nnue_index, MODEL};
 use crate::nnue_::L1_SIZE;
+use crate::squares::Square;
 
 use super::{accumulator::Accumualator, accumulator::Feature, align64::Align64};
 
@@ -27,7 +28,7 @@ pub(crate) struct NNUEState<T, const U: usize> {
 }
 
 impl<const U: usize> From<Board> for NNUEState<Feature, U> {
-    fn from(board: Board) -> Self {
+    fn from(board: Board) -> NNUEState<Feature, U> {
         let mut boxed: Box<Self> = unsafe {
             let layout = Layout::new::<Accumualator<Feature, U>>();
             let ptr = alloc_zeroed(layout);
@@ -39,104 +40,16 @@ impl<const U: usize> From<Board> for NNUEState<Feature, U> {
             Box::from_raw(ptr.cast())
         };
 
-        boxed.accumulator_stack[0] = Accumualator::default();
+        let acc = unsafe { Accumualator::refresh(&board) };
+        boxed.accumulator_stack[0] = acc;
+        boxed.current_acc = 0;
 
-        let mut board_sqs = board.get_occupancy(Both);
-
-        while board_sqs != 0 {
-            let sq = board_sqs.trailing_ones() as u64;
-        }
-
-        let bitmaps = board.board;
-
-        for (p, board) in (*bitmaps).into_iter().enumerate() {
-            let mut sqs = *board;
-
-            while sqs != 0 {
-                let sq = sqs.trailing_zeros() as u8;
-
-                let piece = Piece::from(p as u8);
-            }
-        }
-
-        // Self { white: [0; U], black: [0; U] }
-        0
+        *boxed
     }
 }
 
 
 impl<T, const U: usize> NNUEState<T, U> {
-    pub(crate) unsafe fn refresh(&self, board: &Board) -> Self {
-        const REGISTER_WIDTH: usize = 256/16; // 16
-        const NUM_CHUNKS: usize = L1_SIZE / REGISTER_WIDTH; // 1024/16 = 64
-
-        let mut active_features = Vec::with_capacity(board.get_occupancy(Both).count_ones() as usize);
-        
-        let bitmaps = board.board;
-        for (p, board) in (*bitmaps).into_iter().enumerate() {
-            let sqs = *board;
-
-            while sqs != 0 {
-                let sq = sqs.trailing_zeros() as u8;
-                let piece = Piece::from(p as u8);
-
-                let f_idx = nnue_index(piece, sq);
-            }
-        }
-
-        let mut regs: [Feature; NUM_CHUNKS] = unsafe { [_mm256_setzero_si256(); NUM_CHUNKS] };
-
-        // Load bias into registers
-        for i in 0..NUM_CHUNKS {
-            *regs.as_mut_ptr().add(i) = _mm256_load_si256(MODEL.features_bias.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i);
-        }
-
-        // for 
-        //  use the update_accumualtor method below to generate this
-
-        0
-    }
-}
-
-
-
-
-// impl Accumualator<Feature, L1_SIZE> {
-// 
-//     pub(crate) fn refresh_accumulator<const U: usize, const V: usize, W: Copy>(
-//         layer: LinearLayer<U, V, W>, 
-//         new_acc: &mut Self,
-//         active_features: &Vec<FeatureIdx>,
-//         color: Color
-//     ) {
-//         const REGISTER_WIDTH: usize = 256/16;
-//         const NUM_CHUNKS: usize = L1_SIZE / REGISTER_WIDTH;
-//         let mut regs: [__m256i; NUM_CHUNKS] = unsafe { [_mm256_setzero_si256(); NUM_CHUNKS] };
-
-//         // Load bias to registers and operate on registers only
-//         for i in 0..NUM_CHUNKS {
-//             unsafe {
-//                 let bias = layer.bias.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
-//                 *regs.as_mut_ptr().add(i) = _mm256_loadu_si256(bias);
-//             };
-//         }
-
-//         for a in active_features {
-//             for i in 0..NUM_CHUNKS {
-//                 unsafe {
-//                     // let xx = (*(layer.weight.as_ptr().add(**a))).as_ptr().add(i * REGISTER_WIDTH);
-//                     let weights = layer.weight.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
-//                     *regs.as_mut_ptr().add(i) = _mm256_add_epi16(regs[i], _mm256_load_si256(weights));
-//                 };
-//             }
-//         }
-
-//         // Only after all the accumulation is done do the write.
-//         for i in 0..NUM_CHUNKS {
-//             unsafe { _mm256_store_si256(&mut new_acc[color][i], regs[i]) }
-//         }
-//     }
-// 
 //     pub(crate) fn update_accumulator<const U: usize, const V: usize, W: Copy>(
 //         &self,
 //         layer: LinearLayer<U, V, W>,
@@ -193,3 +106,5 @@ impl<T, const U: usize> NNUEState<T, U> {
 // 
 
 // }
+
+}
