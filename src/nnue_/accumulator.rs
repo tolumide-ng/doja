@@ -1,6 +1,6 @@
 // when the king moves, the accumulator is refreshed
 
-use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_load_si256, _mm256_loadu_si256, _mm256_setzero_si256, _mm256_store_si256, _mm256_sub_epi16};
+use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_cvtepi8_epi16, _mm256_extracti128_si256, _mm256_load_si256, _mm256_loadu_si256, _mm256_max_epi8, _mm256_mullo_epi16, _mm256_packs_epi16, _mm256_permute4x64_epi64, _mm256_setzero_si256, _mm256_store_si256, _mm256_sub_epi16};
 use std::ops::{Index, IndexMut};
 
 
@@ -10,10 +10,9 @@ use crate::color::Color::*;
 use crate::color::Color;
 use crate::constants::PLAYERS_COUNT;
 use crate::nnue::net::{halfka_idx, MODEL};
-use crate::nnue_::constants::halfKA::*;
 use crate::squares::Square;
 
-use super::{feature_idx::FeatureIdx, linear_layer::LinearLayer};
+use super::feature_idx::FeatureIdx;
 
 
 // A single AVX2 register can fit 16 i16 values, and there are 16AVX2 registers (32 since AVX512) (stockfish docs)
@@ -23,8 +22,8 @@ pub(crate) type Feature = __m256i;
 #[derive(Debug, Clone, Copy)]
 #[repr(align(64))]
 pub(crate) struct Accumualator<T, const U: usize> {
-    white: [T; U],
-    black: [T; U],
+    pub(crate) white: [T; U],
+    pub(crate) black: [T; U],
 }
 
 impl<const U: usize> Default for Accumualator<Feature, U> {
@@ -140,89 +139,39 @@ impl<const U: usize> Accumualator<Feature, U> {
         acc
     }
 
+    pub(crate) unsafe fn crelu16(&self, stm: Color) -> [[__m256i; U]; 2] {
+        const IN_REGISTER_WIDTH: usize = 256/16;
+        const OUT_REGISTER_WIDTH: usize = 256/8;
+        assert_eq!(U % OUT_REGISTER_WIDTH, 0, "We're processing 32 elements at a time");
+        let num_out_chunks = U/OUT_REGISTER_WIDTH;
 
-    // pub(crate) fn refresh_accumulator<const U: usize, const V: usize, W: Copy>(
-    //     layer: LinearLayer<U, V, W>, 
-    //     new_acc: &mut Self,
-    //     active_features: &Vec<FeatureIdx>,
-    //     color: Color
-    // ) {
-    //     const REGISTER_WIDTH: usize = 256/16;
-    //     const NUM_CHUNKS: usize = L1_SIZE / REGISTER_WIDTH;
-    //     let mut regs: [__m256i; NUM_CHUNKS] = unsafe { [_mm256_setzero_si256(); NUM_CHUNKS] };
+        let input = if stm == Color::White {[self.white, self.black]} else {[self.black, self.white]};
+        let mut output: [[__m256i; U]; 2] = [[_mm256_setzero_si256(); U]; 2];
 
-    //     // Load bias to registers and operate on registers only
-    //     for i in 0..NUM_CHUNKS {
-    //         unsafe {
-    //             let bias = layer.bias.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
-    //             *regs.as_mut_ptr().add(i) = _mm256_loadu_si256(bias);
-    //         };
-    //     }
+        let zero = _mm256_setzero_si256();
+        const CONTROL: i32 = 0b11011000; // 3, 1, 2, 0; lane 0 is the rightmost one
 
-    //     for a in active_features {
-    //         for i in 0..NUM_CHUNKS {
-    //             unsafe {
-    //                 // let xx = (*(layer.weight.as_ptr().add(**a))).as_ptr().add(i * REGISTER_WIDTH);
-    //                 let weights = layer.weight.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
-    //                 *regs.as_mut_ptr().add(i) = _mm256_add_epi16(regs[i], _mm256_load_si256(weights));
-    //             };
-    //         }
-    //     }
+        for i in 0..num_out_chunks {
+            for color in [Color::White, Color::Black] {
+                let curr_input = *(input.as_ptr().add(color as usize));
+                let in0 = _mm256_load_si256(curr_input.as_ptr().add((i * 2 + 0) * IN_REGISTER_WIDTH));
+                let in1 = _mm256_load_si256(curr_input.as_ptr().add((i * 2 + 1) * IN_REGISTER_WIDTH));
 
-    //     // Only after all the accumulation is done do the write.
-    //     for i in 0..NUM_CHUNKS {
-    //         unsafe { _mm256_store_si256(&mut new_acc[color][i], regs[i]) }
-    //     }
-    // }
 
-    pub(crate) fn update_accumulator<const L: usize, const M: usize, N: Copy>(
-        &self,
-        layer: LinearLayer<L, M, N>,
-        removed_features: &Vec<FeatureIdx>,
-        added_features: &Vec<FeatureIdx>,
-        color: Color 
-    ) -> Self {
-        const REGISTER_WIDTH: usize = 256/16;
-        const NUM_CHUNKS: usize = L1_SIZE /REGISTER_WIDTH;
-        
-        let mut regs: [__m256i; NUM_CHUNKS] = unsafe {[_mm256_setzero_si256(); NUM_CHUNKS]};
-        let mut new_acc = self.clone();
+                // packs saturates to 127, so we only need to clamp from below
+                let result = _mm256_permute4x64_epi64(_mm256_max_epi8(_mm256_packs_epi16(in0, in1), zero), CONTROL);
 
-        for i in 0..NUM_CHUNKS {
-            unsafe { 
-                let bias = new_acc[color].as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
-                *regs.as_mut_ptr().add(i) = _mm256_load_si256(bias) 
-            };
-        }
+                // let lower = _mm256_cvtepi8_epi16(_mm256_extracti128_si256(result, 0));
+                // let upper = _mm256_cvtepi8_epi16(_mm256_extracti128_si256(result, 1));
 
-        for r in removed_features {
-            for i in 0..NUM_CHUNKS {
-                unsafe {
-                    let weights = layer.weight.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
-                    *regs.as_mut_ptr().add(i) = _mm256_sub_epi16(*regs.as_ptr().add(i), _mm256_load_si256(weights));
-                }
+                // let squared0 = _mm256_mullo_epi16(lower, lower);
+                // let squared1 = _mm256_mullo_epi16(upper, upper);
+
+                _mm256_store_si256(output.as_mut_ptr().add(i * OUT_REGISTER_WIDTH) as *mut __m256i, result);
             }
         }
 
-        for a in added_features {
-            for i in 0..NUM_CHUNKS {
-                unsafe {
-                    let weights = layer.weight.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
-                    *regs.as_mut_ptr().add(i) = _mm256_sub_epi16(*regs.as_ptr().add(i), _mm256_load_si256(weights));
-                }
-            }
-        }
-
-         // Only after all the accumulation is done, do the write
-         for i in 0..NUM_CHUNKS {
-             unsafe {
-                let src = *(regs.as_ptr().add(i));
-                let dst = &mut new_acc[color][i * REGISTER_WIDTH];
-                _mm256_store_si256(dst, src);
-            }
-         }
-        
-        new_acc
+        output
     }
 }
 

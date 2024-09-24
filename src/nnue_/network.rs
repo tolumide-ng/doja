@@ -2,7 +2,7 @@ use std::alloc::{self, alloc_zeroed, Layout};
 use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_load_si256, _mm256_setzero_si256, _mm256_store_si256};
 
 use crate::board::{piece::Piece, state::board::Board};
-use crate::color::Color::*;
+use crate::color::Color::{self, *};
 use crate::nnue::net::{halfka_idx, nnue_index, MODEL};
 use crate::nnue_::L1_SIZE;
 use crate::squares::Square;
@@ -23,7 +23,7 @@ pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: 
 }
 
 pub(crate) struct NNUEState<T, const U: usize> {
-    accumulator_stack: [Accumualator<T, U>; MAX_DEPTH + 1],
+    accumulators: [Accumualator<T, U>; MAX_DEPTH + 1],
     current_acc: usize,
 }
 
@@ -41,7 +41,7 @@ impl<const U: usize> From<Board> for NNUEState<Feature, U> {
         };
 
         let acc = unsafe { Accumualator::refresh(&board) };
-        boxed.accumulator_stack[0] = acc;
+        boxed.accumulators[0] = acc;
         boxed.current_acc = 0;
 
         *boxed
@@ -49,62 +49,22 @@ impl<const U: usize> From<Board> for NNUEState<Feature, U> {
 }
 
 
-impl<T, const U: usize> NNUEState<T, U> {
-//     pub(crate) fn update_accumulator<const U: usize, const V: usize, W: Copy>(
-//         &self,
-//         layer: LinearLayer<U, V, W>,
-//         removed_features: &Vec<FeatureIdx>,
-//         added_features: &Vec<FeatureIdx>,
-//         color: Color 
-//     ) -> Self {
-//         const REGISTER_WIDTH: usize = 256/16;
-//         const NUM_CHUNKS: usize = L1_SIZE /REGISTER_WIDTH;
+impl<const U: usize> NNUEState<Feature, U> {
+    pub(crate) fn update(&mut self) {}
+
+    pub(crate) unsafe fn evaluate(&self, stm: Color) -> i32 {
+        let acc = &self.accumulators[self.current_acc];
+        // let (us, them) = if stm == Color::White {(&acc.white, &acc.black)} else {(&acc.black, &acc.white)};
+        // let curr_input = if stm == Color::White {[&acc.white, &acc.black]} else {[&acc.black, &acc.white]};
+
+        let clipped_acc = acc.crelu16(stm); // [i8s; 32]
+
+        // loop through each of them `clipped_acc` and multiply with the output_weight, add all of them together;
+
+
         
-//         let mut regs: [__m256i; NUM_CHUNKS] = unsafe {[_mm256_setzero_si256(); NUM_CHUNKS]};
-//         let mut new_acc = self.clone();
+        // let l1_outputs = Align
 
-//         for i in 0..NUM_CHUNKS {
-//             unsafe { 
-//                 let bias = new_acc[color].as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
-//                 *regs.as_mut_ptr().add(i) = _mm256_load_si256(bias) 
-//             };
-//         }
-
-//         for r in removed_features {
-//             for i in 0..NUM_CHUNKS {
-//                 unsafe {
-//                     let weights = layer.weight.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
-//                     *regs.as_mut_ptr().add(i) = _mm256_sub_epi16(*regs.as_ptr().add(i), _mm256_load_si256(weights));
-//                 }
-//             }
-//         }
-
-//         for a in added_features {
-//             for i in 0..NUM_CHUNKS {
-//                 unsafe {
-//                     let weights = layer.weight.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i;
-//                     *regs.as_mut_ptr().add(i) = _mm256_sub_epi16(*regs.as_ptr().add(i), _mm256_load_si256(weights));
-//                 }
-//             }
-//         }
-
-//          // Only after all the accumulation is done, do the write
-//          for i in 0..NUM_CHUNKS {
-//              unsafe {
-//                 let src = *(regs.as_ptr().add(i));
-//                 let dst = &mut new_acc[color][i * REGISTER_WIDTH];
-//                 _mm256_store_si256(dst, src);
-//             }
-//          }
-        
-//         new_acc
-//     }
-// 
-// 
-// 
-// 
-// 
-
-// }
-
+        0 
+    }
 }
