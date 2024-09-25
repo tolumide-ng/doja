@@ -1,6 +1,6 @@
 // when the king moves, the accumulator is refreshed
 
-use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_cvtepi8_epi16, _mm256_extracti128_si256, _mm256_load_si256, _mm256_loadu_si256, _mm256_max_epi8, _mm256_mullo_epi16, _mm256_packs_epi16, _mm256_permute4x64_epi64, _mm256_setzero_si256, _mm256_store_si256, _mm256_sub_epi16};
+use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_load_si256, _mm256_max_epi16, _mm256_max_epi8, _mm256_min_epi16, _mm256_mullo_epi16, _mm256_packs_epi16, _mm256_permute4x64_epi64, _mm256_set1_epi16, _mm256_setzero_si256, _mm256_store_si256, _mm256_sub_epi16};
 use std::ops::{Index, IndexMut};
 
 
@@ -12,23 +12,25 @@ use crate::constants::PLAYERS_COUNT;
 use crate::nnue::net::{halfka_idx, MODEL};
 use crate::squares::Square;
 
+use super::align64::Align64;
 use super::feature_idx::FeatureIdx;
 
 
 // A single AVX2 register can fit 16 i16 values, and there are 16AVX2 registers (32 since AVX512) (stockfish docs)
 
 pub(crate) type Feature = __m256i;
+pub(crate) const QA: i16 = 255;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(align(64))]
 pub(crate) struct Accumualator<T, const U: usize> {
-    pub(crate) white: [T; U],
-    pub(crate) black: [T; U],
+    pub(crate) white: Align64<[T; U]>,
+    pub(crate) black: Align64<[T; U]>,
 }
 
 impl<const U: usize> Default for Accumualator<Feature, U> {
     fn default() -> Self {
-        unsafe { Self { white: [_mm256_setzero_si256(); U], black: [_mm256_setzero_si256(); U] } }
+        unsafe { Self { white: Align64([_mm256_setzero_si256(); U]), black: Align64([_mm256_setzero_si256(); U]) } }
     }
 }
 
@@ -156,16 +158,36 @@ impl<const U: usize> Accumualator<Feature, U> {
                 let curr_input = *(input.as_ptr().add(color as usize));
                 let in0 = _mm256_load_si256(curr_input.as_ptr().add((i * 2 + 0) * IN_REGISTER_WIDTH));
                 let in1 = _mm256_load_si256(curr_input.as_ptr().add((i * 2 + 1) * IN_REGISTER_WIDTH));
-
-
-                // packs saturates to 127, so we only need to clamp from below
+                
                 let result = _mm256_permute4x64_epi64(_mm256_max_epi8(_mm256_packs_epi16(in0, in1), zero), CONTROL);
 
-                // let lower = _mm256_cvtepi8_epi16(_mm256_extracti128_si256(result, 0));
-                // let upper = _mm256_cvtepi8_epi16(_mm256_extracti128_si256(result, 1));
+                _mm256_store_si256(output.as_mut_ptr().add(i * OUT_REGISTER_WIDTH) as *mut __m256i, result);
+            }
+        }
 
-                // let squared0 = _mm256_mullo_epi16(lower, lower);
-                // let squared1 = _mm256_mullo_epi16(upper, upper);
+        output
+    }
+
+    pub(crate) unsafe fn sq_crelu16(&self, stm: Color) -> [Align64<[__m256i; U]>; 2] {
+        const IN_REGISTER_WIDTH: usize = 256/16; // 16
+        const OUT_REGISTER_WIDTH: usize = 256/16; // 16 (output would be in i16, because we would be squaring the clamped values(i8^2) squaredCReLU)
+        let num_out_chunks = U/OUT_REGISTER_WIDTH; // 1024/16 = 64
+
+        let input = if stm == Color::White {[self.white, self.black]} else {[self.black, self.white]};
+        let mut output: [Align64<[__m256i; U]>; 2] = [Align64([_mm256_setzero_si256(); U]); 2];  // [[_; 1024]; 2];
+
+        let min = _mm256_setzero_si256();
+        let max = _mm256_set1_epi16(QA);
+
+        const CONTROL: i32 = 0b11011000; // 3, 1, 2, 0; lane 0 is the rightmost one
+
+        for i in 0..num_out_chunks {
+            for color in [Color::White, Color::Black] {
+                let curr_input = *(input.as_ptr().add(color as usize)); // color
+                let in0 = _mm256_load_si256(curr_input.as_ptr().add(i * IN_REGISTER_WIDTH)); // loads 16 i16 values from curr_input 
+
+                let r = _mm256_max_epi16(_mm256_min_epi16(in0, min), max);
+                let result = _mm256_mullo_epi16(r, r);
 
                 _mm256_store_si256(output.as_mut_ptr().add(i * OUT_REGISTER_WIDTH) as *mut __m256i, result);
             }
