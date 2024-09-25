@@ -1,19 +1,20 @@
-use std::alloc::{self, alloc_zeroed, Layout};
+use std::alloc::{self, alloc_zeroed, dealloc, Layout};
 use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_castsi256_si128, _mm256_cvtepi16_epi32, _mm256_extractf128_si256, _mm256_extracti128_si256, _mm256_load_si256, _mm256_mullo_epi16, _mm256_mullo_epi32, _mm256_setzero_si256, _mm256_store_si256};
+use std::ptr;
 
 use crate::board::{piece::Piece, state::board::Board};
 use crate::color::Color::{self, *};
 use crate::nnue::net::MODEL;
 
-use super::accumulator::QA;
+use super::accumulator::{QA, QAB};
 use super::L1_SIZE;
 use super::{accumulator::Accumualator, accumulator::Feature, align64::Align64};
 
 pub(crate) const MAX_DEPTH: usize = 127;
 pub(crate) const SCALE: i32 = 400;
 
-#[derive(Debug)] 
 #[repr(C)]
+#[derive(Debug)]
 pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: Copy> {
     // pub(crate) weight: [[T; M]; 2], // where U = 2(colors) * layer's size
     pub(crate) input_weight: Align64<[T; M]>,
@@ -23,29 +24,51 @@ pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: 
     pub(crate) output_bias: i16,
 }
 
+
+#[derive(Debug)]
 pub(crate) struct NNUEState<T, const U: usize> {
-    accumulators: [Accumualator<T, U>; MAX_DEPTH + 1],
+    // accumulators: [Accumualator<T, U>; MAX_DEPTH + 1],
+    accumulators: *mut Accumualator<T, U>,
     current_acc: usize,
 }
 
+impl<T, const U: usize>  NNUEState<T, U> {
+    fn new() -> Self {
+        let layout = Layout::array::<Accumualator<T, U>>(MAX_DEPTH + 1).unwrap();
+        let ptr = unsafe {alloc_zeroed(layout) as *mut Accumualator<T, U>};
+        if ptr.is_null() {
+            alloc::handle_alloc_error(layout);
+        }
+
+        NNUEState {
+            accumulators: ptr, current_acc: 0
+        }
+    }
+}
+
+impl<T, const U: usize> Drop for NNUEState<T, U> {
+    fn drop(&mut self) {
+        unsafe {
+            let layout = Layout::array::<Accumualator<T, U>>(MAX_DEPTH + 1).unwrap();
+            dealloc(self.accumulators as *mut u8, layout);
+        }
+    }
+}
+
 impl<const U: usize> From<Board> for NNUEState<Feature, U> {
-    fn from(board: Board) -> NNUEState<Feature, U> {
-        let mut boxed: Box<Self> = unsafe {
-            let layout = Layout::new::<Accumualator<Feature, U>>();
-            let ptr = alloc_zeroed(layout);
+    fn from(board: Board) -> Self {
+        let mut state = NNUEState::<Feature, U>::new();
 
-            if ptr.is_null() {
-                alloc::handle_alloc_error(layout);
-            }
-
-            Box::from_raw(ptr.cast())
-        };
-
-        let acc = unsafe { Accumualator::refresh(&board) };
-        boxed.accumulators[0] = acc;
-        boxed.current_acc = 0;
-
-        *boxed
+        
+        unsafe {
+            println!("XXXX");
+            let acc = Accumualator::refresh(&board);
+            let target = state.accumulators.add(0);
+            ptr::write(target, acc);
+        }
+        state.current_acc = 0;
+        
+        state
     }
 }
 
@@ -97,32 +120,24 @@ impl<const U: usize> NNUEState<Feature, U> {
     }
 
     pub(crate) unsafe fn evaluate(&self, stm: Color) -> i32 {
-        let acc = &self.accumulators[self.current_acc];
+        // let acc = &self.accumulators[self.current_acc];
+        let acc = self.accumulators.add(self.current_acc);
         // let (us, them) = if stm == Color::White {(&acc.white, &acc.black)} else {(&acc.black, &acc.white)};
         // let curr_input = if stm == Color::White {[&acc.white, &acc.black]} else {[&acc.black, &acc.white]};
 
         // let clipped_acc = acc.crelu16(stm); // [i8s; 32]
-        let clipped_acc = acc.sq_crelu16(stm); // [i16; 16]
+        let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
         let output = Self::propagate(clipped_acc);
 
         // let value = (output/QA as i32);
-        let layer_output = output + MODEL.output_bias as i32;
+        // let layer_output = output + MODEL.output_bias as i32;
 
-        let value = layer_output * SCALE;
+        // let value = layer_output * SCALE;
 
-        let v = Self::material_scale() / 1024;
+        // let v = Self::material_scale() / 1024;
 
-        // let v = v * (200 - )
+        // // let v = v * (200 - )
 
-
-
-
-        // loop through each of them `clipped_acc` and multiply with the output_weight, add all of them together;
-
-
-        
-        // let l1_outputs = Align
-
-        0 
+        return (output/QA as i32 + MODEL.output_bias as i32) * SCALE / QAB;
     }
 }

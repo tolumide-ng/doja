@@ -1,10 +1,11 @@
 // The purpose of the ClippedReLu is to introduce non-linearity to the network.
 
+use accumulator::Feature;
 use calc::halfka::halfka_index;
 use constants::customKA0::*;
-use network::NNUEParams;
+use network::{NNUEParams, NNUEState};
 
-use crate::{board::piece::Piece, nnue::{commons::HIDDEN, net::nnue_index}, squares::Square};
+use crate::{board::{fen::FEN, piece::Piece, state::board::Board}, constants::TRICKY_POSITION, nnue::{commons::HIDDEN, net::nnue_index}, squares::Square};
 
 pub mod quantmoid;
 pub(crate) mod calc;
@@ -58,6 +59,13 @@ pub(crate) fn checkings() {
     use crate::board::piece::Piece::*;
     
     let network = &PARAMS;
+    let b = Board::parse_fen(TRICKY_POSITION).unwrap();
+    println!("BEFORE IT IS ");
+    let nn = NNUEState::<Feature, 1024>::from(b);
+
+    println!("AFTER IT WAS ");
+
+    println!("the nn is {:#?}", nn);
     // println!("((((((((((((((((((moddd:::::::::::::::::::::: {:?}
     //     {}, {}, {}, {}, {}", PARAMS.input_weight[2], 
     // PARAMS.input_weight[70000],

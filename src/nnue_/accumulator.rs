@@ -20,6 +20,7 @@ use super::feature_idx::FeatureIdx;
 
 pub(crate) type Feature = __m256i;
 pub(crate) const QA: i16 = 255;
+pub(crate) const QAB: i32 = 255*64;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(align(64))]
@@ -40,6 +41,8 @@ impl<const U: usize> Accumualator<Feature, U> {
     const REGISTER_WIDTH: usize = 256/16; // 16
 
     pub(crate) unsafe fn refresh(board: &Board) -> Self {
+
+        println!(":::::::::::::::::::");
         let mut acc = Accumualator::default();
 
         let num_chunks: usize = U / Self::REGISTER_WIDTH; // 1024/16 = 64 (U would usually be the L1SIZE)
