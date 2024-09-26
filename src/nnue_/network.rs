@@ -2,11 +2,14 @@ use std::alloc::{self, alloc_zeroed, dealloc, Layout};
 use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_castsi256_si128, _mm256_cvtepi16_epi32, _mm256_extractf128_si256, _mm256_extracti128_si256, _mm256_load_si256, _mm256_mullo_epi16, _mm256_mullo_epi32, _mm256_setzero_si256, _mm256_store_si256};
 use std::ptr;
 
+use crate::board;
 use crate::board::{piece::Piece, state::board::Board};
 use crate::color::Color::{self, *};
-use crate::nnue::net::MODEL;
+use crate::nnue::net::{halfka_idx, MODEL};
+use crate::squares::Square;
 
 use super::accumulator::{QA, QAB};
+use super::feature_idx::FeatureIdx;
 use super::L1_SIZE;
 use super::{accumulator::Accumualator, accumulator::Feature, align64::Align64};
 
@@ -61,17 +64,9 @@ impl<const U: usize> From<Board> for NNUEState<Feature, U> {
 
         
         unsafe {
-            println!("XXXX");
             let acc = Accumualator::refresh(&board);
             let target = state.accumulators.add(0);
             ptr::write(target, acc);
-
-
-            println!(":::::::::::::::::::::::::::::::: {:?}", (*state.accumulators).white[0]);
-            println!(":::::::::::::::::::::::::::::::: {:?}", (*state.accumulators).white[1]);
-            println!("\n\n");
-            println!(":::::::::::::::::::::::::::::::: {:?}", (*state.accumulators).black[0]);
-            println!(":::::::::::::::::::::::::::::::: {:?}", (*state.accumulators).black[1]);
         }
         state.current_acc = 0;
 
@@ -83,7 +78,25 @@ impl<const U: usize> From<Board> for NNUEState<Feature, U> {
 
 
 impl<const U: usize> NNUEState<Feature, U> {
-    pub(crate) fn update(&mut self) {}
+    pub(crate) fn update(&mut self, removed: Vec<(Piece, Square)>, added: Vec<(Piece, Square)>) {
+        unsafe {
+            let acc = *(self.accumulators.add(self.current_acc));
+            let added = added.into_iter().map(|(p, sq)| (p.color(), halfka_idx(p, sq))).collect::<Vec<_>>();
+            let removed = removed.into_iter().map(|(p, sq)| (p.color(), halfka_idx(p, sq))).collect::<Vec<_>>();
+
+            let new_acc = acc.update(&removed, &added);
+            self.current_acc += 1;
+            *self.accumulators.add(self.current_acc) = new_acc;
+        }
+    }
+
+    pub(crate) fn refresh<T>(&mut self, board: &Board) {
+        unsafe {
+            let acc = Accumualator::refresh(board);
+            self.current_acc += 1;
+            *self.accumulators.add(self.current_acc) = acc;
+        }
+    } 
     
     /// The input here are 16 *i16s per m156i 
     pub(crate) unsafe fn propagate(inputs: [Align64<[Feature; U]>; 2]) -> i32 {
@@ -136,15 +149,6 @@ impl<const U: usize> NNUEState<Feature, U> {
         // let clipped_acc = acc.crelu16(stm); // [i8s; 32]
         let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
         let output = Self::propagate(clipped_acc);
-
-        // let value = (output/QA as i32);
-        // let layer_output = output + MODEL.output_bias as i32;
-
-        // let value = layer_output * SCALE;
-
-        // let v = Self::material_scale() / 1024;
-
-        // // let v = v * (200 - )
 
         return (output/QA as i32 + MODEL.output_bias as i32) * SCALE / QAB;
     }

@@ -3,6 +3,7 @@ use std::ops::Deref;
 use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 use crate::{bit_move::Move, move_type::MoveType, nnue::state::NNUEState, squares::Square};
+use crate::nnue_::network::NNUEState as NNUE;
 use crate::color::Color::{self, *};
 use crate::nnue::state::{ON, OFF};
 use crate::squares::Square::*;
@@ -29,6 +30,15 @@ impl History {
 pub(crate) struct Position {
     board: Board,
     nnue_state: Box<NNUEState>,
+    history: Vec<History>,
+}
+
+
+
+#[derive(Debug)]
+pub(crate) struct PositionN<T, const U: usize> {
+    board: Board,
+    nnue: Box<NNUE<T, U>>,
     history: Vec<History>,
 }
 

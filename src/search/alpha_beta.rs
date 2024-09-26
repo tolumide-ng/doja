@@ -1,7 +1,7 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
 use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
-use super::{evaluation::Evaluation, time_control::TimeControl};
+use super::time_control::TimeControl;
 
 
 /// Sometimes you can figure out what kind of node you are dealing with early on. If the first move you search fails high (returns a score greater than or equal to beta).

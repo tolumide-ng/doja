@@ -87,11 +87,8 @@ impl<const U: usize> Accumualator<Feature, U> {
                 let reg_idx = (color as usize * num_chunks) + i;
 
                 let weights = *(MODEL.feature_weights.as_ptr().add(idx) as *const __m256i);
-                // println!(":::>><><><> {:#?}", *regs.as_ptr().add(reg_idx));
-                println!("weights -------------------- {:?}", weights);
                 // y = Ax + b (where A is the feature, x is the weight, and b is bias)
                 *regs.as_mut_ptr().add(reg_idx) = _mm256_add_epi16(*(regs.as_ptr().add(reg_idx)), weights);
-
             }
         }
 
