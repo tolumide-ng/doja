@@ -65,8 +65,16 @@ impl<const U: usize> From<Board> for NNUEState<Feature, U> {
             let acc = Accumualator::refresh(&board);
             let target = state.accumulators.add(0);
             ptr::write(target, acc);
+
+
+            println!(":::::::::::::::::::::::::::::::: {:?}", (*state.accumulators).white[0]);
+            println!(":::::::::::::::::::::::::::::::: {:?}", (*state.accumulators).white[1]);
+            println!("\n\n");
+            println!(":::::::::::::::::::::::::::::::: {:?}", (*state.accumulators).black[0]);
+            println!(":::::::::::::::::::::::::::::::: {:?}", (*state.accumulators).black[1]);
         }
         state.current_acc = 0;
+
         
         state
     }

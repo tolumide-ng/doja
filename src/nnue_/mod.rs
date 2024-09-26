@@ -66,6 +66,8 @@ pub(crate) fn checkings() {
     println!("AFTER IT WAS ");
 
     println!("the nn is {:#?}", nn);
+
+    // println!("::::::::::::::::::::::::: {:?}", nn);
     // println!("((((((((((((((((((moddd:::::::::::::::::::::: {:?}
     //     {}, {}, {}, {}, {}", PARAMS.input_weight[2], 
     // PARAMS.input_weight[70000],

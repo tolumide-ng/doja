@@ -41,23 +41,23 @@ impl<const U: usize> Accumualator<Feature, U> {
     const REGISTER_WIDTH: usize = 256/16; // 16
 
     pub(crate) unsafe fn refresh(board: &Board) -> Self {
-
-        println!(":::::::::::::::::::");
         let mut acc = Accumualator::default();
-
         let num_chunks: usize = U / Self::REGISTER_WIDTH; // 1024/16 = 64 (U would usually be the L1SIZE)
 
         let mut active_features = Vec::with_capacity(board.get_occupancy(Both).count_ones() as usize);
-        
         let bitmaps = &board.board;
+        
         for (p, board) in (*bitmaps).into_iter().enumerate() {
-            let sqs = *board;
+            let mut sqs: u64 = *board;
 
             while sqs != 0 {
                 let sq = Square::from(sqs.trailing_zeros() as u8);
                 let piece = Piece::from(p as u8);
-
+                
                 let f_idx = halfka_idx(piece, sq);
+                // println!("in the while loop {}", *f_idx + (1200));
+
+                sqs &= sqs -1;
 
                 active_features.push((f_idx, piece.color()));
             }
@@ -83,12 +83,15 @@ impl<const U: usize> Accumualator<Feature, U> {
                 // for any value of "a", by the end of this loop, we'd have loaded all weights that belong to "a"
                 // this specifically updates all the values representing the feature "a" on the board
                 // we can only load 16 i16s at a time, weil 16*16=256 (size of an AVX2 register)
-                let idx = (*a * U) + (i*Self::REGISTER_WIDTH);
+                let idx =  *a + (i*Self::REGISTER_WIDTH);
                 let reg_idx = (color as usize * num_chunks) + i;
 
                 let weights = *(MODEL.feature_weights.as_ptr().add(idx) as *const __m256i);
+                // println!(":::>><><><> {:#?}", *regs.as_ptr().add(reg_idx));
+                println!("weights -------------------- {:?}", weights);
                 // y = Ax + b (where A is the feature, x is the weight, and b is bias)
                 *regs.as_mut_ptr().add(reg_idx) = _mm256_add_epi16(*(regs.as_ptr().add(reg_idx)), weights);
+
             }
         }
 
