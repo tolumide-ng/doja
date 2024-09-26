@@ -2,10 +2,11 @@ use std::ops::Deref;
 
 use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
-use crate::{bit_move::Move, move_type::MoveType, nnue::state::NNUEState, squares::Square};
-use crate::nnue_::network::NNUEState as NNUE;
+use crate::nnue_::accumulator::Feature;
+use crate::{bit_move::Move, move_type::MoveType, squares::Square};
+use crate::nnue_::network::NNUEState;
 use crate::color::Color::{self, *};
-use crate::nnue::state::{ON, OFF};
+use crate::nnue_::constants::customKA0::*;
 use crate::squares::Square::*;
 use super::castling::Castling;
 use super::{piece::{Piece, Piece::*}, state::board::Board};
@@ -26,19 +27,11 @@ impl History {
     }
 }
 
+
 #[derive(Debug, Clone)]
 pub(crate) struct Position {
-    board: Board,
-    nnue_state: Box<NNUEState>,
-    history: Vec<History>,
-}
-
-
-
-#[derive(Debug)]
-pub(crate) struct PositionN<T, const U: usize> {
-    board: Board,
-    nnue: Box<NNUE<T, U>>,
+    pub(crate) board: Board,
+    nnue_state: NNUEState<Feature, L1_SIZE>,
     history: Vec<History>,
 }
 
@@ -46,12 +39,12 @@ pub(crate) struct PositionN<T, const U: usize> {
 impl Position {
     pub(crate) fn new() -> Self {
         let board = Board::new();
-        let nnue_state = NNUEState::from_board(&board);
+        let nnue_state = NNUEState::from(&board);
         Self { history: Vec::new(), board, nnue_state }
     }
 
     pub(crate) fn with(board: Board) -> Self {
-        let nnue_state = NNUEState::from_board(&board);
+        let nnue_state = NNUEState::from(&board);
         Self { board, nnue_state, history: Vec::new() }
     }
 
@@ -104,29 +97,42 @@ impl Position {
         };
         
         if self.make_move(mv, mv_ty) {
-            self.nnue_state.push();
+            // self.nnue_state.push();
+            let mut remove = vec![]; let mut add = vec![];
             
             if mv.get_enpassant() {
                 // let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                 let enpass_tgt = Square::from(match turn {White => tgt as u64 -  8, _ => tgt as u64 + 8});
-                self.nnue_state.manual_update::<OFF>(Piece::pawn(!turn), enpass_tgt);
+                // self.nnue_state.manual_update::<OFF>(Piece::pawn(!turn), enpass_tgt);
+                remove.push((Piece::pawn(!turn), enpass_tgt));
             } else if mv.get_capture() {
                 // println!("src {:#?}--- tgt {:#?}", src, tgt);
-                self.nnue_state.manual_update::<OFF>(victim.unwrap(), tgt_sq);
+                // self.nnue_state.manual_update::<OFF>(victim.unwrap(), tgt_sq);
+                remove.push((victim.unwrap(), tgt_sq));
             } else if mv.get_castling() {
                 // println!("{}", self.board.to_string());
                 // println!("the mv src --->>> {:#?}, target ====>>>> {}", mv.get_src(), mv.get_target());
                 let (rook_src, rook_tgt) = rook_mvs.unwrap();
+                let rook = Piece::rook(turn);
+                
                 // println!("the return here is {:#?}", rook_mvs);
-                self.nnue_state.move_update(Piece::rook(turn), rook_src, rook_tgt);
+                // self.nnue_state.move_update(Piece::rook(turn), rook_src, rook_tgt);
+                remove.push((rook, rook_src));
+                add.push((rook, rook_tgt));
             }
     
             if let Some(promoted) =  mv.get_promotion() {
-                self.nnue_state.manual_update::<OFF>(mv.get_piece(), src);
-                self.nnue_state.manual_update::<ON>(promoted, tgt);
+                // self.nnue_state.manual_update::<OFF>(mv.get_piece(), src);
+                // self.nnue_state.manual_update::<ON>(promoted, tgt);
+                remove.push((mv.get_piece(), src));
+                add.push((promoted, tgt));
             } else {
-                self.nnue_state.move_update(mv.get_piece(), src, tgt);
+                remove.push((mv.get_piece(), src));
+                add.push((mv.get_piece(), tgt));
             }
+
+
+            self.nnue_state.update(remove, add);
 
             return true;
         }

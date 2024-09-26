@@ -44,7 +44,7 @@ pub(crate) mod halfKA {
     
     
     // TEST LATER WITH STOCKFISH: L1 size increased to 2560.
-    pub(crate) const L1_SIZE: usize = 2048 * 2;
+    // pub(crate) const L1_SIZE: usize = 2048 * 2;
     pub(crate) const L2_SIZE: usize = 16;
     pub(crate) const L3_SIZE: usize = 32;
     pub(crate) const L4_SIZE: usize = 1;

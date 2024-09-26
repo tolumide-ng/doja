@@ -77,15 +77,15 @@ fn main() {
     // println!("the scoer now ius >>>> {}", score)::::
     // EvaluationMasks::init();
 
-    // let controller = Arc::new(Mutex::new(Control::default()));
-    // let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+    let controller = Arc::new(Mutex::new(Control::default()));
+    let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     // println!("**********************BEFORE*****************************");
-    // println!("{}", board.to_string());
-    // NegaMax::run(controller, 7, &mut board);
-    // println!("**********************AFTER*****************************");
-    // println!("{}", board.to_string());
+    println!("{}", board.to_string());
+    NegaMax::run(controller, 7, &mut board);
+    println!("**********************AFTER*****************************");
+    println!("{}", board.to_string());
 
-    checkings();
+    // checkings();
 
 
 

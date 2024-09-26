@@ -1,17 +1,16 @@
 use std::alloc::{self, alloc_zeroed, dealloc, Layout};
-use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_castsi256_si128, _mm256_cvtepi16_epi32, _mm256_extractf128_si256, _mm256_extracti128_si256, _mm256_load_si256, _mm256_mullo_epi16, _mm256_mullo_epi32, _mm256_setzero_si256, _mm256_store_si256};
-use std::ptr;
+use std::arch::x86_64::*;
+use std::{ptr, usize};
 
-use crate::board;
+
 use crate::board::{piece::Piece, state::board::Board};
 use crate::color::Color::{self, *};
 use crate::nnue::net::{halfka_idx, MODEL};
 use crate::squares::Square;
 
 use super::accumulator::{QA, QAB};
-use super::feature_idx::FeatureIdx;
-use super::L1_SIZE;
-use super::{accumulator::Accumualator, accumulator::Feature, align64::Align64};
+use super::accumulator_ptr::AccumulatorPtr;
+use super::{accumulator::Accumulator, accumulator::Feature, align64::Align64};
 
 pub(crate) const MAX_DEPTH: usize = 127;
 pub(crate) const SCALE: i32 = 400;
@@ -28,23 +27,22 @@ pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: 
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct NNUEState<T, const U: usize> {
-    // accumulators: [Accumualator<T, U>; MAX_DEPTH + 1],
-    accumulators: *mut Accumualator<T, U>,
+    accumulators: AccumulatorPtr<T, U>,
     current_acc: usize,
 }
 
 impl<T, const U: usize>  NNUEState<T, U> {
     fn new() -> Self {
-        let layout = Layout::array::<Accumualator<T, U>>(MAX_DEPTH + 1).unwrap();
-        let ptr = unsafe {alloc_zeroed(layout) as *mut Accumualator<T, U>};
+        let layout = Layout::array::<Accumulator<T, U>>(MAX_DEPTH + 1).unwrap();
+        let ptr = unsafe {alloc_zeroed(layout) as *mut Accumulator<T, U>};
         if ptr.is_null() {
             alloc::handle_alloc_error(layout);
         }
 
         NNUEState {
-            accumulators: ptr, current_acc: 0
+            accumulators: AccumulatorPtr(ptr), current_acc: 0
         }
     }
 }
@@ -52,19 +50,19 @@ impl<T, const U: usize>  NNUEState<T, U> {
 impl<T, const U: usize> Drop for NNUEState<T, U> {
     fn drop(&mut self) {
         unsafe {
-            let layout = Layout::array::<Accumualator<T, U>>(MAX_DEPTH + 1).unwrap();
-            dealloc(self.accumulators as *mut u8, layout);
+            let layout = Layout::array::<Accumulator<T, U>>(MAX_DEPTH + 1).unwrap();
+            dealloc(*self.accumulators as *mut u8, layout);
         }
     }
 }
 
-impl<const U: usize> From<Board> for NNUEState<Feature, U> {
-    fn from(board: Board) -> Self {
+impl<const U: usize> From<&Board> for NNUEState<Feature, U> {
+    fn from(board: &Board) -> Self {
         let mut state = NNUEState::<Feature, U>::new();
 
         
         unsafe {
-            let acc = Accumualator::refresh(&board);
+            let acc = Accumulator::refresh(&board);
             let target = state.accumulators.add(0);
             ptr::write(target, acc);
         }
@@ -75,9 +73,16 @@ impl<const U: usize> From<Board> for NNUEState<Feature, U> {
     }
 }
 
+// unsafe impl<T: Send, const U: usize> Send for *mut Accumulator<T, U> {}
+// unsafe impl<T: Sync, const U: usize> Sync for Accumulator<T, U> {}
+
 
 
 impl<const U: usize> NNUEState<Feature, U> {
+    pub(crate) fn pop(&mut self) {
+        self.current_acc -= 1;
+    }
+
     pub(crate) fn update(&mut self, removed: Vec<(Piece, Square)>, added: Vec<(Piece, Square)>) {
         unsafe {
             let acc = *(self.accumulators.add(self.current_acc));
@@ -92,7 +97,7 @@ impl<const U: usize> NNUEState<Feature, U> {
 
     pub(crate) fn refresh<T>(&mut self, board: &Board) {
         unsafe {
-            let acc = Accumualator::refresh(board);
+            let acc = Accumulator::refresh(board);
             self.current_acc += 1;
             *self.accumulators.add(self.current_acc) = acc;
         }
@@ -140,16 +145,18 @@ impl<const U: usize> NNUEState<Feature, U> {
         0
     }
 
-    pub(crate) unsafe fn evaluate(&self, stm: Color) -> i32 {
-        // let acc = &self.accumulators[self.current_acc];
-        let acc = self.accumulators.add(self.current_acc);
-        // let (us, them) = if stm == Color::White {(&acc.white, &acc.black)} else {(&acc.black, &acc.white)};
-        // let curr_input = if stm == Color::White {[&acc.white, &acc.black]} else {[&acc.black, &acc.white]};
-
-        // let clipped_acc = acc.crelu16(stm); // [i8s; 32]
-        let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
-        let output = Self::propagate(clipped_acc);
-
-        return (output/QA as i32 + MODEL.output_bias as i32) * SCALE / QAB;
+    pub(crate) fn evaluate(&self, stm: Color) -> i32 {
+        unsafe {
+            // let acc = &self.accumulators[self.current_acc];
+            let acc = self.accumulators.add(self.current_acc);
+            // let (us, them) = if stm == Color::White {(&acc.white, &acc.black)} else {(&acc.black, &acc.white)};
+            // let curr_input = if stm == Color::White {[&acc.white, &acc.black]} else {[&acc.black, &acc.white]};
+            
+            // let clipped_acc = acc.crelu16(stm); // [i8s; 32]
+            let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
+            let output = Self::propagate(clipped_acc);
+            
+            return (output/QA as i32 + MODEL.output_bias as i32) * SCALE / QAB;
+        }
     }
 }

@@ -1,7 +1,7 @@
 // when the king moves, the accumulator is refreshed
 
 use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_load_si256, _mm256_max_epi16, _mm256_max_epi8, _mm256_min_epi16, _mm256_mullo_epi16, _mm256_packs_epi16, _mm256_permute4x64_epi64, _mm256_set1_epi16, _mm256_setzero_si256, _mm256_store_si256, _mm256_sub_epi16};
-use std::ops::{Index, IndexMut};
+use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 
 use crate::board::piece::Piece;
@@ -22,26 +22,37 @@ pub(crate) type Feature = __m256i;
 pub(crate) const QA: i16 = 255;
 pub(crate) const QAB: i32 = 255*64;
 
+
+
 #[derive(Debug, Clone, Copy)]
 #[repr(align(64))]
-pub(crate) struct Accumualator<T, const U: usize> {
+pub(crate) struct Accumulator<T, const U: usize> {
     pub(crate) white: Align64<[T; U]>,
     pub(crate) black: Align64<[T; U]>,
 }
 
-impl<const U: usize> Default for Accumualator<Feature, U> {
+
+impl<const U: usize> Default for Accumulator<Feature, U> {
     fn default() -> Self {
         unsafe { Self { white: Align64([_mm256_setzero_si256(); U]), black: Align64([_mm256_setzero_si256(); U]) } }
     }
 }
 
 
+// impl<T, const U: usize> From<*mut Accumulator<T, U>> for AccumulatorPtr<T, U> {
+//     fn from(value: *mut Accumulator<T, U>) -> Self {
+//         Self(value)
+//     }
+// }
 
-impl<const U: usize> Accumualator<Feature, U> {
+
+
+
+impl<const U: usize> Accumulator<Feature, U> {
     const REGISTER_WIDTH: usize = 256/16; // 16
 
     pub(crate) unsafe fn refresh(board: &Board) -> Self {
-        let mut acc = Accumualator::default();
+        let mut acc = Accumulator::default();
         let num_chunks: usize = U / Self::REGISTER_WIDTH; // 1024/16 = 64 (U would usually be the L1SIZE)
 
         let mut active_features = Vec::with_capacity(board.get_occupancy(Both).count_ones() as usize);
@@ -104,7 +115,7 @@ impl<const U: usize> Accumualator<Feature, U> {
     pub(crate) unsafe fn update(&self, removed_features: &Vec<(Color, FeatureIdx)>, added_features: &Vec<(Color, FeatureIdx)>) -> Self {
         let num_chunks: usize = U / Self::REGISTER_WIDTH; // 1024/16 = 64 (U would usually be the L1SIZE)
 
-        let mut acc = Accumualator::default();
+        let mut acc = Accumulator::default();
         let mut regs: Vec<__m256i> = Vec::with_capacity(num_chunks * PLAYERS_COUNT);
 
         
@@ -201,7 +212,7 @@ impl<const U: usize> Accumualator<Feature, U> {
 }
 
 
-impl<T, const U: usize> Index<Color> for Accumualator<T, U> {
+impl<T, const U: usize> Index<Color> for Accumulator<T, U> {
     type Output = [T; U];
 
     fn index(&self, index: Color) -> &Self::Output {
@@ -215,7 +226,7 @@ impl<T, const U: usize> Index<Color> for Accumualator<T, U> {
 
 
 
-impl<T, const U: usize> IndexMut<Color> for Accumualator<T, U> {
+impl<T, const U: usize> IndexMut<Color> for Accumulator<T, U> {
     fn index_mut(&mut self, index: Color) -> &mut Self::Output {
         match index {
             Color::White => &mut self.white,

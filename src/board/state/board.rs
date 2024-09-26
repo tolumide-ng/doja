@@ -380,6 +380,7 @@ impl Board {
         move_list
     }
 
+    /// Returns the rook source and target
     pub(crate) fn validate_castling_move(&self, mv: &Move) -> Option<(Square, Square)> {
         let king_side_mask = 0b1001u64;
         let queen_side_mask = 0b10001u64;

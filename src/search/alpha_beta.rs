@@ -282,7 +282,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         
         if null_move_forward_pruning_conditions {
             // nmfp: null-move forward prunning (board)
-            let mut nmfp_board = board.clone();
+            let mut nmfp_board = Position::with((**board).clone());
             self.ply += 1;
             self.repetition_index+=1;
             self.repetition_table[self.repetition_index] = nmfp_board.hash_key;

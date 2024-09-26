@@ -1,11 +1,10 @@
 // The purpose of the ClippedReLu is to introduce non-linearity to the network.
 
 use accumulator::Feature;
-use calc::halfka::halfka_index;
 use constants::customKA0::*;
 use network::{NNUEParams, NNUEState};
 
-use crate::{board::{fen::FEN, piece::Piece, state::board::Board}, constants::TRICKY_POSITION, nnue::{commons::HIDDEN, net::nnue_index}, squares::Square};
+use crate::{board::{fen::FEN, state::board::Board}, constants::TRICKY_POSITION};
 
 pub mod quantmoid;
 pub(crate) mod calc;
@@ -16,6 +15,7 @@ pub(crate) mod constants;
 pub(crate) mod network;
 pub(crate) mod relu;
 pub(crate) mod align64;
+pub(crate) mod accumulator_ptr;
 
 // All layers are linear, and all hidden neurons use ClippedReLU activation function
 
@@ -51,21 +51,21 @@ pub(crate) fn checkings() {
     //     num_outputs: 20,
     // };
 
-    // let mut acc = Accumualator::default();
-    // Accumualator::refresh_accumulator(linear, &mut acc,
+    // let mut acc = Accumulator::default();
+    // Accumulator::refresh_accumulator(linear, &mut acc,
     //      &vec![FeatureIdx::new(3), FeatureIdx::new(4), FeatureIdx::new(5), FeatureIdx::new(18)],
     //      Color::White);
 
     use crate::board::piece::Piece::*;
     
-    let network = &PARAMS;
-    let b = Board::parse_fen(TRICKY_POSITION).unwrap();
-    println!("BEFORE IT IS ");
-    let nn = NNUEState::<Feature, 1024>::from(b);
+    // let network = &PARAMS;
+    // let b = Board::parse_fen(TRICKY_POSITION).unwrap();
+    // println!("BEFORE IT IS ");
+    // let nn = NNUEState::<Feature, 1024>::from(b);
 
-    println!("AFTER IT WAS ");
+    // println!("AFTER IT WAS ");
 
-    println!("the nn is {:#?}", nn);
+    // println!("the nn is {:#?}", nn);
 
     // println!("::::::::::::::::::::::::: {:?}", nn);
     // println!("((((((((((((((((((moddd:::::::::::::::::::::: {:?}
