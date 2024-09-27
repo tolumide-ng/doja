@@ -88,7 +88,7 @@ impl<const U: usize> NNUEState<Feature, U> {
             let acc = *(self.accumulators.add(self.current_acc));
             let added = added.into_iter().map(|(p, sq)| (p.color(), halfka_idx(p, sq))).collect::<Vec<_>>();
             let removed = removed.into_iter().map(|(p, sq)| (p.color(), halfka_idx(p, sq))).collect::<Vec<_>>();
-
+            
             let new_acc = acc.update(&removed, &added);
             self.current_acc += 1;
             *self.accumulators.add(self.current_acc) = new_acc;

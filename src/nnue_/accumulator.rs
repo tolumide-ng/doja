@@ -1,7 +1,7 @@
 // when the king moves, the accumulator is refreshed
 
 use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_load_si256, _mm256_max_epi16, _mm256_max_epi8, _mm256_min_epi16, _mm256_mullo_epi16, _mm256_packs_epi16, _mm256_permute4x64_epi64, _mm256_set1_epi16, _mm256_setzero_si256, _mm256_store_si256, _mm256_sub_epi16};
-use std::ops::{Deref, DerefMut, Index, IndexMut};
+use std::ops::{Index, IndexMut};
 
 
 use crate::board::piece::Piece;
@@ -128,20 +128,22 @@ impl<const U: usize> Accumulator<Feature, U> {
 
         for (color, f_idx) in removed_features.iter() {
             for i in 0..num_chunks {
-                let model_idx = (**f_idx * U) + (i * Self::REGISTER_WIDTH);
+                // let model_idx = (**f_idx * U) + (i * Self::REGISTER_WIDTH);
+                let model_idx = **f_idx + (i * Self::REGISTER_WIDTH);
                 let regs_idx = (*color as usize * num_chunks) + i;
-
+                
                 let weights = *(MODEL.feature_weights.as_ptr().add(model_idx) as *const __m256i);
                 *regs.as_mut_ptr().add(regs_idx) = _mm256_sub_epi16(*(regs.as_ptr().add(regs_idx)), weights);
             }
         }
         
+        // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> model_idx>>>> {model_idx}, and weights is {}", MODEL.feature_weights.len());
         for (color, f_idx) in added_features.into_iter() {
             for i in 0..num_chunks {
-                let mode_idx = (**f_idx * U) + (i * Self::REGISTER_WIDTH);
+                let model_idx = **f_idx+ (i * Self::REGISTER_WIDTH);
                 let regs_idx = (*color as usize * num_chunks) + i;
 
-                let weights = *(MODEL.feature_weights.as_ptr().add(mode_idx) as *const __m256i);
+                let weights = *(MODEL.feature_weights.as_ptr().add(model_idx) as *const __m256i);
                 *regs.as_mut_ptr().add(regs_idx) = _mm256_add_epi16(*(regs.as_ptr().add(regs_idx)), weights);
             }
         }
@@ -187,26 +189,28 @@ impl<const U: usize> Accumulator<Feature, U> {
         const OUT_REGISTER_WIDTH: usize = 256/16; // 16 (output would be in i16, because we would be squaring the clamped values(i8^2) squaredCReLU)
         let num_out_chunks = U/OUT_REGISTER_WIDTH; // 1024/16 = 64
 
+        
         let input = if stm == Color::White {[self.white, self.black]} else {[self.black, self.white]};
-        let mut output: [Align64<[__m256i; U]>; 2] = [Align64([_mm256_setzero_si256(); U]); 2];  // [[_; 1024]; 2];
-
+        let output: [Align64<[__m256i; U]>; 2] = [Align64([_mm256_setzero_si256(); U]); 2];  // [[_; 1024]; 2];
+        
         let min = _mm256_setzero_si256();
         let max = _mm256_set1_epi16(QA);
-
-        const CONTROL: i32 = 0b11011000; // 3, 1, 2, 0; lane 0 is the rightmost one
-
-        for i in 0..num_out_chunks {
-            for color in [Color::White, Color::Black] {
+        
+        // const CONTROL: i32 = 0b11011000; // 3, 1, 2, 0; lane 0 is the rightmost one
+        
+        for color in [Color::White, Color::Black] {
+            for i in 0..num_out_chunks {
                 let curr_input = *(input.as_ptr().add(color as usize)); // color
                 let in0 = _mm256_load_si256(curr_input.as_ptr().add(i * IN_REGISTER_WIDTH)); // loads 16 i16 values from curr_input 
-
                 let r = _mm256_max_epi16(_mm256_min_epi16(in0, min), max);
                 let result = _mm256_mullo_epi16(r, r);
+
+                let mut output = *(output.as_ptr().add(color as usize));
 
                 _mm256_store_si256(output.as_mut_ptr().add(i * OUT_REGISTER_WIDTH) as *mut __m256i, result);
             }
         }
-
+        
         output
     }
 }

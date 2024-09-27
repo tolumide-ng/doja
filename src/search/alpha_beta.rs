@@ -244,13 +244,13 @@ impl<T> NegaMax<T> where T: TimeControl {
         if (self.nodes & NODES_2047) == 0 {
             self.controller.as_ref().lock().unwrap().communicate();
         }
-
         // println!("ply is {}", self.ply);
         if depth == 0 {
             // self.tt.record(board.hash_key, depth, score, self.ply, HashFlag::Exact);
             return self.quiescence(alpha, beta, board);
         }
 
+        
         if self.ply > MAX_PLY -1 {
             let evaluation = board.evaluate();
             // println!("::::::::::::::::::: {}", e);
@@ -263,15 +263,15 @@ impl<T> NegaMax<T> where T: TimeControl {
 
         self.nodes+=1;
         // println!("::::::: {depth}");
-
+        
         let king_square = u64::from(board[Piece::king(board.turn)].trailing_zeros());
         // is king in check
         let king_in_check = board.is_square_attacked(king_square, !board.turn);
         let depth = if king_in_check {depth +1} else {depth};
         let mut legal_moves = 0;
-
+        
         let static_eval = board.evaluate();
-
+        
         // Null-Move Forward Pruning
         // Null-move forward pruning is a step you perform prior to searching any of the moves.  You ask the question, "If I do nothing here, can the opponent do anything?"
         // In order to test this, we allow the opponent play this turn(even though its ours), if they play and we're not in harms way (greater than beat), then we're good.
@@ -311,6 +311,8 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
 
 
+
+        
         // [Strelka's Razoring](https://www.chessprogramming.org/Razoring)
         if !pv_node && !king_in_check && depth <= 3 {
             let mut value = static_eval + 125;
@@ -331,24 +333,25 @@ impl<T> NegaMax<T> where T: TimeControl {
         }
 
         
+        
         let moves = board.gen_movement().into_iter();
         if self.follow_pv {
             self.enable_pv_scoring(&moves);
         }
-
+        
         // for mv in moves 
         let sorted_moves = self.sort_moves(board, moves);
         
         // https://www.chessprogramming.org/Principal_Variation_Search#Pseudo_Code
         let mut moves_searched = 0;
-
+        
         // loop through hte moves
         // for mv in &sorted_moves {
-        //     println!("======================>>>>>>> src:::: {} target---{} castling****{}", mv.get_src(), mv.get_target(), mv.get_castling());
-        // }
-        for mv in sorted_moves {
-            let legal_move = board.make_move_nnue(mv, MoveType::AllMoves);
-
+            //     println!("======================>>>>>>> src:::: {} target---{} castling****{}", mv.get_src(), mv.get_target(), mv.get_castling());
+            // }
+            for mv in sorted_moves {
+                let legal_move = board.make_move_nnue(mv, MoveType::AllMoves);
+                
             
 
             // let Some(new_board) = play_moves else {continue};
