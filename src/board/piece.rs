@@ -2,6 +2,27 @@ use std::ops::{Index, IndexMut};
 
 use crate::{color::Color, constants::{MVV_LVA, PLAYER_PIECES}};
 
+#[derive(Debug, Clone, derive_more::Display, PartialEq, Eq)]
+#[repr(u8)]
+pub enum PieceType {
+    P=0, N=1, B=2, R=3, Q=4, K=5,
+}
+
+
+impl From<Piece> for PieceType {
+    fn from(value: Piece) -> Self {
+        match value as u8 {
+            0|6 => PieceType::P,
+            1|7 => PieceType::N,
+            2|8 => PieceType::B,
+            3|9 => PieceType::R,
+            4|10 => PieceType::Q,
+            5|11 => PieceType::K,
+            _ => panic!("Unexpected Piece value")
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, derive_more::Display, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Piece {

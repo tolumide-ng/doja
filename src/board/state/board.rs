@@ -561,6 +561,31 @@ impl Board {
             }
         }
     }
+
+    pub(crate) fn piece_at(&self, sq: Square) -> Option<Piece> {
+        let sq = sq as u64;
+        let white = (self.occupancies[0] & sq) != 0;
+        let black = (self.occupancies[1] & sq) != 0;
+        match (white, black) {
+            (true, false) => {
+                for i in 0..6 {
+                    if (*self.board[i] & (sq as u64)) != 0 {
+                        return Some(Piece::from(i as u8))
+                    }
+                }
+            }
+            (false, true) => {
+                for i in 7..11 {
+                    if (*self.board[i] & (sq as u64)) != 0 {
+                        return Some(Piece::from(i as u8))
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        None
+    }
     
     pub(crate) fn get_piece_at(&self, sq: Square, color: Color) -> Option<Piece> {
         let target_pieces = Piece::all_pieces_for(color);

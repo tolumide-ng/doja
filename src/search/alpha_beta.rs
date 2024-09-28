@@ -66,8 +66,6 @@ impl<T> NegaMax<T> where T: TimeControl {
             
             alpha = score - VAL_WINDOW;
             beta = score + VAL_WINDOW;
-
-            println!(":XXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
             
 
             if score > -MATE_VALUE && score < -MATE_SCORE {
@@ -85,7 +83,8 @@ impl<T> NegaMax<T> where T: TimeControl {
             }
 
             // println!("");
-            println!("\n-------------------------- {:#?}", start_time.elapsed().as_millis());
+            println!("\n-------------------------- {:#?}ms", start_time.elapsed().as_millis());
+            println!("=======------------------- {:#?}s \n", start_time.elapsed().as_secs());
             // println!("{:?}", self.pv_table);
         }
 

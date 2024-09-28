@@ -241,8 +241,6 @@ impl Position {
             (self.board[WR].count_ones() + self.board[BR].count_ones()) as i32 * PIECE_VALUES[WR] + 
             (self.board[WQ].count_ones() + self.board[BQ].count_ones()) as i32 * PIECE_VALUES[WQ];
 
-            // println!("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
-
         (eval * ((700 + total_material)/32)) /1024
     }
 }
