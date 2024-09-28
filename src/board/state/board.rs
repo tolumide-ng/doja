@@ -1,11 +1,12 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{bit_move::Move, board::piece_map::PieceMap, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, move_type::MoveType, moves::Moves, squares::Square, zobrist::START_POSITION_ZOBRIST};
+use crate::{bit_move::{Move, MoveType::*}, board::piece_map::PieceMap, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, moves::Moves, squares::Square, zobrist::START_POSITION_ZOBRIST};
 
 use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
 use crate::squares::Square::*;
 use crate::color::Color::*;
+use crate::move_scope::{MoveScope, *};
 
 #[cfg(test)]
 #[path ="./tests.rs"]
@@ -146,12 +147,12 @@ impl Board {
 
                 
                 while src2 !=0 {
-                    let src = src2.trailing_zeros() as u32;
-                    let target = target2.trailing_zeros() as u32;
+                    let src = src2.trailing_zeros() as u8;
+                    let target = target2.trailing_zeros() as u8;
 
                     
                     let piece = Piece::pawn(color);
-                    let xx = Move::new(src, target, piece, None, false, true, false, false);
+                    let xx = Move::new(src, target, DoublePush);
                     move_list.push(xx);
 
                     src2 &= src2 -1;
@@ -177,12 +178,12 @@ impl Board {
 
 
                     if move_promotes {
-                        move_list.push(Move::new(s_sq, t_sq, piece, Some(Piece::bishop(color)), false, false, false, false));
-                        move_list.push(Move::new(s_sq, t_sq, piece, Some(Piece::queen(color)), false, false, false, false));
-                        move_list.push(Move::new(s_sq, t_sq, piece, Some(Piece::knight(color)), false, false, false, false));
-                        move_list.push(Move::new(s_sq, t_sq, piece, Some(Piece::rook(color)), false, false, false, false));
+                        move_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToBishop));
+                        move_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToQueen));
+                        move_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToKnight));
+                        move_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToRook));
                     } else {
-                        move_list.push(Move::new(s_sq, t_sq, piece, None, false, false, false, false));
+                        move_list.push(Move::new(s_sq as u8, t_sq as u8, Quiet));
                     }
 
                     single_push_targets &= single_push_targets - 1;
@@ -214,13 +215,13 @@ impl Board {
                 };
 
                 if can_promote {
-                    mv_list.push(Move::new(src, target as u32, piece, Some(Piece::bishop(color)), true, false, false, false));
-                    mv_list.push(Move::new(src, target as u32, piece, Some(Piece::rook(color)), true, false, false, false));
-                    mv_list.push(Move::new(src, target as u32, piece, Some(Piece::knight(color)), true, false, false, false));
-                    mv_list.push(Move::new(src, target as u32, piece, Some(Piece::queen(color)), true, false, false, false));
+                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToBishop));
+                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToRook));
+                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToKnight));
+                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToQueen));
 
                 } else {
-                    mv_list.push(Move::new(src, target as u32, piece, None, true, false, false, false));
+                    mv_list.push(Move::new(src as u8, target as u8, Quiet));
 
                 }
                 captures &= captures-1;
@@ -249,14 +250,14 @@ impl Board {
             if enpass_right_attack != 0 {
                 if (enpass_right_attack & *self[piece]) != 0 {
                     let source = enpass_right_attack.trailing_zeros();
-                    let bmove = Move::new(source, enpass as u32, piece, None, true, false, true, false);
+                    let bmove = Move::new(source as u8, enpass as u8, Capture);
                     mv_list.push(bmove);
                 }
             }
             if enpass_left_attack != 0 {
                 if (enpass_left_attack & *self[piece]) != 0 {
                     let source = enpass_left_attack.trailing_zeros();    
-                    let bmove = Move::new(source, enpass as u32, piece, None, true, false, true, false);
+                    let bmove = Move::new(source as u8, enpass as u8, Capture);
                     mv_list.push(bmove);
                 }
             }
@@ -276,7 +277,7 @@ impl Board {
                     let e1f1g1_attacked = self.is_square_attacked(u64::from(Square::E1), !color) || self.is_square_attacked(u64::from(Square::F1), !color) || self.is_square_attacked(u64::from(Square::G1), !color);
                     
                     if f1g1_empty && !e1f1g1_attacked {
-                        move_list.push(Move::new(Square::E1 as u32, Square::G1 as u32, Piece::WK, None, false, false, false, true));
+                        move_list.push(Move::new(Square::E1 as u8, Square::G1 as u8, Castling));
                     }
                 }
 
@@ -285,7 +286,7 @@ impl Board {
                     let e1c1d1_attacked = self.is_square_attacked(u64::from(Square::E1), !color) || self.is_square_attacked(u64::from(Square::C1), !color)  || self.is_square_attacked(u64::from(Square::D1), !color);
 
                     if b1c1d1_empty && !e1c1d1_attacked {
-                        move_list.push(Move::new(Square::E1 as u32, Square::C1 as u32, Piece::WK, None, false, false, false, true));
+                        move_list.push(Move::new(Square::E1 as u8, Square::C1 as u8, Castling));
                     }
                 }
             }
@@ -295,7 +296,7 @@ impl Board {
                     let e8f8g8_attacked = self.is_square_attacked(u64::from(Square::E8), !color) || self.is_square_attacked(u64::from(Square::F8), !color) || self.is_square_attacked(u64::from(Square::G8), !color);
 
                     if f8g8_empty && !e8f8g8_attacked {
-                        move_list.push(Move::new(Square::E8 as u32, Square::G8 as u32, Piece::BK, None, false, false, false, true));
+                        move_list.push(Move::new(Square::E8 as u8, Square::G8 as u8, Castling));
                     }
                 }
 
@@ -304,7 +305,7 @@ impl Board {
                     let e8d8c8_attacked = self.is_square_attacked(u64::from(Square::E8), !color) || self.is_square_attacked(u64::from(Square::D8), !color) || self.is_square_attacked(u64::from(Square::C8), !color);
 
                     if b8c8d8_empty && !e8d8c8_attacked {
-                        move_list.push(Move::new(Square::E8 as u32, Square::C8 as u32, Piece::BK, None, false, false, false, true));
+                        move_list.push(Move::new(Square::E8 as u8, Square::C8 as u8, Castling));
                     }
                 }
             }
@@ -353,7 +354,8 @@ impl Board {
                 // let target = targets.trailing_zeros() as u64;
                 // capture move // there is an opponent on the target square
                 let opponent_on_target = Bitboard::from(self.occupancies[!color]).get_bit(target) != 0;
-                move_list.push(Move::new(source, target as u32, piece, None, opponent_on_target, false, false, false));
+                let mvt = if opponent_on_target {Capture} else {Quiet};
+                move_list.push(Move::new(source as u8, target as u8, mvt));
 
                 targets.pop_bit(target);
             }
@@ -443,17 +445,18 @@ impl Board {
     }
 
 
-    pub(crate) fn make_move(&self, bit_move: Move, move_type: MoveType) -> Option<Self> {
+    pub(crate) fn make_move(&self, bit_move: Move, scope: MoveScope) -> Option<Self> {
         let mut board = self.clone();
-        let turn = board.turn;
+        // let turn = board.turn;
 
-        match move_type {
-            MoveType::AllMoves => {
+        match scope {
+            MoveScope::AllMoves => {
                 let from = bit_move.get_src(); // initial position of the piece
                 let to = bit_move.get_target(); // target position of the piece
-                let piece = bit_move.get_piece(); // the piece trying to move
+                let Some(piece) = self.piece_at(from) else {return None}; // the piece trying to move
+                let turn = self.turn;
 
-                if *(self[piece]) & (1 << (from as u64)) == 0 || self.turn != bit_move.get_piece().color() {return None}
+                if *(self[piece]) & (1 << (from as u64)) == 0 || self.turn != piece.color() {return None}
                 
                 
                 // move piece
@@ -462,7 +465,7 @@ impl Board {
                 board.hash_key ^= ZOBRIST.piece_keys[piece][from];
                 board.hash_key ^= ZOBRIST.piece_keys[piece][to];
                 
-                if Piece::WP == bit_move.get_piece() || Piece::BP == bit_move.get_piece() || bit_move.get_capture() {
+                if Piece::WP == piece || Piece::BP == piece || bit_move.get_capture() {
                     board.fifty = [0, 0];
                 }
                 
@@ -482,6 +485,7 @@ impl Board {
                 }
                 
                 if let Some(promoted_to) = bit_move.get_promotion() { // if this piece is eligible for promotion, the new type it's vying for
+                    let promoted_to = Piece::from((promoted_to, turn));
                     board[piece].pop_bit(to.into());
                     board.hash_key ^= ZOBRIST.piece_keys[piece][to];
                     board[promoted_to].set_bit(to.into());
@@ -541,10 +545,10 @@ impl Board {
                 board.turn = !board.turn;
                 board.hash_key ^= ZOBRIST.side_key;
 
-                if Piece::WP == bit_move.get_piece() || Piece::BP == bit_move.get_piece() || bit_move.get_capture() {
+                if Piece::WP == piece || Piece::BP == piece || bit_move.get_capture() {
                     board.fifty = [0, 0];
                 } else {
-                    board.fifty[bit_move.get_piece().color()] +=1;
+                    board.fifty[turn] +=1;
                 }
 
                 // *self = board;
@@ -552,9 +556,9 @@ impl Board {
                 Some(board)
             }
 
-            MoveType::CapturesOnly => {
+            MoveScope::CapturesOnly => {
                 if bit_move.get_capture() {
-                    return self.make_move(bit_move, MoveType::AllMoves);
+                    return self.make_move(bit_move, MoveScope::AllMoves);
                 } else {
                     return None;
                 }

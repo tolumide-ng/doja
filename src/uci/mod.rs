@@ -2,7 +2,7 @@ use std::{io::{stdout, Seek, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, t
 
 use thiserror::Error;
 
-use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_type::MoveType, search::{alpha_beta::NegaMax, control::Control}};
+use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -128,12 +128,12 @@ impl UCI {
         // let mut p = state;
         while let Some(mv) = moves.next()  {
             // if let Some(b_move) = Self::parse_move(&b, mv) {
-            //     b = b.make_move(b_move, MoveType::AllMoves).unwrap();
+            //     b = b.make_move(b_move, MoveScope::AllMoves).unwrap();
             // }
 
             if let Some(b_move) = Self::parse_move(&state, mv) {
-                // b = b.make_move(b_move, MoveType::AllMoves).unwrap();
-                state.make_move(b_move, MoveType::AllMoves);
+                // b = b.make_move(b_move, MoveScope::AllMoves).unwrap();
+                state.make_move(b_move, MoveScope::AllMoves);
             }
         }
     }

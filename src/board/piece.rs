@@ -23,6 +23,23 @@ impl From<Piece> for PieceType {
     }
 }
 
+
+impl From<(PieceType, Color)> for Piece {
+    fn from(value: (PieceType, Color)) -> Self {
+        let color = value.1;
+        let p = value.0;
+        
+        match p {
+            PieceType::P => Piece::pawn(color),
+            PieceType::N => Piece::knight(color),
+            PieceType::B => Piece::bishop(color),
+            PieceType::R => Piece::rook(color),
+            PieceType::Q => Piece::queen(color),
+            PieceType::K => Piece::king(color),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, derive_more::Display, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Piece {

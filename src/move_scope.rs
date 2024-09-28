@@ -1,4 +1,4 @@
-pub enum MoveType {
+pub enum MoveScope {
     AllMoves,
     CapturesOnly,
 }

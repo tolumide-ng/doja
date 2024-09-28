@@ -28,7 +28,7 @@ const MOVE_TYPE: u16 = 0b1111_0000_0000_0000;
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum MoveType {
     Quiet = 0b0000,
     Capture = 0b0001,
@@ -45,7 +45,7 @@ pub(crate) enum MoveType {
     CaptureAndPromoteToQueen = 0b1100,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Move(u16);
 
 impl Move {

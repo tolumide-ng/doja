@@ -3,7 +3,7 @@ use std::ops::Deref;
 use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 use crate::nnue_::accumulator::Feature;
-use crate::{bit_move::Move, move_type::MoveType, squares::Square};
+use crate::{bit_move::Move, move_scope::MoveScope, squares::Square};
 use crate::nnue_::network::NNUEState;
 use crate::color::Color::{self, *};
 use crate::nnue_::constants::customKA0::*;
@@ -18,12 +18,12 @@ mod tests;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct History {
-    mv: Move, hash: u64, victim: Option<Piece>
+    mv: Move, hash: u64, victim: Option<Piece>, piece: Piece,
 }
 
 impl History {
-    pub(crate) fn new(mv: Move, hash: u64, victim: Option<Piece>) -> Self {
-        Self { mv, hash, victim }
+    pub(crate) fn new(mv: Move, hash: u64, victim: Option<Piece>, piece: Piece) -> Self {
+        Self { mv, hash, victim, piece }
     }
 }
 
@@ -48,8 +48,9 @@ impl Position {
         Self { board, nnue_state, history: Vec::new() }
     }
 
-    pub(crate) fn make_move(&mut self, mv: Move, mv_ty: MoveType) -> bool {
-        if let Some(new_board) = self.board.make_move(mv, mv_ty) {
+    pub(crate) fn make_move(&mut self, mv: Move, scope: MoveScope) -> bool {
+        let Some(piece) = self.piece_at(mv.get_src()) else {return false};
+        if let Some(new_board) = self.board.make_move(mv, scope) {
             let mut captured = None;
             let tgt = mv.get_target() as u64;
 
@@ -59,10 +60,10 @@ impl Position {
             }
 
             if mv.get_capture() && !mv.get_enpassant() {
-                captured = match mv.get_capture() {true => { self.board.get_piece_at(mv.get_target(), !mv.get_piece().color()) }, false => None};
+                captured = match mv.get_capture() {true => { self.board.get_piece_at(mv.get_target(), !self.board.turn) }, false => None};
             }
 
-            let mv_history = History::new(mv, self.board.hash_key, captured);
+            let mv_history = History::new(mv, self.board.hash_key, captured, piece);
 
             let _ = std::mem::replace(&mut self.board, new_board);
             self.history.push(mv_history);
@@ -85,7 +86,7 @@ impl Position {
         self.board.set_zobrist(key);
     }
     
-    pub(crate) fn make_move_nnue(&mut self, mv: Move, mv_ty: MoveType) -> bool {
+    pub(crate) fn make_move_nnue(&mut self, mv: Move, scope: MoveScope) -> bool {
         let (src, tgt) = (mv.get_src(), mv.get_target());
         let tgt_sq = Square::from(tgt);
         let turn = self.board.turn;
@@ -95,8 +96,10 @@ impl Position {
         if mv.get_castling() { 
             rook_mvs = self.board.validate_castling_move(&mv); // rook movements
         };
+
+        let Some(piece) = self.board.piece_at(src) else {return false};
         
-        if self.make_move(mv, mv_ty) {
+        if self.make_move(mv, scope) {
             // self.nnue_state.push();
             let mut remove = vec![]; let mut add = vec![];
             
@@ -122,13 +125,11 @@ impl Position {
             }
     
             if let Some(promoted) =  mv.get_promotion() {
-                // self.nnue_state.manual_update::<OFF>(mv.get_piece(), src);
-                // self.nnue_state.manual_update::<ON>(promoted, tgt);
-                remove.push((mv.get_piece(), src));
-                add.push((promoted, tgt));
+                remove.push((piece, src));
+                add.push((Piece::from((promoted, turn)), tgt));
             } else {
-                remove.push((mv.get_piece(), src));
-                add.push((mv.get_piece(), tgt));
+                remove.push((piece, src));
+                add.push((piece, tgt));
             }
 
 
@@ -143,15 +144,14 @@ impl Position {
     pub(crate) fn undo_move(&mut self, with_nnue: bool) {
         if self.history.len() == 0 { return }
 
-        let History { mv, hash, victim } = self.history.pop().unwrap();
+        let History { mv, hash, victim, piece } = self.history.pop().unwrap();
         let src = mv.get_src() as u64;
         let tgt = mv.get_target() as u64;
-        let piece = mv.get_piece();
         let color = piece.color(); // the side that moved
 
         {
             // remove the acting(src) piece from wherever it moved to (target)
-            let new_piece = match mv.get_promotion() {Some(p) => p, None => piece};
+            let new_piece = match mv.get_promotion() {Some(p) => Piece::from((p, color)), None => piece};
             *self.board[new_piece] ^= 1 << tgt;
             self.board.occupancies[color] ^= 1 << tgt;
             self.board.occupancies[Both] ^= 1 << tgt;

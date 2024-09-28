@@ -16,7 +16,7 @@ mod moves;
 // mod random_magic;
 mod piece_attacks;
 mod bit_move;
-mod move_type;
+mod move_scope;
 mod perft;
 mod kogge_stone;
 mod uci;
@@ -33,14 +33,6 @@ use std::sync::{Arc, Mutex};
 
 use board::{fen::FEN, position::Position, state::board::Board};
 use constants::TRICKY_POSITION;
-use nnue_::checkings;
-// use bit_move::Move;   
-// use bitboard::Bitboard;
-// use board::{state::board_state::Board, fen::FEN};
-// use color::Color;
-// use constants::{ALPHA, BETA, EMPTY_BOARD, REPETITIONS, START_POSITION, TRICKY_POSITION, ZOBRIST};
-// use masks::EvaluationMasks
-// use search::control::Control;
 use search::control::Control;
 // use zobrist::Zobrist;
 

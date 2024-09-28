@@ -67,8 +67,12 @@ impl Display for Moves {
             let l = self.list[count];
             print!("| ");
             print!("{}        ", l.to_string());
-            let promotion = if let Some(p) = l.get_promotion() {pieces[p]} else {' '};
-            println!("|   {}       |   {}         |  {:5}    | {:5}   | {:5}      | {:5}      |", pieces[l.get_piece()], promotion, l.get_capture(), l.get_double_push(), l.get_enpassant(), l.get_castling());
+            let promotion = if let Some(p) = l.get_promotion() {pieces[p as usize]} else {' '};
+            // |   {}       
+            println!("
+            |   {}         |  {:5}    | {:5}   | {:5}      | {:5}      |",
+            //  pieces[l.get_piece()], 
+             promotion, l.get_capture(), l.get_double_push(), l.get_enpassant(), l.get_castling());
         }
  
         println!("\n\nTotal number of moves {} \n\n", self.count);

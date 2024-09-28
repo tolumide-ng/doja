@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_type::MoveType, moves::Moves, tt::{HashFlag, TTable}};
+use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, tt::{HashFlag, TTable}};
 use super::time_control::TimeControl;
 
 
@@ -25,7 +25,7 @@ pub struct NegaMax<T: TimeControl> {
     history_moves: [[u32; TOTAL_SQUARES]; TOTAL_PIECES], //[[target_sq; 64]; moving_piece];
     /// The Principal variation (PV) is a sequence of moves that programs consider best and therefore expect to be played. All the nodes included by the PV are PV-nodes
     /// [Principal Variation](https://www.chessprogramming.org/Principal_Variation)
-    pv_table: [[i32; MAX_PLY]; MAX_PLY],
+    pv_table: [[Move; MAX_PLY]; MAX_PLY],
     pv_length: [usize; MAX_PLY],
 }
 
@@ -36,7 +36,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             killer_moves: [[0; 64]; 2], 
             history_moves: [[0; 64]; 12], 
             pv_length: [0; 64], 
-            pv_table: [[0; 64]; 64], 
+            pv_table: [[Move::default(); 64]; 64], 
             nodes: 0, ply: 0, follow_pv: false, score_pv: false, controller,
             tt: TTable::default(),
             repetition_index: 0,
@@ -79,7 +79,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             }
 
             for count in 0..self.pv_length[0] as usize {
-                print!("-->>> {}, ", Move::from(self.pv_table[0][count] as u32))
+                print!("-->>> {}, ", Move::from(self.pv_table[0][count]))
             }
 
             // println!("");
@@ -103,7 +103,7 @@ impl<T> NegaMax<T> where T: TimeControl {
 
         for mv in moves.into_iter() {
             // if this move is the best move at that specific ply(self.ply), then enable `score_pv`, and `follow_pv`
-            if self.pv_table[0][self.ply] == (*mv) as i32 {
+            if self.pv_table[0][self.ply] == mv {
                 self.score_pv = true;
                 self.follow_pv = true;
             }
@@ -114,31 +114,32 @@ impl<T> NegaMax<T> where T: TimeControl {
     /// mv: Move (please remove the mut later, and find a abtter way to write this)
     pub(crate) fn score_move(&mut self, board: &Board, mv: Move) -> u32 {
         if self.score_pv {
-            if self.pv_table[0][self.ply] == (*mv) as i32 {
+            if self.pv_table[0][self.ply] == mv {
                 self.score_pv = false;
                 return 20_000;
             }
         }
+        let Some(piece) = board.piece_at(mv.get_src()) else {return 0};
         if let Some(victim) = board.get_move_capture(mv, !board.turn) {
-            let attacker = mv.get_piece();
+            let attacker = piece;
             let score = attacker.get_mvv_lva(&victim)  + 10_000;
             return score;
         } else {
             if let Some(kill_move) = self.killer_moves[0].get(self.ply) {
-                if *kill_move == *mv {
+                if *kill_move == (*mv).into() {
                     return 9_000
                 }
             }
             
             // score  2nd killer move
             if let Some(kill_move) = self.killer_moves[1].get(self.ply) {
-                 if *kill_move == *mv {
+                 if *kill_move == (*mv).into() {
                      return 8_000
                  }
             }
             
             // score history move
-            return self.history_moves[mv.get_piece()][mv.get_target()];
+            return self.history_moves[piece][mv.get_target()];
 
         }
 
@@ -186,7 +187,7 @@ impl<T> NegaMax<T> where T: TimeControl {
                 // if mv.to_string() == String::from("e2a6x") {
                 //     println!("::::::::::::COOOL:::::::::::::::::::::");
                 // }
-                if board.make_move_nnue(mv, MoveType::CapturesOnly) {
+                if board.make_move_nnue(mv, MoveScope::CapturesOnly) {
                     self.ply += 1;
                     self.repetition_index += 1;
                     self.repetition_table[self.repetition_index] = board.hash_key;
@@ -349,7 +350,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             //     println!("======================>>>>>>> src:::: {} target---{} castling****{}", mv.get_src(), mv.get_target(), mv.get_castling());
             // }
             for mv in sorted_moves {
-                let legal_move = board.make_move_nnue(mv, MoveType::AllMoves);
+                let legal_move = board.make_move_nnue(mv, MoveScope::AllMoves);
                 
             
 
@@ -410,7 +411,7 @@ impl<T> NegaMax<T> where T: TimeControl {
                 // println!("ply @3 is {}", self.ply);
                 if !mv.get_capture() { // quiet move (non-capturing quiet move that beats the opponent)
                     self.killer_moves[1][self.ply] = self.killer_moves[0][self.ply];
-                    self.killer_moves[0][self.ply] = *mv;
+                    self.killer_moves[0][self.ply] = (*mv).into();
                 }
                 // node/move fails high
                 return beta
@@ -430,7 +431,7 @@ impl<T> NegaMax<T> where T: TimeControl {
                 
                 if !mv.get_capture() {
                     // store history moves
-                    self.history_moves[mv.get_piece()][mv.get_target() as usize] += depth as u32;
+                    self.history_moves[board.piece_at(mv.get_src()).unwrap()][mv.get_target() as usize] += depth as u32;
                     // *self.history_moves[mv.get_piece()].get_mut(mv.get_target() as usize).unwrap() += depth as u32;
                 }
                 alpha = score; // PV move (position)
@@ -438,7 +439,7 @@ impl<T> NegaMax<T> where T: TimeControl {
                 // println!("ply @2 is {}", self.ply);
                 // write PV move
                 // Traingular PV-Table
-                self.pv_table[self.ply][self.ply] =  *mv as i32;
+                self.pv_table[self.ply][self.ply] =  mv;
 
                 // if mv.to_string() == String::from("e2a6x") {
                 //     println!("::::::::::::COOOL::::::********:::::::::::::::");

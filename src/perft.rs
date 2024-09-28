@@ -1,9 +1,9 @@
 use std::time::Instant;
 
 use crate::constants::TRICKY_POSITION;
-use crate::move_type::MoveType;
 use crate::board::state::board::Board;
 use crate::board::fen::FEN;
+use crate::move_scope::MoveScope;
 
 pub(crate) struct Perft;
 
@@ -19,7 +19,7 @@ impl Perft {
 
         for index in 0..move_list.count_mvs() {
             let bmove = move_list.list[index];
-            let legal_move = board.make_move(bmove, MoveType::AllMoves);
+            let legal_move = board.make_move(bmove, MoveScope::AllMoves);
             if let Some(new_board) = legal_move {                
                 Perft::driver(depth-1, nodes, new_board);
             }
@@ -53,7 +53,7 @@ impl Perft {
 
         for index in 0..move_list.count_mvs() {
             let bmove = move_list.list[index];
-            let legal_move = board.make_move(bmove, MoveType::AllMoves);
+            let legal_move = board.make_move(bmove, MoveScope::AllMoves);
             if let Some(new_board) = legal_move {
                 let cummulative_nodes = *nodes;
                 Perft::driver(depth-1, nodes, new_board);
