@@ -80,23 +80,24 @@ impl Move {
     }
 
     pub(crate) fn get_capture(&self) -> bool {
-        let value = (**self >> SQUARE_OFFSET) & (MoveType::Capture as u16);
-        value != 0
+        [MoveType::Capture, MoveType::CaptureAndPromoteToBishop, MoveType::CaptureAndPromoteToKnight, MoveType::CaptureAndPromoteToQueen, MoveType::CaptureAndPromoteToRook].contains(&self.move_type())
     }
 
     pub(crate) fn get_double_push(&self) -> bool {
         let value = (**self >> SQUARE_OFFSET) & (MoveType::DoublePush as u16);
-        value != 0
+        value == MoveType::DoublePush as u16
     }
 
     pub(crate) fn get_enpassant(&self) -> bool {
-        let value = (**self  >> SQUARE_OFFSET) & (MoveType::Enpassant as u16);
-        value != 0
+        self.move_type() == MoveType::Enpassant
+        // let value = (**self  >> SQUARE_OFFSET) & (MoveType::Enpassant as u16);
+        // value != 0
     }
 
     pub(crate) fn get_castling(&self) -> bool {
-        let value = (**self  >> SQUARE_OFFSET) & (MoveType::Castling as u16);
-        value != 0
+        // let value = (**self  >> SQUARE_OFFSET) & (MoveType::Castling as u16);
+        // value != 0
+        self.move_type() == MoveType::Castling
     }
 
     pub(crate) fn move_type(&self) -> MoveType {
@@ -177,20 +178,21 @@ impl Move {
     #[test]
     fn should_return_a_valid_u32_after_creaton() {
         let bmove = Move::new(0, 9, Capture);
-        assert_eq!(1049152, *bmove);
+        assert_eq!(0x1240, *bmove);
     }
 
     #[test]
     fn should_return_data_stored_in_the_move_for_a_queen_capture() {
         let queen_capture =  Move::new(12, 28, Capture);
+        assert_eq!(*queen_capture, 0x170C);
 
         assert_eq!(queen_capture.get_capture(), true);
         assert_eq!(queen_capture.get_castling(), false);
-        assert_eq!(queen_capture.get_double_push(), false);
         assert_eq!(queen_capture.get_enpassant(), false);
         assert_eq!(queen_capture.get_promotion(), None);
         assert_eq!(queen_capture.get_target(), Square::from(28u8));
         assert_eq!(queen_capture.get_src(), Square::from(12u8));
+        assert_eq!(queen_capture.move_type(), Capture);
     }
 
 
@@ -202,9 +204,9 @@ impl Move {
         assert_eq!(pawn_to_bishop.get_target(), Square::from(5u8));
         assert_eq!(pawn_to_bishop.get_promotion(), Some(PieceType::B));
         assert_eq!(pawn_to_bishop.get_capture(), true);
-        assert_eq!(pawn_to_bishop.get_double_push(), false);
         assert_eq!(pawn_to_bishop.get_enpassant(), false);
         assert_eq!(pawn_to_bishop.get_castling(), false);
+        assert_eq!(pawn_to_bishop.move_type(), CaptureAndPromoteToBishop);
     }
 
 
@@ -216,9 +218,9 @@ impl Move {
         assert_eq!(castling_move.get_target(), Square::from(2u8));
         assert_eq!(castling_move.get_promotion(), None);
         assert_eq!(castling_move.get_capture(), false);
-        assert_eq!(castling_move.get_double_push(), false);
         assert_eq!(castling_move.get_enpassant(), false);
         assert_eq!(castling_move.get_castling(), true);
+        assert_eq!(castling_move.move_type(), Castling);
     }
 
     #[test]
@@ -229,9 +231,9 @@ impl Move {
         assert_eq!(double_push.get_target(), Square::from(26u8));
         assert_eq!(double_push.get_promotion(), None);
         assert_eq!(double_push.get_capture(), false);
-        assert_eq!(double_push.get_double_push(), true);
         assert_eq!(double_push.get_enpassant(), false);
         assert_eq!(double_push.get_castling(), false);
+        assert_eq!(double_push.move_type(), DoublePush);
     }
 
     #[test]
@@ -241,9 +243,9 @@ impl Move {
         assert_eq!(enpassant.get_src(), Square::from(20u8));
         assert_eq!(enpassant.get_target(), Square::from(12u8));
         assert_eq!(enpassant.get_promotion(), None);
-        assert_eq!(enpassant.get_capture(), true);
-        assert_eq!(enpassant.get_double_push(), false);
+        assert_eq!(enpassant.get_capture(), false);
         assert_eq!(enpassant.get_enpassant(), true);
         assert_eq!(enpassant.get_castling(), false);
+        assert_eq!(enpassant.move_type(), MoveType::Enpassant);
     }
  }
