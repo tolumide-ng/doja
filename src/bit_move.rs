@@ -27,6 +27,9 @@ const MOVE_TYPE: u16 = 0b1111_0000_0000_0000;
  */
 
 
+ const SQUARE_OFFSET: u64 = 12;
+ const MOVE_TYPE_MASK: u16 = 0b1111_0000_0000_0000;
+
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum MoveType {
@@ -77,27 +80,27 @@ impl Move {
     }
 
     pub(crate) fn get_capture(&self) -> bool {
-        let value = **self >> 12;
-        value & (MoveType::Capture as u16) != 0
+        let value = (**self >> SQUARE_OFFSET) & (MoveType::Capture as u16);
+        value != 0
     }
 
     pub(crate) fn get_double_push(&self) -> bool {
-        let value = **self >> 12;
-        value & (MoveType::DoublePush as u16) != 0
+        let value = (**self >> SQUARE_OFFSET) & (MoveType::DoublePush as u16);
+        value != 0
     }
 
     pub(crate) fn get_enpassant(&self) -> bool {
-        let value = **self >> 12;
-        value & (MoveType::Enpassant as u16) != 0
+        let value = (**self  >> SQUARE_OFFSET) & (MoveType::Enpassant as u16);
+        value != 0
     }
 
     pub(crate) fn get_castling(&self) -> bool {
-        let value = **self >> 12;
-        value & (MoveType::Castling as u16) != 0
+        let value = (**self  >> SQUARE_OFFSET) & (MoveType::Castling as u16);
+        value != 0
     }
 
     pub(crate) fn move_type(&self) -> MoveType {
-        let value = **self >> 12;
+        let value = (**self & MOVE_TYPE_MASK) >> SQUARE_OFFSET;
 
         match value {
             0b0000 => MoveType::Quiet,
