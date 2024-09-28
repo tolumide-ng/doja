@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, tt::{HashFlag, TTable}};
+use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, tt::{flag::HashFlag, table::TTable}};
 use super::time_control::TimeControl;
 
 
@@ -8,7 +8,7 @@ use super::time_control::TimeControl;
 /// you've vlearly got a beta node. If the first move fails low(returns a score lesser than or equal to alpha), assuming that your move ordering is pretty good, you
 /// probably have an alpha mode. If the first move returns a score between alpha and beta, you probably have a PV node.
 /// Ofcourse, you could be wrong in two of tyhe case. Once you fail high, you return beta, so you can't make a mistake about that, 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct NegaMax<T: TimeControl> {
     nodes: u64,
     ply: usize,
@@ -347,12 +347,12 @@ impl<T> NegaMax<T> where T: TimeControl {
         
         // loop through hte moves
         // for mv in &sorted_moves {
-            //     println!("======================>>>>>>> src:::: {} target---{} castling****{}", mv.get_src(), mv.get_target(), mv.get_castling());
-            // }
-            for mv in sorted_moves {
-                let legal_move = board.make_move_nnue(mv, MoveScope::AllMoves);
-                
+        //     println!("======================>>>>>>> src:::: {} target---{} castling****{}", mv.get_src(), mv.get_target(), mv.get_castling());
+        // }
+        for mv in sorted_moves {
+            let legal_move = board.make_move_nnue(mv, MoveScope::AllMoves);
             
+        
 
             // let Some(new_board) = play_moves else {continue};
             if !legal_move { continue; }
@@ -407,7 +407,7 @@ impl<T> NegaMax<T> where T: TimeControl {
                 // if mv.to_string() == String::from("e2a6x") {
                 //     println!("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< score={score:10} alpha={alpha:10}, and beta={beta:10} >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
                 // }
-                self.tt.record(board.hash_key, depth, beta, self.ply, HashFlag::LowerBound);
+                self.tt.record(board.hash_key, depth, beta, self.ply, HashFlag::LowerBound, 0, Some(mv));
                 // println!("ply @3 is {}", self.ply);
                 if !mv.get_capture() { // quiet move (non-capturing quiet move that beats the opponent)
                     self.killer_moves[1][self.ply] = self.killer_moves[0][self.ply];
@@ -473,7 +473,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             return 0 // stalemate | draw
         }
 
-        self.tt.record(board.hash_key, depth, alpha, self.ply, hash_flag);
+        self.tt.record(board.hash_key, depth, alpha, self.ply, hash_flag, 0, None);
         return alpha
     }
 
