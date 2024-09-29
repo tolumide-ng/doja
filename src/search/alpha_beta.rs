@@ -8,15 +8,15 @@ use super::time_control::TimeControl;
 /// you've vlearly got a beta node. If the first move fails low(returns a score lesser than or equal to alpha), assuming that your move ordering is pretty good, you
 /// probably have an alpha mode. If the first move returns a score between alpha and beta, you probably have a PV node.
 /// Ofcourse, you could be wrong in two of tyhe case. Once you fail high, you return beta, so you can't make a mistake about that, 
-#[derive(Debug)]
-pub struct NegaMax<T: TimeControl> {
+#[derive(Debug, Clone)]
+pub struct NegaMax<'a, T: TimeControl> {
     nodes: u64,
     ply: usize,
     follow_pv: bool,
     score_pv: bool,
     controller: Arc<Mutex<T>>,
     /// Transposition table
-    tt: TTable,
+    tt: &'a TTable,
     repetition_index: usize,
     repetition_table: [u64; 500],
     
@@ -30,15 +30,15 @@ pub struct NegaMax<T: TimeControl> {
 }
 
 
-impl<T> NegaMax<T> where T: TimeControl {
-    fn new(controller: Arc<Mutex<T>>) -> Self {
+impl<'a, T> NegaMax<'a, T> where T: TimeControl {
+    pub(crate) fn new(controller: Arc<Mutex<T>>, tt: &'a TTable) -> Self {
         let x = Self {
             killer_moves: [[0; 64]; 2], 
             history_moves: [[0; 64]; 12], 
             pv_length: [0; 64], 
             pv_table: [[Move::default(); 64]; 64], 
             nodes: 0, ply: 0, follow_pv: false, score_pv: false, controller,
-            tt: TTable::default(),
+            tt,
             repetition_index: 0,
             repetition_table: [0; 500],
         };
@@ -46,9 +46,10 @@ impl<T> NegaMax<T> where T: TimeControl {
         x
     }
 
-    fn iterative_deepening(&mut self, limit: u8, board: &mut Position) {
+    pub(crate) fn iterative_deepening(&mut self, limit: u8, board: &mut Position) {
         let mut alpha = ALPHA;
         let mut beta = BETA;
+
 
         for depth in 1..=(limit) {
             let start_time = Instant::now();
@@ -56,7 +57,9 @@ impl<T> NegaMax<T> where T: TimeControl {
             if self.controller.as_ref().lock().unwrap().stopped() { break; }
 
             self.follow_pv = true;
+            println!("!!!!<<<before>>");
             let score = self.negamax(alpha, beta, depth, board);
+            println!("READY>>");
             if (score <= alpha) || (score >= beta) {
                 println!("potentially bad move :::: {:#?}", score);
                 alpha = ALPHA; // We fell outside the window, so try again with a
@@ -91,8 +94,8 @@ impl<T> NegaMax<T> where T: TimeControl {
     }
     
     // This method is currently VERY SLOW once the depth starts approaching 8, please work to improve it
-    pub(crate) fn run(controller: Arc<Mutex<T>>, depth: u8, board: &mut Position) {
-        let mut negamax = Self::new(controller);
+    pub(crate) fn run(controller: Arc<Mutex<T>>, tt: &'a TTable, depth: u8, board: &mut Position) {
+        let mut negamax = Self::new(controller, tt);
         negamax.iterative_deepening(depth, board);
     }
 
@@ -225,6 +228,7 @@ impl<T> NegaMax<T> where T: TimeControl {
     fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, mut board: &mut Position) -> i32 {
         self.pv_length[self.ply] = self.ply;
 
+        
         let mut hash_flag = HashFlag::UpperBound; // alpha
         if self.ply > 0 && self.is_repetition(board) || board.fifty.iter().any(|&p| p >= 50) {
             return 0 // draw

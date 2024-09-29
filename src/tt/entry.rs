@@ -83,6 +83,16 @@ impl TTEntry {
         let smp_key = key ^ smp_data.load(Ordering::Relaxed);
         Self { age: AtomicU8::new(age), smp_key: AtomicU64::new(smp_key), smp_data }
     }
+
+    pub(crate) fn write(&self, key: u64, age: u8, depth: u8, score: i32, mv: Option<Move>, flag: HashFlag) {
+        let smp_data = SMPData::new(key, depth, score, mv, flag);
+
+        let smp_key = key ^ u64::from(smp_data);
+
+        self.smp_data.store(smp_data.into(), Ordering::SeqCst);
+        self.smp_key.store(smp_key, Ordering::SeqCst);
+        self.age.store(age, Ordering::SeqCst);
+    }
 }
 
 
@@ -90,36 +100,6 @@ impl SMPData {
     fn new(key: u64, depth: u8, score: i32, mv: Option<Move>, flag: HashFlag) -> Self {
         Self {key, depth, score, mv, flag}
     }
-
-    // fn verify_smp(&self) {
-    //     let data = self.key();
-    //     let key = self.key ^ data;
-
-    //     if data != self.smp_data {
-    //         // data error
-    //     }
-    //     if key != self.smp_key {
-    //         // smp_key error
-    //     }
-    // }
-
-
-    // pub(crate) fn record(&mut self, zobrist_key: u64, depth: u8, score: i32, ply: usize, flag: HashFlag) {
-    //     let index = zobrist_key as usize % BYTES_PER_MB;
-    //     let ptr = self.table.as_mut_ptr();
-
-    //     let value = if score < -MATE_SCORE { score - (ply as i32)} else if score > MATE_SCORE  { score + (ply as i32) } else { score };
-
-    //     unsafe {
-    //         // println!("the index is {index}");
-    //         (*ptr.add(index)).key = zobrist_key;
-    //         // (*ptr.add(index)).best = best;
-    //         // (*ptr.add(index)).score = value;
-    //         (*ptr.add(index)).flag = flag;
-    //         (*ptr.add(index)).depth = depth;
-    //     }
-    //     self.entries += 1;
-    // }
 }
 
 

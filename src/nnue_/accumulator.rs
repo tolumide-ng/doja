@@ -187,7 +187,7 @@ impl<const U: usize> Accumulator<Feature, U> {
     pub(crate) unsafe fn sq_crelu16(&self, stm: Color) -> [Align64<[__m256i; U]>; 2] {
         const IN_REGISTER_WIDTH: usize = 256/16; // 16
         const OUT_REGISTER_WIDTH: usize = 256/16; // 16 (output would be in i16, because we would be squaring the clamped values(i8^2) squaredCReLU)
-        let num_out_chunks = U/OUT_REGISTER_WIDTH; // 1024/16 = 64
+        let num_out_chunks = U/OUT_REGISTER_WIDTH; // 1024/16 = 6
 
         
         let input = if stm == Color::White {[self.white, self.black]} else {[self.black, self.white]};

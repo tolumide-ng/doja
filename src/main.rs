@@ -29,11 +29,12 @@ mod tt;
 // use std::{sync::mpsc, time::Instant};
 // use std::{ptr, thread};
 
-use std::sync::{Arc, Mutex};
+use std::{sync::{Arc, Mutex}, thread::{self, Thread}};
 
 use board::{fen::FEN, position::Position, state::board::Board};
 use constants::TRICKY_POSITION;
 use search::control::Control;
+use tt::table::TTable;
 // use zobrist::Zobrist;
 
 use crate::search::alpha_beta::NegaMax;
@@ -69,13 +70,59 @@ fn main() {
     // println!("the scoer now ius >>>> {}", score)::::
     // EvaluationMasks::init();
 
+    // NegaMax::run(controller, &tt, 7, &mut board);
+    // println!("{}", board.to_string());
+    println!("**********************AFTER*****************************");
+    
     let controller = Arc::new(Mutex::new(Control::default()));
     let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     // println!("**********************BEFORE*****************************");
     println!("{}", board.to_string());
-    NegaMax::run(controller, 7, &mut board);
-    println!("**********************AFTER*****************************");
-    println!("{}", board.to_string());
+    let tt = TTable::default();
+    NegaMax::run(controller, &tt, 1, &mut board);
+
+    
+    // let mut threads = vec![];
+
+    // for _ in 0..10 {
+    //     let cc = Arc::clone(&controller);
+    //     // let t = thread::spawn(move || {
+    //     // });
+
+    //     // threads.push(t);
+    // }
+
+    // let axx = [];
+
+    // thread::scope(|s| {
+
+    //     // let mut ttt = Vec::with_capacity(10);
+
+    //     // let xtt = Arc::new(tt);
+
+    //     let negamax = NegaMax::new(controller, &tt);
+    //     // negamax.iterative_deepening(depth, board);
+    //     let limit = 10;
+
+    //     // for i in 0.. 6 {
+    //     //     let mut bb = board.clone();
+    //     //     // let cc = Arc::clone(&controller);
+
+    //     //     let mut nn = negamax.clone();
+
+    //     //     // ttt.push(s.spawn(move || NegaMax::run(cc, &tt, 7, &mut bb)));
+    //     //     println!("########################################################################################################");
+    //     //     s.spawn(move|| {
+    //     //         // let mut ii = limit;
+    //     //         // if i <= limit {
+    //     //         //     ii = ii;
+    //     //         // }
+    //     //         println!("i is ------------------------------------------------------------------------>>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", i);
+    //     //         nn.iterative_deepening(i, &mut bb);
+    //     //         println!("****************************");
+    //     //     });
+    //     // }
+    // });
 
     // checkings();
 

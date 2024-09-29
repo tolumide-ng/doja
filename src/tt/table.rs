@@ -26,17 +26,20 @@ pub(crate) const BYTES_PER_MB: usize = 0x10000; // 1MB
 /// Transposition Table
 #[derive(Debug)]
 pub(crate) struct TTable {
-   table: Box<[Option<TTEntry>; BYTES_PER_MB]>, // we need to be able to dynamically allocate this in the future, see CMK's method on Video 88
+//    table: Box<[Option<TTEntry>; BYTES_PER_MB]>, // we need to be able to dynamically allocate this in the future, see CMK's method on Video 88
+    table: Box<[TTEntry; BYTES_PER_MB]>, // we need to be able to dynamically allocate this in the future, see CMK's method on Video 88
    entries: usize,
 }
 
-const TT_ENTRY: Option<TTEntry> = None;
+// const TT_ENTRY: Option<TTEntry> = None;
 impl Default for TTable {
    fn default() -> Self {
-       Self {
-           table: Box::new([TT_ENTRY; BYTES_PER_MB]),
-           entries: 0
-       }
+    //    let table = Box::new([TT_ENTRY; BYTES_PER_MB]);
+       let table: Box<[TTEntry; BYTES_PER_MB]> = Box::new(core::array::from_fn(|_| TTEntry::default()));   
+    Self {
+        table,
+        entries: 0
+    }
    }
 }
 
@@ -48,7 +51,10 @@ impl TTable {
         // we can turst the #[default] implementation to work without any issue because the default key is 0,
         // and that would likely not match any zobtist key
 
-        let Some(entry) = phahse else {return None};
+        // let Some(entry) = phahse else {return None};
+        if phahse.smp_data.load(Ordering::Relaxed) == 0 {return None};
+        let entry = phahse;
+
         let data = SMPData::from(entry.smp_data.load(Ordering::Relaxed));
 
         let test_key = zobrist_key ^ u64::from(data);
@@ -80,12 +86,14 @@ impl TTable {
        None
    }
 
-   pub(crate) fn record(&mut self, zobrist_key: u64, depth: u8, score: i32, ply: usize, flag: HashFlag, age: u8, mv: Option<Move>) {
+   pub(crate) fn record(&self, zobrist_key: u64, depth: u8, score: i32, ply: usize, flag: HashFlag, age: u8, mv: Option<Move>) {
        let index = zobrist_key as usize % BYTES_PER_MB;
        
        let mut replace = false;
+       let exists =  self.table[index].smp_data.load(Ordering::Relaxed) != 0;
 
-       if let Some(entry) = &self.table[index] {
+       if exists {
+        let entry = &self.table[index];
            let data = SMPData::from(entry.smp_data.load(Ordering::Relaxed));
             if entry.age.load(Ordering::Relaxed) < age || data.depth <= depth { replace = true;}
         } else {
@@ -94,12 +102,19 @@ impl TTable {
         
         if replace == false { return }
     
-    let value = if score < -MATE_SCORE { score - (ply as i32)} else if score > MATE_SCORE  { score + (ply as i32) } else { score };
-    let ptr = self.table.as_mut_ptr();
-       unsafe {
-            *ptr.add(index) = Some(TTEntry::new(zobrist_key, age, depth, value, mv, flag))
+        let value = if score < -MATE_SCORE { score - (ply as i32)} else if score > MATE_SCORE  { score + (ply as i32) } else { score };
+        unsafe {
+        //    let ptr = self.table.as_ptr().cast_mut().add(index);
+            // *ptr = Some(TTEntry::new(zobrist_key, age, depth, value, mv, flag))
+            let ptr = self.table.as_ptr();
+            (*ptr.add(index)).write(zobrist_key, age, depth, value, mv, flag);
        }
-       self.entries += 1;
+
+    //    self.entries += 1;
    }
 }
 
+
+
+// unsafe impl Send for TTable {}
+// unsafe  impl Sync for TTable {}

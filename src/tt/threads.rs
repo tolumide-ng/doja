@@ -38,7 +38,7 @@ fn itertive() {}
 fn xx() {
     let tt = TTable::default();
     let bb = Position::new();
-    let signal = Signal {depth: 2};
+    // let signal = Signal {depth: 2};
 
     for xx in 0..3 {
         // thread::spawn(move || {
