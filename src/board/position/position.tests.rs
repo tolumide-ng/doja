@@ -29,7 +29,7 @@ mod do_and_undo_a_move {
         assert!(position.board.occupancies[Black] & white_knight_c4 == 0);
         assert!(position.board.occupancies[White] & white_knight_c4 != 0);
 
-        position.make_move(mv, CapturesOnly);
+        position.make_move(mv, AllMoves);
 
         assert!(position.board.occupancies[Both] & black_bishop_d5 == 0);
         assert!(position.board.occupancies[Black] & black_bishop_d5 == 0);
@@ -59,7 +59,7 @@ mod do_and_undo_a_move {
         assert!(position.board.occupancies[Black] & white_knight_c4 == 0);
         assert!(position.board.occupancies[White] & white_knight_c4 != 0);
 
-        position.make_move(mv, CapturesOnly);
+        position.make_move(mv, AllMoves);
         
         assert!(position.board.occupancies[Both] & black_bishop_d5 == 0);
         assert!(position.board.occupancies[Black] & black_bishop_d5 == 0);
@@ -104,10 +104,11 @@ mod do_and_undo_a_move {
         assert_eq!(position.board.enpassant, Some(A3));
         assert_eq!(position.board.turn, Black);
 
-        position.make_move(mv, CapturesOnly);
+        position.make_move(mv, AllMoves);
         let zobrist_after_move = position.board.hash_key;
-
+        
         let black_pawn_on_a3 = 1u64 << A3 as u8;
+        
         assert!(position.board.occupancies[White] & white_pawn_a4 == 0);
         assert!(position.board.occupancies[Black] & black_pawn_b4 == 0);
         assert!(position.board.occupancies[Black] & black_pawn_on_a3 != 0);
@@ -142,8 +143,11 @@ mod do_and_undo_a_move {
         assert!(position.board.occupancies[White] & (1u64 << F4 as u8) != 0);
         assert!(position.board.occupancies[Black] & (1u64 << D5 as u8) != 0);
 
-        position.make_move(white_knight_captures_pawn, CapturesOnly);
-
+        
+        position.make_move(white_knight_captures_pawn, AllMoves);
+        
+        
+        
         assert!(position.board.occupancies[Both] & (1u64 << F4 as u8) == 0);
         assert!(position.board.occupancies[Black] & (1u64 << D5 as u8) == 0);
         assert!(position.board.occupancies[White] & (1u64 << D5 as u8) != 0);
@@ -153,8 +157,8 @@ mod do_and_undo_a_move {
 
         assert!((position.board.occupancies[Black] & 1u64 << B5 as u8) != 0);
         assert!((position.board.occupancies[White] & 1u64 << A4 as u8) != 0);
-
-        position.make_move(black_pawn_captures_pawn, CapturesOnly);
+        
+        position.make_move(black_pawn_captures_pawn, AllMoves);
 
         assert!((position.board.occupancies[Black] & 1u64 << B5 as u8) == 0);
         assert!((position.board.occupancies[White] & 1u64 << A4 as u8) == 0);
@@ -165,7 +169,7 @@ mod do_and_undo_a_move {
 
         let white_rook_captures = Move::new(A1 as u8, A4 as u8, Capture);
 
-        position.make_move(white_rook_captures, CapturesOnly);
+        position.make_move(white_rook_captures, AllMoves);
 
         assert!((position.board.occupancies[Black] & 1u64 << A4 as u8) == 0);
         assert!((position.board.occupancies[White] & 1u64 << A1 as u8) == 0);

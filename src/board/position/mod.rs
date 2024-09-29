@@ -1,6 +1,7 @@
 use std::ops::Deref;
 
 use crate::bit_move::MoveType;
+use crate::bitboard::Bitboard;
 use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 use crate::nnue_::accumulator::Feature;
@@ -50,11 +51,17 @@ impl Position {
     }
 
     pub(crate) fn make_move(&mut self, mv: Move, scope: MoveScope) -> bool {
-        let Some(piece) = self.piece_at(mv.get_src()) else {return false};
+        // if mv.get_src() == B5 {
+            //     println!("{}", Bitboard::from(self.board.occupancies[Black]));
+            //     println!("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&    {:?}, {:?}",  mv.get_src(), self.piece_at(mv.get_src()));
+            //     println!("!!!!!!!!!!!!!!!!!!!!!!!!! {:?}", self.get_piece_at(mv.get_src(), Black));
+            // }
+            let Some(piece) = self.piece_at(mv.get_src()) else {return false};
+            println!("<<<<<[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[SHOULD BE HERE]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]>>>>>");
         if let Some(new_board) = self.board.make_move(mv, scope) {
-            let mut captured = None;
+                let mut captured = None;
             let tgt = mv.get_target() as u64;
-
+            
             if mv.get_enpassant() {
                 let enpass_tgt = Square::from(match !self.board.turn {Black => tgt + 8, _ => tgt -  8});
                 captured = self.board.get_piece_at(enpass_tgt, !self.board.turn);
@@ -63,9 +70,8 @@ impl Position {
             if mv.get_capture() && !mv.get_enpassant() {
                 captured = match mv.get_capture() {true => { self.board.get_piece_at(mv.get_target(), !self.board.turn) }, false => None};
             }
-
+            
             let mv_history = History::new(mv, self.board.hash_key, captured, piece);
-
             let _ = std::mem::replace(&mut self.board, new_board);
             self.history.push(mv_history);
             

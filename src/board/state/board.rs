@@ -151,7 +151,7 @@ impl Board {
                     let target = target2.trailing_zeros() as u8;
 
                     
-                    let piece = Piece::pawn(color);
+                    // let piece = Piece::pawn(color);
                     let xx = Move::new(src, target, DoublePush);
                     move_list.push(xx);
 
@@ -170,7 +170,7 @@ impl Board {
 
                     let t_sq = target_sq.trailing_zeros();
                     let s_sq = src_sq.trailing_zeros();
-                    let piece = Piece::pawn(color);
+                    // let piece = Piece::pawn(color);
                     let move_promotes = match color {
                         Color::White => {t_sq >= Square::A8 as u32 && t_sq <= Square::H8 as u32}
                         _ => {t_sq >= Square::A1 as u32 && t_sq <= Square::H1 as u32}
@@ -221,7 +221,7 @@ impl Board {
                     mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToQueen));
 
                 } else {
-                    mv_list.push(Move::new(src as u8, target as u8, Quiet));
+                    mv_list.push(Move::new(src as u8, target as u8, Capture));
 
                 }
                 captures &= captures-1;
@@ -250,14 +250,14 @@ impl Board {
             if enpass_right_attack != 0 {
                 if (enpass_right_attack & *self[piece]) != 0 {
                     let source = enpass_right_attack.trailing_zeros();
-                    let bmove = Move::new(source as u8, enpass as u8, Capture);
+                    let bmove = Move::new(source as u8, enpass as u8, Enpassant);
                     mv_list.push(bmove);
                 }
             }
             if enpass_left_attack != 0 {
                 if (enpass_left_attack & *self[piece]) != 0 {
                     let source = enpass_left_attack.trailing_zeros();    
-                    let bmove = Move::new(source as u8, enpass as u8, Capture);
+                    let bmove = Move::new(source as u8, enpass as u8, Enpassant);
                     mv_list.push(bmove);
                 }
             }
@@ -447,17 +447,18 @@ impl Board {
 
     pub(crate) fn make_move(&self, bit_move: Move, scope: MoveScope) -> Option<Self> {
         let mut board = self.clone();
+        println!("******************* {:?}", self.turn);
         // let turn = board.turn;
 
         match scope {
             MoveScope::AllMoves => {
                 let from = bit_move.get_src(); // initial position of the piece
                 let to = bit_move.get_target(); // target position of the piece
+
                 let Some(piece) = self.piece_at(from) else {return None}; // the piece trying to move
                 let turn = self.turn;
-
-                if *(self[piece]) & (1 << (from as u64)) == 0 || self.turn != piece.color() {return None}
                 
+                if *(self[piece]) & (1 << (from as u64)) == 0 || turn != piece.color() {return None}
                 
                 // move piece
                 board[piece].pop_bit(from.into());
@@ -474,6 +475,7 @@ impl Board {
                 if bit_move.get_capture() {
                     // there would usually only be a maximum of 2 captures each, consider unrolling this for loop (what did I mean here by 2???????)
                     let target_pieces = Piece::all_pieces_for(!turn);
+                    println!("BEFORE============");
                     
                     for p in target_pieces {
                         if board[p].get_bit(to.into()) != 0 {
@@ -515,10 +517,10 @@ impl Board {
 
                 if bit_move.get_castling() {
                     if let Some((src, tgt)) = self.validate_castling_move(&bit_move) {
-                        board[Piece::rook(self.turn)].pop_bit(src.into());
-                        board[Piece::rook(self.turn)].set_bit(tgt.into());
-                        board.hash_key ^= ZOBRIST.piece_keys[Piece::rook(self.turn)][src as usize];
-                        board.hash_key ^= ZOBRIST.piece_keys[Piece::rook(self.turn)][tgt as usize];
+                        board[Piece::rook(turn)].pop_bit(src.into());
+                        board[Piece::rook(turn)].set_bit(tgt.into());
+                        board.hash_key ^= ZOBRIST.piece_keys[Piece::rook(turn)][src as usize];
+                        board.hash_key ^= ZOBRIST.piece_keys[Piece::rook(turn)][tgt as usize];
                     } else {
                         return None;
                     };
@@ -567,20 +569,22 @@ impl Board {
     }
 
     pub(crate) fn piece_at(&self, sq: Square) -> Option<Piece> {
-        let sq = sq as u64;
+        let sq = 1 << sq as u64;
         let white = (self.occupancies[0] & sq) != 0;
         let black = (self.occupancies[1] & sq) != 0;
+
+        println!("b {}, w{}", black, white);
         match (white, black) {
             (true, false) => {
-                for i in 0..6 {
-                    if (*self.board[i] & (sq as u64)) != 0 {
+                for i in 0..=5 {
+                    if (*self.board[i] & sq) != 0 {
                         return Some(Piece::from(i as u8))
                     }
                 }
             }
             (false, true) => {
-                for i in 7..11 {
-                    if (*self.board[i] & (sq as u64)) != 0 {
+                for i in 6..=11 {
+                    if (*self.board[i] & sq) != 0 {
                         return Some(Piece::from(i as u8))
                     }
                 }

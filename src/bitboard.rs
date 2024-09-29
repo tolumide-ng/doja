@@ -135,23 +135,26 @@ fn format_u64(input: u64) -> String {
 
 impl Display for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        println!("---------------------------");
+        // println!("TOLUMIDE SHOPEIN");
+        writeln!(f, "---------------------------")?;
+        writeln!(f, "")?;
         for rank in (0..8).rev() {
             for file in 0..8 {
                 let square = (rank * 8) + file;
 
                 if file == 0 {
-                    print!("{}  ", rank+1);
+                    write!(f, "{}  ", rank+1)?;
                 }
                 
-                print!(" {} ", self. get_bit(square));
+                write!(f, " {} ", self. get_bit(square))?;
                 // print!(" {} ", 8 * rank + file);
             }
-            println!("");
+            writeln!(f, "")?;
         }
-        println!("    \n    a  b  c  d  e  f  g  h\n");
-        println!("Bitboard: {}", self.0);
-        writeln!(f, "")
+        writeln!(f, "    \n    a  b  c  d  e  f  g  h\n")?;
+        writeln!(f, "Bitboard: {}", self.0)?;
+        writeln!(f, "")?;
+        Ok(())
     }
 }
 

@@ -57,7 +57,6 @@ mod board_tests {
         fn should_test_if_the_square_is_under_attack_by_knights() {
             let board = Board::parse_fen("3qk3/8/2N5/8/3p4/8/1p2NPPP/2BQK2R b KQkq - 1 1").unwrap();
 
-            println!("{:#?}", board.to_string());
             assert!(board.is_square_attacked(Square::D4 as u64, Color::White));
             assert!(!board.is_square_attacked(Square::E2 as u64, Color::Black));
         }
@@ -208,7 +207,6 @@ mod board_tests {
 
             assert_eq!(result.count_ones() as usize, targets.len());
             for sq in targets {
-                println!("on the square sq {:#?}", sq);
                 assert!(result & (1<<sq as u64) != 0);
             }
         }
@@ -337,11 +335,8 @@ mod board_tests {
             board.set_occupancy(Color::White, white_pawns | white_bishop);
             board.set_occupancy(Color::Black, black_pawns);
 
-            println!("{:#?}", Bitboard::from(black_pawns).to_string());
-            println!("{:#?}", Bitboard::from(white_pawns).to_string());
-
             let result = board.get_pawn_attacks(Color::Black);
-            let targets = [(Square::B4, Square::C3, Quiet), (Square::F2, Square::G1, CaptureAndPromoteToBishop), (Square::F2, Square::G1, CaptureAndPromoteToQueen), (Square::F2, Square::G1, CaptureAndPromoteToKnight), (Square::F2, Square::G1, CaptureAndPromoteToQueen)];
+            let targets = [(Square::B4, Square::C3, Capture), (Square::F2, Square::G1, CaptureAndPromoteToBishop), (Square::F2, Square::G1, CaptureAndPromoteToQueen), (Square::F2, Square::G1, CaptureAndPromoteToKnight), (Square::F2, Square::G1, CaptureAndPromoteToQueen)];
         
             assert_eq!(result.len(), targets.len());
             for (src, target, mv_ty) in targets {
@@ -364,12 +359,9 @@ mod board_tests {
             board.set_occupancy(Color::Black, black_pawns);
             board.enpassant = Some(Square::B3);
 
-            println!("{:#?}", Bitboard::from(black_pawns).to_string());
-            println!("{:#?}", Bitboard::from(white_pawns).to_string());
-
             let result = board.get_pawn_attacks(Color::Black);
             let targets = [(Square::C4, Square::B3)];
-        
+
             assert_eq!(result.len(), targets.len());
             for (src, target) in targets {
                 let expected = Move::new(src as u8, target as u8, Enpassant);
@@ -405,8 +397,8 @@ mod board_tests {
     
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
-                let Move = Move::new(src as u8, target as u8, Castling);
-                assert!(received.contains(&Move));
+                let mv = Move::new(src as u8, target as u8, Castling);
+                assert!(received.contains(&mv));
             }
         }
     
@@ -433,8 +425,8 @@ mod board_tests {
     
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
-                let Move = Move::new(src as u8, target as u8, Castling);
-                assert!(received.contains(&Move));
+                let mv = Move::new(src as u8, target as u8, Castling);
+                assert!(received.contains(&mv));
             } 
         }
 
@@ -462,8 +454,8 @@ mod board_tests {
     
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
-                let Move = Move::new(src as u8, target as u8, Castling);
-                assert!(received.contains(&Move));
+                let mv = Move::new(src as u8, target as u8, Castling);
+                assert!(received.contains(&mv));
             } 
         }
 
@@ -491,8 +483,8 @@ mod board_tests {
  
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
-                let Move = Move::new(src as u8, target as u8, Castling);
-                assert!(received.contains(&Move));
+                let mv = Move::new(src as u8, target as u8, Castling);
+                assert!(received.contains(&mv));
             } 
         }
 
@@ -598,7 +590,7 @@ mod board_tests {
             board.board[BR] = Bitboard::from(black_rooks);
 
             let received = board.get_sliding_and_leaper_moves(BR);
-            let targets = [(D2, D1, Quiet), (D2, D3, Quiet), (D2, D4, Quiet), (D2, D5, Quiet), (D2, D6, Quiet), (D2, C2, Quiet), (D2, B2, Capture), (D2, E2, Capture), (D2, F2, Quiet), (D2, G2, Capture),
+            let targets = [(D2, D1, Quiet), (D2, D3, Quiet), (D2, D4, Quiet), (D2, D5, Quiet), (D2, D6, Capture), (D2, C2, Quiet), (D2, B2, Capture), (D2, E2, Quiet), (D2, F2, Quiet), (D2, G2, Capture),
             (C1, A1, Quiet), (C1, B1, Quiet), (C1, D1, Quiet), (C1, E1, Quiet), (C1, F1, Capture), (C1, C2, Quiet), (C1, C3, Quiet), (C1, C4, Quiet), (C1, C5, Quiet), (C1, C6, Quiet), (C1, C7, Quiet), (C1, C8, Quiet)];
 
             assert_eq!(received.len(), targets.len());
@@ -625,7 +617,7 @@ mod board_tests {
             board.board[BQ] = Bitboard::from(black_queen);
 
             let received = board.get_sliding_and_leaper_moves(BQ);
-            let targets = [(D2, D1, Quiet), (D2, D3, Quiet), (D2, D4, Quiet), (D2, D5, Quiet), (D2, D6, Capture), (D2, C2, Quiet), (D2, B2, Capture), (D2, E2, Quiet), (D2, F2, Quiet), (D2, G2, Quiet),
+            let targets = [(D2, D1, Quiet), (D2, D3, Quiet), (D2, D4, Quiet), (D2, D5, Quiet), (D2, D6, Capture), (D2, C2, Quiet), (D2, B2, Capture), (D2, E2, Quiet), (D2, F2, Quiet), (D2, G2, Capture),
             (D2, E1, Quiet), (D2, C1, Quiet), (D2, C3, Quiet), (D2, B4, Quiet), (D2, A5, Quiet), (D2, E3, Quiet), (D2, F4, Quiet), (D2, G5, Quiet), (D2, H6, Quiet)];
 
             assert_eq!(received.len(), targets.len());
@@ -644,6 +636,8 @@ mod board_tests {
         
         #[cfg(test)]
         mod capturing_moves_and_regular_moves {
+
+        use crate::bit_move::Move;
 
         use super::*;
 
@@ -668,17 +662,17 @@ mod board_tests {
             board.board[WK] = Bitboard::from(white_king);
             board.turn = Black;
 
-            let Move = Move::new(D2 as u8, D3 as u8, Quiet);
+            let mv = Move::new(D2 as u8, D3 as u8, Quiet);
             assert_eq!(Square::from((*board.board[BB]).trailing_zeros() as u64), D2);
 
             let zobrist_key = board.hash_key;
-            let result = board.make_move(Move, AllMoves).unwrap();
+            let result = board.make_move(mv, AllMoves).unwrap();
 
             assert_ne!(result.hash_key, zobrist_key);
             assert_eq!(Square::from((*result.board[BB]).trailing_zeros() as u64), D3);
 
-            let Move = Move::new(A6 as u8, D3 as u8, Capture);
-            let capture_result = result.make_move(Move, CapturesOnly).unwrap();
+            let mv = Move::new(A6 as u8, D3 as u8, Capture);
+            let capture_result = result.make_move(mv, CapturesOnly).unwrap();
 
             assert_ne!(capture_result.hash_key, zobrist_key);
             assert_ne!(capture_result.hash_key, result.hash_key);
@@ -707,17 +701,17 @@ mod board_tests {
             board.board[BQ] = Bitboard::from(black_queen);
 
             let zobrist = board.hash_key;
-            let Move = Move::new(E4 as u8, F5 as u8, Capture);
+            let mv = Move::new(E4 as u8, F5 as u8, Capture);
 
             assert_eq!((*board.board[BP]).count_ones(), 3);
-            let result = board.make_move(Move, AllMoves).unwrap();
+            let result = board.make_move(mv, AllMoves).unwrap();
             
             assert_ne!(result.hash_key, zobrist);
             assert_eq!(Square::from((*result.board[WQ]).trailing_zeros() as u64), F5);
             assert_eq!((*result.board[BP]).count_ones(), 2);
             
-            let Move = Move::new(C8 as u8, F5 as u8, Capture);
-            let capture_result = result.make_move(Move, CapturesOnly).unwrap();
+            let mv = Move::new(C8 as u8, F5 as u8, Capture);
+            let capture_result = result.make_move(mv, CapturesOnly).unwrap();
 
             assert_ne!(capture_result.hash_key, zobrist);
             assert_ne!(capture_result.hash_key, result.hash_key);
@@ -731,17 +725,17 @@ mod board_tests {
             let board = Board::parse_fen("rnb1kbnr/p1p1p1pp/8/3p1N2/3K4/7q/PP1PPPPP/R2Q1BNR w KQkq - 0 1").unwrap();
 
             let zobrist = board.hash_key;
-            let Move = Move::new(D4 as u8, D5 as u8, Capture);
+            let mv = Move::new(D4 as u8, D5 as u8, Capture);
 
             assert_eq!((*board.board[WK]).count_ones(), 1);
             assert_eq!(Square::from((*board.board[WK]).trailing_zeros() as u64), D4);
 
-            let result = board.make_move(Move, AllMoves).unwrap();
+            let result = board.make_move(mv, AllMoves).unwrap();
             assert_ne!(result.hash_key, board.hash_key);
             assert_eq!(Square::from((*result.board[WK]).trailing_zeros()  as u64), D5);
             
-            let Move = Move::new(E8 as u8, D7 as u8, Quiet);
-            let black_king_move = result.make_move(Move, AllMoves).unwrap();
+            let mv = Move::new(E8 as u8, D7 as u8, Quiet);
+            let black_king_move = result.make_move(mv, AllMoves).unwrap();
 
             assert_ne!(black_king_move.hash_key, result.hash_key);
             assert_ne!(black_king_move.hash_key, zobrist);
@@ -752,22 +746,20 @@ mod board_tests {
         fn rook_move_and_capture() {
             let board = Board::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/1NBQKBNR b KQk - 3 3").unwrap();
 
-            let Move = Move::new(A8 as u8, A4 as u8, Quiet);
+            let mv = Move::new(A8 as u8, A4 as u8, Quiet);
 
             assert_eq!((*board.board[BR]).count_ones(), 2);
             assert_eq!((*board.board[WR]).count_ones(), 2);
 
-            let black_move = board.make_move(Move, AllMoves).unwrap();
+            let black_move = board.make_move(mv, AllMoves).unwrap();
 
             
             assert_eq!((*black_move.board[BR]).count_ones(), 2);
             assert_eq!((*black_move.board[WR]).count_ones(), 2);
 
-            let Move = Move::new(C4 as u8, A4 as u8, Capture);;
-            let white_captures = black_move.make_move(Move, AllMoves).unwrap();
+            let mv = Move::new(C4 as u8, A4 as u8, Capture);;
+            let white_captures = black_move.make_move(mv, AllMoves).unwrap();
             
-            println!("{:#?}", white_captures.to_string());
-
             assert_ne!(white_captures.hash_key, black_move.hash_key);
             assert_ne!(white_captures.hash_key, board.hash_key);
             assert_eq!((*white_captures.board[BR]).count_ones(), 1);
@@ -778,14 +770,14 @@ mod board_tests {
         fn knight_move_and_capture() {
             let board = Board::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/N1BQKBNR w KQk - 3 3").unwrap();
 
-            let Move = Move::new(A1 as u8, B3 as u8, Capture);
+            let mv = Move::new(A1 as u8, B3 as u8, Capture);
 
             assert_eq!((*board.board[BN]).count_ones(), 1);
             assert_eq!((*board.board[WN]).count_ones(), 2);
             assert_eq!((*board.board[BP]).count_ones(), 5);
             assert_eq!((*board.board[WP]).count_ones(), 8);
 
-            let white_captures = board.make_move(Move, AllMoves).unwrap();
+            let white_captures = board.make_move(mv, AllMoves).unwrap();
 
 
             assert_eq!((*white_captures.board[BN]).count_ones(), 1);
@@ -793,10 +785,8 @@ mod board_tests {
             assert_eq!((*white_captures.board[BP]).count_ones(), 4);
             assert_eq!((*white_captures.board[WP]).count_ones(), 8);
             
-
-            println!("{:#?}", white_captures.to_string());
-            let Move = Move::new(G8 as u8, F6 as u8, Quiet);
-            let black_move = white_captures.make_move(Move, AllMoves).unwrap();
+            let mv = Move::new(G8 as u8, F6 as u8, Quiet);
+            let black_move = white_captures.make_move(mv, AllMoves).unwrap();
             
             
             assert_ne!(black_move.hash_key, white_captures.hash_key);
@@ -811,21 +801,19 @@ mod board_tests {
         #[test]
         fn pawn_move_and_capture() {
             let board = Board::parse_fen("r2qkbnr/4pppp/2R5/1p2P3/8/PP2P3/1P1P2PP/N1BQKBNR w KQk - 4 3").unwrap();
-            let Move = Move::new(A3 as u8, A4 as u8, Quiet);
+            let mv = Move::new(A3 as u8, A4 as u8, Quiet);
 
             assert_eq!((*board.board[WP]).count_ones(), 8);
             assert_eq!((*board.board[BP]).count_ones(), 5);
 
-            let mut white_moves = board.make_move(Move, AllMoves).unwrap();
+            let mut white_moves = board.make_move(mv, AllMoves).unwrap();
 
             assert_eq!((*white_moves.board[BP]).count_ones(), 5);
             assert_eq!((*white_moves.board[WP]).count_ones(), 8);
 
-            let Move = Move::new(B5 as u8, A4 as u8, Quiet);
+            let mv = Move::new(B5 as u8, A4 as u8, Capture);
             white_moves.set_turn(Black);
-            println!("{:#?}", white_moves.to_string());
-            // println!()
-            let black_captures = white_moves.make_move(Move, AllMoves).unwrap();
+            let black_captures = white_moves.make_move(mv, AllMoves).unwrap();
 
             assert_eq!((*black_captures.board[BP]).count_ones(), 5);
             assert_eq!((*black_captures.board[WP]).count_ones(), 7);
@@ -834,7 +822,7 @@ mod board_tests {
         #[test]
         fn enpassant_move_and_capture() { // double moves must always result in an enpassant
             let board = Board::parse_fen("r2qkbnr/4pppp/2R5/4P3/1p6/1P2P3/PP1P2PP/N1BQKBNR w KQk - 0 4").unwrap();
-            let Move = Move::new(A2 as u8, A4 as u8, DoublePush);
+            let mv = Move::new(A2 as u8, A4 as u8, DoublePush);
 
             assert_eq!((*board.board[WP]).count_ones(), 8);
             assert_eq!((*board.board[BP]).count_ones(), 5);
@@ -842,7 +830,7 @@ mod board_tests {
             assert!((1 <<  A4 as u64) & board.occupancies[Both] == 0);
             assert!(board.enpassant.is_none());
 
-            let white_moves = board.make_move(Move, AllMoves).unwrap();
+            let white_moves = board.make_move(mv, AllMoves).unwrap();
 
             assert_eq!((*white_moves.board[WP]).count_ones(), 8);
             assert_eq!((*white_moves.board[BP]).count_ones(), 5);
@@ -850,8 +838,8 @@ mod board_tests {
             assert!((1 <<  A4 as u64) & white_moves.occupancies[Both] != 0);
             assert!(white_moves.enpassant == Some(A3));
 
-            let Move = Move::new(B4 as u8, A3 as u8, Enpassant);
-            let black_captures = white_moves.make_move(Move, AllMoves).unwrap();
+            let mv = Move::new(B4 as u8, A3 as u8, Enpassant);
+            let black_captures = white_moves.make_move(mv, AllMoves).unwrap();
             
             assert_eq!((*black_captures.board[WP]).count_ones(), 7);
             assert_eq!((*black_captures.board[BP]).count_ones(), 5);
@@ -866,24 +854,24 @@ mod board_tests {
         fn should_not_move_if_the_source_position_is_not_correct() {
             let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let src = C6;
-            let Move = Move::new(src as u8, C5 as u8, Quiet);
+            let mv = Move::new(src as u8, C5 as u8, Quiet);
 
             assert!(board.occupancies[Both] & (1 << C6 as u64) == 0);
             assert!(board.occupancies[Both] & (1 << C5 as u64) == 0);
 
-            let result = board.make_move(Move, AllMoves);
+            let result = board.make_move(mv, AllMoves);
             assert!(result.is_none());
         }
 
         #[test]
         fn should_not_change_position_if_the_target_move_is_invalid() {
             let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
-            let Move = Move::new(H4 as u8, H6 as u8, Quiet);
+            let mv = Move::new(H4 as u8, H6 as u8, Quiet);
 
             assert!(board.occupancies[Both] & (1 << H4 as u64) != 0);
             assert!(board.occupancies[Both] & (1 << H6 as u64) == 0);
             
-            let result = board.make_move(Move, AllMoves);
+            let result = board.make_move(mv, AllMoves);
          
             assert!(result.is_none());
             assert!(board.occupancies[Both] & (1 << H4 as u64) != 0);
@@ -1034,7 +1022,6 @@ mod board_tests {
             let mv = Move::new(E8 as u8, G8 as u8, Castling);
 
             let result = board.make_move(mv, AllMoves).unwrap();
-            println!("{:#?}", result.to_string());
             assert_eq!(Square::from(result[BK].trailing_zeros() as u64), G8);
             assert_eq!(Square::from(result[BR].trailing_zeros() as u64), A8);
             assert_eq!(Square::from(((*result[BR] ^ (1 << A8 as u64))).trailing_zeros() as u64), F8);
@@ -1052,8 +1039,6 @@ mod board_tests {
             assert_eq!(result[WR].count_ones(), 2);
 
             assert_eq!(Square::from(result[WK].trailing_zeros() as u64), G1);
-
-            println!("{:#?}", result.to_string());
             assert_eq!(Square::from(result[WK].trailing_zeros() as u64), G1);
             assert_eq!(Square::from(result[WR].trailing_zeros() as u64), A1);
             assert_eq!(Square::from(((*result[WR] ^ (1<< A1 as u64)).trailing_zeros()) as u64), F1);
@@ -1074,7 +1059,6 @@ mod board_tests {
         fn should_fail_to_castle_blacking_kingside_if_there_are_pieces_between_the_king_and_the_rook() {
             let board = Board::parse_fen("r3kq1r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
             let mv = Move::new(E8 as u8, G8 as u8, Castling);
-            println!("{:#?}", board.to_string());
 
             assert!(board.make_move(mv, AllMoves).is_none());
         }
@@ -1093,7 +1077,6 @@ mod board_tests {
         fn should_fail_to_castle_blackking_queenside_if_there_are_pieces_between_the_king_and_the_rook() {
             let board = Board::parse_fen("r1q1k2r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R3KQ1R b KQkq - 1 2").unwrap();
             let mv = Move::new(E8 as u8, C8 as u8, Castling);
-            println!("{:#?}", board.to_string());
             assert!(board.make_move(mv, AllMoves).is_none());
         }
 
