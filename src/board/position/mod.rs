@@ -51,13 +51,7 @@ impl Position {
     }
 
     pub(crate) fn make_move(&mut self, mv: Move, scope: MoveScope) -> bool {
-        // if mv.get_src() == B5 {
-            //     println!("{}", Bitboard::from(self.board.occupancies[Black]));
-            //     println!("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&    {:?}, {:?}",  mv.get_src(), self.piece_at(mv.get_src()));
-            //     println!("!!!!!!!!!!!!!!!!!!!!!!!!! {:?}", self.get_piece_at(mv.get_src(), Black));
-            // }
-            let Some(piece) = self.piece_at(mv.get_src()) else {return false};
-            println!("<<<<<[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[SHOULD BE HERE]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]>>>>>");
+        let Some(piece) = self.piece_at(mv.get_src()) else {return false};
         if let Some(new_board) = self.board.make_move(mv, scope) {
                 let mut captured = None;
             let tgt = mv.get_target() as u64;

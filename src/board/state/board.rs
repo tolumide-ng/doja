@@ -447,9 +447,7 @@ impl Board {
 
     pub(crate) fn make_move(&self, bit_move: Move, scope: MoveScope) -> Option<Self> {
         let mut board = self.clone();
-        println!("******************* {:?}", self.turn);
-        // let turn = board.turn;
-
+        
         match scope {
             MoveScope::AllMoves => {
                 let from = bit_move.get_src(); // initial position of the piece
@@ -475,9 +473,7 @@ impl Board {
                 if bit_move.get_capture() {
                     // there would usually only be a maximum of 2 captures each, consider unrolling this for loop (what did I mean here by 2???????)
                     let target_pieces = Piece::all_pieces_for(!turn);
-                    println!("BEFORE============");
-                    
-                    for p in target_pieces {
+                   for p in target_pieces {
                         if board[p].get_bit(to.into()) != 0 {
                             board[p].pop_bit(to.into());
                             board.hash_key ^= ZOBRIST.piece_keys[p][to];
@@ -573,7 +569,6 @@ impl Board {
         let white = (self.occupancies[0] & sq) != 0;
         let black = (self.occupancies[1] & sq) != 0;
 
-        println!("b {}, w{}", black, white);
         match (white, black) {
             (true, false) => {
                 for i in 0..=5 {

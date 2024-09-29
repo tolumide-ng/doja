@@ -451,14 +451,7 @@ impl<T> NegaMax<T> where T: TimeControl {
                     self.pv_table[self.ply][j] = self.pv_table[self.ply+1][j];
                 }
                 self.pv_length[self.ply] = self.pv_length[self.ply + 1];
-                
-                for xx in self.pv_table {
-                    for yy in xx {
-                        if yy.to_string() == String::from("e2a6x") {
-                            println!("YAAAAAaaaayyyyy");
-                        } 
-                    }
-                }
+
             }
         }
 
