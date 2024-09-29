@@ -2,7 +2,7 @@ use std::{io::{stdout, Seek, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, t
 
 use thiserror::Error;
 
-use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}};
+use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, tt::table::TTable};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -19,11 +19,11 @@ pub enum UciError {
 }
 
 #[derive(Debug)]
-pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>> }
+pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>>, tt: TTable }
 
 impl Default for UCI {
     fn default() -> Self {
-        Self { position: None, controller: Arc::new(Mutex::new(Control::default())) }
+        Self { position: None, controller: Arc::new(Mutex::new(Control::default())), tt: TTable::default() }
     }
 }
 

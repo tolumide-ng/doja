@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 
 use crate::{bit_move::Move, tt::flag::HashFlag};
 
@@ -47,8 +47,8 @@ impl From<SMPData> for u64 {
 #[derive(Debug, Default)]
 #[repr(C)]
 pub(crate) struct TTEntry {
-    pub(super) age: u8, // todo! readup papers on transposition table repalcement schemes
-    pub(super) smp_key: u64,
+    pub(super) age: AtomicU8, // todo! readup papers on transposition table repalcement schemes
+    pub(super) smp_key: AtomicU64,
     pub(super) smp_data: AtomicU64,
 }
 
@@ -81,7 +81,7 @@ impl TTEntry {
         let smp_data = AtomicU64::new(SMPData::new(key, depth, score, mv, flag).into());
 
         let smp_key = key ^ smp_data.load(Ordering::Relaxed);
-        Self { age, smp_key, smp_data }
+        Self { age: AtomicU8::new(age), smp_key: AtomicU64::new(smp_key), smp_data }
     }
 }
 
@@ -123,8 +123,8 @@ impl SMPData {
 }
 
 
-impl PartialEq for TTEntry {
-    fn eq(&self, other: &Self) -> bool {
-        (self.age == other.age) && (self.smp_key == other.smp_key) && (self.smp_data.load(Ordering::Relaxed) == other.smp_data.load(Ordering::Relaxed))
-    }
-}
+// impl PartialEq for TTEntry {
+//     fn eq(&self, other: &Self) -> bool {
+//         (self.age == other.age) && (self.smp_key == other.smp_key) && (self.smp_data.load(Ordering::Relaxed) == other.smp_data.load(Ordering::Relaxed))
+//     }
+// }

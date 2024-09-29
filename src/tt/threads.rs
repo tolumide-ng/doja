@@ -1,6 +1,8 @@
-use crate::bit_move::Move;
+use std::thread;
 
-use super::table::TTable;
+use crate::{bit_move::Move, board::{position::Position, state::board::Board}};
+
+use super::{signal::Signal, table::TTable};
 
 pub(crate) const MAX_THREADS: usize = 32;
 
@@ -8,8 +10,9 @@ pub(crate) const MAX_THREADS: usize = 32;
 #[repr(align(64))]
 pub(crate) struct ThreadData {
     tt: TTable,
-    depth: u8,
-    thread_id: u8,
+    signal: Signal,
+    id: u8,
+    // depth: u8,
     // info: Info
     // best_move: Move,
     // pos: u64,
@@ -21,10 +24,25 @@ pub(crate) struct ThreadData {
 }
 
 impl ThreadData {
-    pub(crate) fn new() {}
+    pub(crate) fn new(board: &Position, signal: Signal, tt: TTable, id: u8) -> Self {
+        Self {tt, id, signal}
+    }
 }
 
 
 
 
 fn itertive() {}
+
+
+fn xx() {
+    let tt = TTable::default();
+    let bb = Position::new();
+    let signal = Signal {depth: 2};
+
+    for xx in 0..3 {
+        // thread::spawn(move || {
+        //     ThreadData::new(&bb, signal, tt, 0);
+        // });
+    }
+}

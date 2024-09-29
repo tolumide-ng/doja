@@ -52,7 +52,7 @@ impl TTable {
         let data = SMPData::from(entry.smp_data.load(Ordering::Relaxed));
 
         let test_key = zobrist_key ^ u64::from(data);
-        if test_key == entry.smp_key {
+        if test_key == entry.smp_key.load(Ordering::Relaxed) {
             if depth == data.depth {
                 let score  = data.score;
                 let value = if score < -MATE_SCORE {score + (ply as i32)} else if score > MATE_SCORE {score - (ply as i32)} else {score};
@@ -87,7 +87,7 @@ impl TTable {
 
        if let Some(entry) = &self.table[index] {
            let data = SMPData::from(entry.smp_data.load(Ordering::Relaxed));
-            if entry.age < age || data.depth <= depth { replace = true;}
+            if entry.age.load(Ordering::Relaxed) < age || data.depth <= depth { replace = true;}
         } else {
             replace = true;
         }
