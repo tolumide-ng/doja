@@ -64,12 +64,12 @@ impl UCI {
                         self.update_controller(control);
                         println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
                         let controller = Arc::clone(&self.controller);
-                        let tt = TTable::default();
+                        let tt = Arc::new(Mutex::new(TTable::default()));
 
                         let mut board = self.position.clone().unwrap();
                         let result = thread::spawn(move || {
                             let depth = controller.lock().unwrap().depth();
-                            NegaMax::run(controller, &tt, depth, &mut board);
+                            NegaMax::run(controller, tt, depth, &mut board);
                             // println!("done done >>>>");
                             // write!(writer, "{}", board.to_string()).unwrap();
                             board

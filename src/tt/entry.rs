@@ -44,8 +44,8 @@ impl From<SMPData> for u64 {
 
 
  /// Transposition table Entry
+//  #[repr(C)]
 #[derive(Debug, Default)]
-#[repr(C)]
 pub(crate) struct TTEntry {
     pub(super) age: AtomicU8, // todo! readup papers on transposition table repalcement schemes
     pub(super) smp_key: AtomicU64,

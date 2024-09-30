@@ -8,15 +8,15 @@ use super::time_control::TimeControl;
 /// you've vlearly got a beta node. If the first move fails low(returns a score lesser than or equal to alpha), assuming that your move ordering is pretty good, you
 /// probably have an alpha mode. If the first move returns a score between alpha and beta, you probably have a PV node.
 /// Ofcourse, you could be wrong in two of tyhe case. Once you fail high, you return beta, so you can't make a mistake about that, 
-#[derive(Debug, Clone)]
-pub struct NegaMax<'a, T: TimeControl> {
+#[derive(Debug)]
+pub struct NegaMax<T: TimeControl> {
     nodes: u64,
     ply: usize,
     follow_pv: bool,
     score_pv: bool,
     controller: Arc<Mutex<T>>,
     /// Transposition table
-    tt: &'a TTable,
+    tt: Arc<Mutex<TTable>>,
     repetition_index: usize,
     repetition_table: [u64; 500],
     
@@ -30,8 +30,8 @@ pub struct NegaMax<'a, T: TimeControl> {
 }
 
 
-impl<'a, T> NegaMax<'a, T> where T: TimeControl {
-    pub(crate) fn new(controller: Arc<Mutex<T>>, tt: &'a TTable) -> Self {
+impl<T> NegaMax<T> where T: TimeControl {
+    pub(crate) fn new(controller: Arc<Mutex<T>>, tt: Arc<Mutex<TTable>>) -> Self {
         let x = Self {
             killer_moves: [[0; 64]; 2], 
             history_moves: [[0; 64]; 12], 
@@ -94,7 +94,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
     }
     
     // This method is currently VERY SLOW once the depth starts approaching 8, please work to improve it
-    pub(crate) fn run(controller: Arc<Mutex<T>>, tt: &'a TTable, depth: u8, board: &mut Position) {
+    pub(crate) fn run(controller: Arc<Mutex<T>>, tt: Arc<Mutex<TTable>>, depth: u8, board: &mut Position) {
         let mut negamax = Self::new(controller, tt);
         negamax.iterative_deepening(depth, board);
     }
@@ -238,7 +238,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         // if we had cached the score for this move before, we return it, and confirm that the current node is not a PV node(principal variation)
         if (self.ply > 0) && pv_node == false {
             // read hash entry if we're not in a root ply and hash entry is available, current node is not a principal variation node
-            if let Some(score) =  self.tt.probe(board.hash_key, depth, alpha, beta, self.ply) {
+            if let Some(score) =  self.tt.as_ref().lock().unwrap().probe(board.hash_key, depth, alpha, beta, self.ply) {
                 return score
             }
         }
@@ -411,7 +411,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                 // if mv.to_string() == String::from("e2a6x") {
                 //     println!("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< score={score:10} alpha={alpha:10}, and beta={beta:10} >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
                 // }
-                self.tt.record(board.hash_key, depth, beta, self.ply, HashFlag::LowerBound, 0, Some(mv));
+                self.tt.as_ref().lock().unwrap().record(board.hash_key, depth, beta, self.ply, HashFlag::LowerBound, 0, Some(mv));
                 // println!("ply @3 is {}", self.ply);
                 if !mv.get_capture() { // quiet move (non-capturing quiet move that beats the opponent)
                     self.killer_moves[1][self.ply] = self.killer_moves[0][self.ply];
@@ -470,7 +470,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             return 0 // stalemate | draw
         }
 
-        self.tt.record(board.hash_key, depth, alpha, self.ply, hash_flag, 0, None);
+        self.tt.as_ref().lock().unwrap().record(board.hash_key, depth, alpha, self.ply, hash_flag, 0, None);
         return alpha
     }
 

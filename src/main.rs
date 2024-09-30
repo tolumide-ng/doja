@@ -76,32 +76,37 @@ fn main() {
     println!("**********************AFTER*****************************");
     
     let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
-    let controller = Arc::new(Mutex::new(Control::default()));
     // println!("**********************BEFORE*****************************");
     println!("{}", board.to_string());
-    let tt = TTable::default();
-
+    
     let bb = board.clone();
     // NegaMax::run(controller, &tt, 1, &mut board);
     
     println!("num of cpus {:?}", std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()));
-
+    
     thread::scope(|s| {
-        let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
-        let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
+        let tt = Arc::new(Mutex::new(TTable::default()));
+        // let tt = TTable::default();
+        // let controller = Arc::new(Mutex::new(Control::default()));
+        // let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+        // let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
+        // let depth = 7;
 
-        let moves = board.gen_movement();
-        let moves_vec = moves.list[0..moves.count_mvs()].to_vec();
-        let chunks = (moves_vec.chunks(threads).collect::<Vec<_>>()).iter().map(|m| m.to_vec()).collect::<Vec<Vec<_>>>();
-        for mm in chunks {
-            let bb = board.clone();
-            s.spawn(move || {
-                for mv in mm {
-                    let mut bb = bb.clone();
-                    let xx = bb.make_move_nnue(mv, MoveScope::AllMoves);
-                }
-            });
-        }
+        // let moves = board.gen_movement();
+        // let moves_vec = moves.list[0..moves.count_mvs()].to_vec();
+        // let chunks = (moves_vec.chunks(threads).collect::<Vec<_>>()).iter().map(|m| m.to_vec()).collect::<Vec<Vec<_>>>();
+        // for mm in chunks {
+        //     let bb = board.clone();
+        //     let cc = Arc::clone(&controller);
+        //     let tt = Arc::clone(&tt);
+        //     s.spawn(move || {
+        //         for mv in mm {
+        //             let mut bb = bb.clone();
+        //             bb.make_move_nnue(mv, MoveScope::AllMoves);
+        //             NegaMax::run(cc.clone(), tt.clone(), depth, &mut bb);
+        //         }
+        //     });
+        // }
     });
     
     // let mut threads = vec![];

@@ -27,18 +27,23 @@ pub(crate) const BYTES_PER_MB: usize = 0x10000; // 1MB
 #[derive(Debug)]
 pub(crate) struct TTable {
 //    table: Box<[Option<TTEntry>; BYTES_PER_MB]>, // we need to be able to dynamically allocate this in the future, see CMK's method on Video 88
-    table: Box<[TTEntry; BYTES_PER_MB]>, // we need to be able to dynamically allocate this in the future, see CMK's method on Video 88
-   entries: usize,
+        // table: Box<[TTEntry; BYTES_PER_MB]>, // we need to be able to dynamically allocate this in the future, see CMK's method on Video 88
+//    entries: usize,
+    table: Box<[TTEntry; BYTES_PER_MB]>,
 }
 
 // const TT_ENTRY: Option<TTEntry> = None;
 impl Default for TTable {
    fn default() -> Self {
     //    let table = Box::new([TT_ENTRY; BYTES_PER_MB]);
-       let table: Box<[TTEntry; BYTES_PER_MB]> = Box::new(core::array::from_fn(|_| TTEntry::default()));   
+    //    let table: Box<[TTEntry; BYTES_PER_MB]> = Box::new(core::array::from_fn(|_| TTEntry::default()));
+        let table: Box<[TTEntry; BYTES_PER_MB]> = Box::new(core::array::from_fn(|_| TTEntry::default()));
+        // let table = vec![TTEntry::default(); BYTES_PER_MB];
+        // let table = (0..BYTES_PER_MB).map(|f| TTEntry::default()).collect::<Vec<_>>();
     Self {
+        // table: Vec::with_capacity(BYTES_PER_MB),
         table,
-        entries: 0
+        // entries: 0
     }
    }
 }
