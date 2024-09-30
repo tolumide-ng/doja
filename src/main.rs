@@ -29,10 +29,11 @@ mod tt;
 // use std::{sync::mpsc, time::Instant};
 // use std::{ptr, thread};
 
-use std::{sync::{Arc, Mutex}, thread::{self, Thread}};
+use std::{clone, num::NonZero, sync::{Arc, Mutex}, thread::{self, Thread}};
 
 use board::{fen::FEN, position::Position, state::board::Board};
 use constants::TRICKY_POSITION;
+use move_scope::MoveScope;
 use search::control::Control;
 use tt::table::TTable;
 // use zobrist::Zobrist;
@@ -74,22 +75,34 @@ fn main() {
     // println!("{}", board.to_string());
     println!("**********************AFTER*****************************");
     
-    {
-        let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
-        {
-            let controller = Arc::new(Mutex::new(Control::default()));
-            // println!("**********************BEFORE*****************************");
-            println!("{}", board.to_string());
-            let tt = TTable::default();
+    let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+    let controller = Arc::new(Mutex::new(Control::default()));
+    // println!("**********************BEFORE*****************************");
+    println!("{}", board.to_string());
+    let tt = TTable::default();
 
+    let bb = board.clone();
+    // NegaMax::run(controller, &tt, 1, &mut board);
+    
+    println!("num of cpus {:?}", std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()));
+
+    thread::scope(|s| {
+        let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+        let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
+
+        let moves = board.gen_movement();
+        let moves_vec = moves.list[0..moves.count_mvs()].to_vec();
+        let chunks = (moves_vec.chunks(threads).collect::<Vec<_>>()).iter().map(|m| m.to_vec()).collect::<Vec<Vec<_>>>();
+        for mm in chunks {
             let bb = board.clone();
-            // NegaMax::run(controller, &tt, 1, &mut board);
-            println!("dropiing this here 0");
+            s.spawn(move || {
+                for mv in mm {
+                    let mut bb = bb.clone();
+                    let xx = bb.make_move_nnue(mv, MoveScope::AllMoves);
+                }
+            });
         }
-        println!("dropping 1>>");
-    }
-
-    println!("done with everything>>>>");
+    });
     
     // let mut threads = vec![];
 
