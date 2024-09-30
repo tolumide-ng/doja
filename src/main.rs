@@ -74,13 +74,22 @@ fn main() {
     // println!("{}", board.to_string());
     println!("**********************AFTER*****************************");
     
-    let controller = Arc::new(Mutex::new(Control::default()));
-    let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
-    // println!("**********************BEFORE*****************************");
-    println!("{}", board.to_string());
-    let tt = TTable::default();
-    NegaMax::run(controller, &tt, 1, &mut board);
+    {
+        let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+        {
+            let controller = Arc::new(Mutex::new(Control::default()));
+            // println!("**********************BEFORE*****************************");
+            println!("{}", board.to_string());
+            let tt = TTable::default();
 
+            let bb = board.clone();
+            // NegaMax::run(controller, &tt, 1, &mut board);
+            println!("dropiing this here 0");
+        }
+        println!("dropping 1>>");
+    }
+
+    println!("done with everything>>>>");
     
     // let mut threads = vec![];
 
