@@ -99,10 +99,3 @@ impl SMPData {
         Self {key, depth, score, mv, flag}
     }
 }
-
-
-// impl PartialEq for TTEntry {
-//     fn eq(&self, other: &Self) -> bool {
-//         (self.age == other.age) && (self.smp_key == other.smp_key) && (self.smp_data.load(Ordering::Relaxed) == other.smp_data.load(Ordering::Relaxed))
-//     }
-// }
