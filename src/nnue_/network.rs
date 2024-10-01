@@ -27,7 +27,7 @@ pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: 
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) struct NNUEState<T, const U: usize> {
     accumulators: AccumulatorPtr<T, U>,
     current_acc: usize,
@@ -42,7 +42,24 @@ impl<T, const U: usize>  NNUEState<T, U> {
         }
 
         NNUEState {
-            accumulators: AccumulatorPtr(ptr), current_acc: 0
+            accumulators: AccumulatorPtr(ptr), // Initializer with raw pointer
+            current_acc: 0
+        }
+    }
+}
+
+impl<T, const U: usize> Clone for NNUEState<T, U> {
+    fn clone(&self) -> Self {
+        unsafe {
+            let layout = Layout::array::<Accumulator<T, U>>(MAX_DEPTH + 1).unwrap();
+            let ptr = alloc_zeroed(layout) as *mut Accumulator<T, U>;
+            if ptr.is_null() {
+                alloc::handle_alloc_error(layout);
+            }
+
+            std::ptr::copy_nonoverlapping(*self.accumulators, ptr, MAX_DEPTH + 1);
+
+            Self { accumulators: AccumulatorPtr(ptr), current_acc: self.current_acc }
         }
     }
 }
@@ -51,7 +68,10 @@ impl<T, const U: usize> Drop for NNUEState<T, U> {
     fn drop(&mut self) {
         unsafe {
             let layout = Layout::array::<Accumulator<T, U>>(MAX_DEPTH + 1).unwrap();
-            dealloc(*self.accumulators as *mut u8, layout);
+            let ptr = self.accumulators.0;
+            if !ptr.is_null() {
+                dealloc(ptr as *mut u8, layout);
+            }
         }
     }
 }
@@ -72,10 +92,6 @@ impl<const U: usize> From<&Board> for NNUEState<Feature, U> {
         state
     }
 }
-
-// unsafe impl<T: Send, const U: usize> Send for *mut Accumulator<T, U> {}
-// unsafe impl<T: Sync, const U: usize> Sync for Accumulator<T, U> {}
-
 
 
 impl<const U: usize> NNUEState<Feature, U> {

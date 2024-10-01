@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 
 use crate::{bit_move::Move, tt::flag::HashFlag};
 
@@ -44,15 +44,13 @@ impl From<SMPData> for u64 {
 
 
  /// Transposition table Entry
+//  #[repr(C)]
 #[derive(Debug, Default)]
-#[repr(C)]
 pub(crate) struct TTEntry {
-    pub(super) age: u8, // todo! readup papers on transposition table repalcement schemes
-    pub(super) smp_key: u64,
+    pub(super) age: AtomicU8, // todo! readup papers on transposition table repalcement schemes
+    pub(super) smp_key: AtomicU64,
     pub(super) smp_data: AtomicU64,
 }
-
-
 
 
 
@@ -81,7 +79,17 @@ impl TTEntry {
         let smp_data = AtomicU64::new(SMPData::new(key, depth, score, mv, flag).into());
 
         let smp_key = key ^ smp_data.load(Ordering::Relaxed);
-        Self { age, smp_key, smp_data }
+        Self { age: AtomicU8::new(age), smp_key: AtomicU64::new(smp_key), smp_data }
+    }
+
+    pub(crate) fn write(&self, key: u64, age: u8, depth: u8, score: i32, mv: Option<Move>, flag: HashFlag) {
+        let smp_data = SMPData::new(key, depth, score, mv, flag);
+
+        let smp_key = key ^ u64::from(smp_data);
+
+        self.smp_data.store(smp_data.into(), Ordering::SeqCst);
+        self.smp_key.store(smp_key, Ordering::SeqCst);
+        self.age.store(age, Ordering::SeqCst);
     }
 }
 
@@ -89,42 +97,5 @@ impl TTEntry {
 impl SMPData {
     fn new(key: u64, depth: u8, score: i32, mv: Option<Move>, flag: HashFlag) -> Self {
         Self {key, depth, score, mv, flag}
-    }
-
-    // fn verify_smp(&self) {
-    //     let data = self.key();
-    //     let key = self.key ^ data;
-
-    //     if data != self.smp_data {
-    //         // data error
-    //     }
-    //     if key != self.smp_key {
-    //         // smp_key error
-    //     }
-    // }
-
-
-    // pub(crate) fn record(&mut self, zobrist_key: u64, depth: u8, score: i32, ply: usize, flag: HashFlag) {
-    //     let index = zobrist_key as usize % BYTES_PER_MB;
-    //     let ptr = self.table.as_mut_ptr();
-
-    //     let value = if score < -MATE_SCORE { score - (ply as i32)} else if score > MATE_SCORE  { score + (ply as i32) } else { score };
-
-    //     unsafe {
-    //         // println!("the index is {index}");
-    //         (*ptr.add(index)).key = zobrist_key;
-    //         // (*ptr.add(index)).best = best;
-    //         // (*ptr.add(index)).score = value;
-    //         (*ptr.add(index)).flag = flag;
-    //         (*ptr.add(index)).depth = depth;
-    //     }
-    //     self.entries += 1;
-    // }
-}
-
-
-impl PartialEq for TTEntry {
-    fn eq(&self, other: &Self) -> bool {
-        (self.age == other.age) && (self.smp_key == other.smp_key) && (self.smp_data.load(Ordering::Relaxed) == other.smp_data.load(Ordering::Relaxed))
     }
 }
