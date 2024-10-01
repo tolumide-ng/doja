@@ -1,10 +1,7 @@
 // The purpose of the ClippedReLu is to introduce non-linearity to the network.
 
-use accumulator::Feature;
 use constants::customKA0::*;
-use network::{NNUEParams, NNUEState};
-
-use crate::{board::{fen::FEN, state::board::Board}, constants::TRICKY_POSITION};
+use network::NNUEParams;
 
 pub mod quantmoid;
 pub(crate) mod calc;
