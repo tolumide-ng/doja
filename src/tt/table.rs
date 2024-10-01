@@ -15,9 +15,9 @@ use super::{entry::{SMPData, TTEntry}, flag::HashFlag};
 
 
  /// 4MegaByte
-//  pub(crate) const BYTES_PER_MB: usize = 0x400000;
-//  pub(crate) const BYTES_PER_MB: usize = 0x10000; // 1MB
-pub(crate) const BYTES_PER_MB: usize = 0x10000; // 1MB
+//  pub(crate) const TOTAL_SIZE: usize = 0x400000;
+// pub(crate) const TOTAL_SIZE: usize = 10 * 1024 * 1024 * 1024; // 300MB
+pub(crate) const TOTAL_SIZE: usize = 0x10000; // 1MB
 
 
 
@@ -30,7 +30,7 @@ pub(crate) struct TTable {
 }
 
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub(crate) struct TPT<'a> {
     pub(crate) table : &'a [TTEntry]
 }
@@ -38,17 +38,117 @@ pub(crate) struct TPT<'a> {
 // const TT_ENTRY: Option<TTEntry> = None;
 impl Default for TTable {
    fn default() -> Self {
-        // let table: Box<[TTEntry; BYTES_PER_MB]> = Box::new(core::array::from_fn(|_| TTEntry::default()));
-        let table = (0..BYTES_PER_MB).map(|_| TTEntry::default()).collect::<Vec<_>>();
+        // let table: Box<[TTEntry; TOTAL_SIZE]> = Box::new(core::array::from_fn(|_| TTEntry::default()));
+        // let max = TOTAL_SIZE / std::mem::size_of::<TTEntry>();
+        let max = TOTAL_SIZE;
+        // println!("SIZE OF IS {}", std::mem::size_of::<TTEntry>());
+        let table = (0..max).map(|_| TTEntry::default()).collect::<Vec<_>>();
         Self { table, }
    }
 }
 
 
 impl TTable {
-   pub(crate) fn probe(&self, zobrist_key: u64, depth: u8, alpha: i32, beta: i32, ply: usize) -> Option<i32> {
-    // let index = zobrist_key & (BYTES_PER_MB as u64 -1);
-       let index = zobrist_key as usize % BYTES_PER_MB;
+//    pub(crate) fn probe(&self, zobrist_key: u64, depth: u8, alpha: i32, beta: i32, ply: usize) -> Option<i32> {
+//     // let index = zobrist_key & (TOTAL_SIZE as u64 -1);
+//        let index = zobrist_key as usize % TOTAL_SIZE;
+//         let phahse = &self.table[index];
+//         // we can turst the #[default] implementation to work without any issue because the default key is 0,
+//         // and that would likely not match any zobtist key
+
+//         // let Some(entry) = phahse else {return None};
+//         if phahse.smp_data.load(Ordering::Relaxed) == 0 {return None};
+//         let entry = phahse;
+
+//         let data = SMPData::from(entry.smp_data.load(Ordering::Relaxed));
+
+//         let test_key = zobrist_key ^ u64::from(data);
+//         if test_key == entry.smp_key.load(Ordering::Relaxed) {
+//             if depth == data.depth {
+//                 let score  = data.score;
+//                 let value = if score < -MATE_SCORE {score + (ply as i32)} else if score > MATE_SCORE {score - (ply as i32)} else {score};
+//                 match data.flag {
+//                     HashFlag::Exact => {
+//                         // matches exact (PVNode)
+//                         return Some(value)
+//                     }
+//                     HashFlag::UpperBound => {
+//                         if value <= alpha {
+//                             // matches (Fail-low) node
+//                             return Some(alpha);
+//                         }
+//                     }
+//                     HashFlag::LowerBound => {
+//                         if  value >= beta {
+//                             // matches (Fail-high) node
+//                             return Some(beta);
+//                         }
+//                     }
+//                     _ => return None,
+//                 }
+//             }
+//         }
+//        None
+//    }
+
+//    pub(crate) fn record(&self, zobrist_key: u64, depth: u8, score: i32, ply: usize, flag: HashFlag, age: u8, mv: Option<Move>) {
+//         // let index = zobrist_key & (TOTAL_SIZE as u64 -1);
+//        let index = zobrist_key as usize % TOTAL_SIZE;
+       
+//        let mut replace = false;
+//        let exists =  self.table[index].smp_data.load(Ordering::Relaxed) != 0;
+
+//        if exists {
+//         let entry = &self.table[index];
+//            let data = SMPData::from(entry.smp_data.load(Ordering::Relaxed));
+//             if entry.age.load(Ordering::Relaxed) < age || data.depth <= depth { replace = true;}
+//         } else {
+//             replace = true;
+//         }
+        
+//         if replace == false { return }
+    
+//         let value = if score < -MATE_SCORE { score - (ply as i32)} else if score > MATE_SCORE  { score + (ply as i32) } else { score };
+//         unsafe {
+//             let ptr = self.table.as_ptr();
+//             (*ptr.add(index)).write(zobrist_key, age, depth, value, mv, flag);
+//        }
+//    }
+
+   pub(crate) fn get(&self) -> TPT {
+        TPT { table: &self.table }
+   }
+}
+
+
+impl<'a> TPT<'a> {
+    pub(crate) fn record(&self, zobrist_key: u64, depth: u8, score: i32, ply: usize, flag: HashFlag, age: u8, mv: Option<Move>) {
+        // let index = zobrist_key & (TOTAL_SIZE as u64 -1);
+       let index = zobrist_key as usize % TOTAL_SIZE;
+       
+       let mut replace = false;
+       let exists =  self.table[index].smp_data.load(Ordering::Relaxed) != 0;
+
+       if exists {
+        let entry = &self.table[index];
+           let data = SMPData::from(entry.smp_data.load(Ordering::Relaxed));
+            if entry.age.load(Ordering::Relaxed) < age || data.depth <= depth { replace = true;}
+        } else {
+            replace = true;
+        }
+        
+        if replace == false { return }
+    
+        let value = if score < -MATE_SCORE { score - (ply as i32)} else if score > MATE_SCORE  { score + (ply as i32) } else { score };
+        unsafe {
+            let ptr = self.table.as_ptr();
+            (*ptr.add(index)).write(zobrist_key, age, depth, value, mv, flag);
+       }
+    }
+
+   pub(crate) fn probe(&self, zobrist_key: u64, depth: u8, alpha: i32, beta: i32, ply: usize) -> Option<i32> { 
+        // let index = zobrist_key & (TOTAL_SIZE as u64 -1);
+        let index = zobrist_key as usize % TOTAL_SIZE;
         let phahse = &self.table[index];
         // we can turst the #[default] implementation to work without any issue because the default key is 0,
         // and that would likely not match any zobtist key
@@ -85,34 +185,7 @@ impl TTable {
                 }
             }
         }
-       None
-   }
 
-   pub(crate) fn record(&self, zobrist_key: u64, depth: u8, score: i32, ply: usize, flag: HashFlag, age: u8, mv: Option<Move>) {
-        // let index = zobrist_key & (BYTES_PER_MB as u64 -1);
-       let index = zobrist_key as usize % BYTES_PER_MB;
-       
-       let mut replace = false;
-       let exists =  self.table[index].smp_data.load(Ordering::Relaxed) != 0;
-
-       if exists {
-        let entry = &self.table[index];
-           let data = SMPData::from(entry.smp_data.load(Ordering::Relaxed));
-            if entry.age.load(Ordering::Relaxed) < age || data.depth <= depth { replace = true;}
-        } else {
-            replace = true;
-        }
-        
-        if replace == false { return }
-    
-        let value = if score < -MATE_SCORE { score - (ply as i32)} else if score > MATE_SCORE  { score + (ply as i32) } else { score };
-        unsafe {
-            let ptr = self.table.as_ptr();
-            (*ptr.add(index)).write(zobrist_key, age, depth, value, mv, flag);
-       }
-   }
-
-   pub(crate) fn get(&self) -> TPT {
-        TPT { table: &self.table }
-   }
+        None
+    }
 }

@@ -1,8 +1,8 @@
-use std::{io::{stdout, Seek, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread};
+use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread};
 
 use thiserror::Error;
 
-use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, tt::{entry::TTEntry, table::{TTable, BYTES_PER_MB}}};
+use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, tt::table::TTable};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -65,12 +65,22 @@ impl UCI {
                         println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
                         let controller = Arc::clone(&self.controller);
 
-                        let tt = TTable::default();
-
+                        
+                        
+                        let table = TTable::default();
                         let mut board = self.position.clone().unwrap();
-                        let result = thread::spawn(move || {
+                        
+                        // thread::scope(|s| {
+                            //     let mut bb = board.clone();
+                            //     s.spawn(move || {
+                                //         negamax[0].iterative_deepening(7, &mut bb);
+                                //     });
+                                // });
+                                
+                                let result = thread::spawn(move || {
+                            let mut negamax = (0..1).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
                             let depth = controller.lock().unwrap().depth();
-                            NegaMax::run(controller, tt.get(), depth, &mut board, 0);
+                            negamax[0].iterative_deepening(depth, &mut board);
                             // println!("done done >>>>");
                             // write!(writer, "{}", board.to_string()).unwrap();
                             board

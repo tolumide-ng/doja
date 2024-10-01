@@ -89,24 +89,35 @@ fn main() {
     let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
     let depth = 10;
     // let mut bb = board.clone();
-    
-    
-    
-    thread::scope(|s| {
-        let table = TTable::default();
+    let table = TTable::default();
 
-        for i in 0..threads {
-            let mut bb = board.clone();
-            let cc = Arc::clone(&controller);
-            let tt = (&table).get();
-            s.spawn(move || {
-                unsafe {
-                    NegaMax::run(cc, tt, depth, &mut bb, i);
+    let mut negamax_thread = (0..threads).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
     
-                }
+
+    thread::scope(|s| {
+        for td in negamax_thread.iter_mut() {
+            let mut bb = board.clone();
+            s.spawn(move || {
+                td.iterative_deepening(7, &mut bb);
             });
         }
     });
+    
+    
+    // thread::scope(|s| {
+    //     let tt = &table;
+
+    //     for i in 0..threads {
+    //         let mut bb = board.clone();
+    //         let cc = Arc::clone(&controller);
+    //         s.spawn(move || {
+    //             unsafe {
+    //                 NegaMax::run(cc, tt.get(), depth, &mut bb, i);
+    
+    //             }
+    //         });
+    //     }
+    // });
     
     // let mut threads = vec![];
 
