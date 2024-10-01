@@ -2,7 +2,7 @@ use std::{io::{stdout, Seek, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, t
 
 use thiserror::Error;
 
-use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, tt::table::TTable};
+use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::{ALPHA, BETA, START_POSITION}, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, tt::{entry::TTEntry, table::{TTable, BYTES_PER_MB}}};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -64,12 +64,13 @@ impl UCI {
                         self.update_controller(control);
                         println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
                         let controller = Arc::clone(&self.controller);
-                        let tt = Arc::new(Mutex::new(TTable::default()));
+
+                        let tt = TTable::default();
 
                         let mut board = self.position.clone().unwrap();
                         let result = thread::spawn(move || {
                             let depth = controller.lock().unwrap().depth();
-                            NegaMax::run(controller, tt, depth, &mut board);
+                            NegaMax::run(controller, tt.get(), depth, &mut board, 0);
                             // println!("done done >>>>");
                             // write!(writer, "{}", board.to_string()).unwrap();
                             board

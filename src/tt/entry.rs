@@ -54,8 +54,6 @@ pub(crate) struct TTEntry {
 
 
 
-
-
 impl From<u64> for SMPData {
     fn from(value: u64) -> Self {
         let mv = Move::from(((value & MV_MASK) >> MV_OFFSET) as u16);

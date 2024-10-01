@@ -421,7 +421,7 @@ impl Board {
                 let cannot_castle = (self.castling_rights.bits() & WHITE_QUEEN_CASTLING_MASK) == 0;
                 
                 if ((result | queen_side_mask) != queen_side_mask) || cannot_castle {
-                    println!("the mask is {:05b}", mask);
+                    // println!("the mask is {:05b}", mask);
                     return None;
                 }
 

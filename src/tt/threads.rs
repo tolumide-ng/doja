@@ -36,7 +36,7 @@ fn itertive() {}
 
 
 fn xx() {
-    let tt = TTable::default();
+    // let tt = TTable::default();
     let bb = Position::new();
     // let signal = Signal {depth: 2};
 

@@ -51,8 +51,6 @@ impl<T, const U: usize>  NNUEState<T, U> {
 impl<T, const U: usize> Clone for NNUEState<T, U> {
     fn clone(&self) -> Self {
         unsafe {
-            println!("clone was called");
-
             let layout = Layout::array::<Accumulator<T, U>>(MAX_DEPTH + 1).unwrap();
             let ptr = alloc_zeroed(layout) as *mut Accumulator<T, U>;
             if ptr.is_null() {

@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, tt::{flag::HashFlag, table::TTable}};
+use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, tt::{flag::HashFlag, table::{TTable, TPT}}};
 use super::time_control::TimeControl;
 
 
@@ -9,14 +9,14 @@ use super::time_control::TimeControl;
 /// probably have an alpha mode. If the first move returns a score between alpha and beta, you probably have a PV node.
 /// Ofcourse, you could be wrong in two of tyhe case. Once you fail high, you return beta, so you can't make a mistake about that, 
 #[derive(Debug)]
-pub struct NegaMax<T: TimeControl> {
+pub struct NegaMax<'a, T: TimeControl> {
     nodes: u64,
     ply: usize,
     follow_pv: bool,
     score_pv: bool,
     controller: Arc<Mutex<T>>,
     /// Transposition table
-    tt: Arc<Mutex<TTable>>,
+    tt: TPT<'a>,
     repetition_index: usize,
     repetition_table: [u64; 500],
     
@@ -27,11 +27,12 @@ pub struct NegaMax<T: TimeControl> {
     /// [Principal Variation](https://www.chessprogramming.org/Principal_Variation)
     pv_table: [[Move; MAX_PLY]; MAX_PLY],
     pv_length: [usize; MAX_PLY],
+    name: usize
 }
 
 
-impl<T> NegaMax<T> where T: TimeControl {
-    pub(crate) fn new(controller: Arc<Mutex<T>>, tt: Arc<Mutex<TTable>>) -> Self {
+impl<'a, T> NegaMax<'a, T> where T: TimeControl {
+    pub(crate) fn new(controller: Arc<Mutex<T>>, tt: TPT<'a>, name: usize) -> Self {
         let x = Self {
             killer_moves: [[0; 64]; 2], 
             history_moves: [[0; 64]; 12], 
@@ -41,6 +42,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             tt,
             repetition_index: 0,
             repetition_table: [0; 500],
+            name,
         };
 
         x
@@ -57,11 +59,11 @@ impl<T> NegaMax<T> where T: TimeControl {
             if self.controller.as_ref().lock().unwrap().stopped() { break; }
 
             self.follow_pv = true;
-            println!("!!!!<<<before>>");
+            // println!("!!!!<<<before>>");
             let score = self.negamax(alpha, beta, depth, board);
-            println!("READY>>");
+            // println!("READY>>");
             if (score <= alpha) || (score >= beta) {
-                println!("potentially bad move :::: {:#?}", score);
+                // println!("potentially bad move :::: {:#?}", score);
                 alpha = ALPHA; // We fell outside the window, so try again with a
                 beta = BETA; //  full-width window (and the same depth).
                 continue;
@@ -69,33 +71,36 @@ impl<T> NegaMax<T> where T: TimeControl {
             
             alpha = score - VAL_WINDOW;
             beta = score + VAL_WINDOW;
+
+            if depth == limit {
+                if score > -MATE_VALUE && score < -MATE_SCORE {
+                    println!("info score mate {} depth {} nodes {} time {}ms pv", (-(score + MATE_VALUE)/2) -1, depth, self.nodes, start_time.elapsed().as_millis());
+                    println!("MATE IN {}", (MATE_VALUE - (score + 1)/2));
+                } else if (score > MATE_SCORE) && score < MATE_VALUE {
+                    println!("info score mate {} depth {} nodes {} time {}ms pv", ((MATE_VALUE - score)/2) + 1, depth, self.nodes, start_time.elapsed().as_millis());
+                    println!("MATED IN {}", (MATE_VALUE + score)/2);
+                } else {
+                    println!("info score cp->{} depth===>{} nodes {} time {}ms pv", score, depth, self.nodes, start_time.elapsed().as_millis());
+                }
+    
+                for count in 0..self.pv_length[0] as usize {
+                    print!("-->>> {}, ", Move::from(self.pv_table[0][count]))
+                }
+    
+                // println!("");
+                println!("\n----index {}---------------------- {:#?}ms", self.name, start_time.elapsed().as_millis());
+                println!("=======------------------- {:#?}s \n", start_time.elapsed().as_secs());
+                // println!("{:?}", self.pv_table);
+            }
             
 
-            if score > -MATE_VALUE && score < -MATE_SCORE {
-                println!("info score mate {} depth {} nodes {} time {}ms pv", (-(score + MATE_VALUE)/2) -1, depth, self.nodes, start_time.elapsed().as_millis());
-                println!("MATE IN {}", (MATE_VALUE - (score + 1)/2));
-            } else if (score > MATE_SCORE) && score < MATE_VALUE {
-                println!("info score mate {} depth {} nodes {} time {}ms pv", ((MATE_VALUE - score)/2) + 1, depth, self.nodes, start_time.elapsed().as_millis());
-                println!("MATED IN {}", (MATE_VALUE + score)/2);
-            } else {
-                println!("info score cp {} depth {} nodes {} time {}ms pv", score, depth, self.nodes, start_time.elapsed().as_millis());
-            }
-
-            for count in 0..self.pv_length[0] as usize {
-                print!("-->>> {}, ", Move::from(self.pv_table[0][count]))
-            }
-
-            // println!("");
-            println!("\n-------------------------- {:#?}ms", start_time.elapsed().as_millis());
-            println!("=======------------------- {:#?}s \n", start_time.elapsed().as_secs());
-            // println!("{:?}", self.pv_table);
         }
 
     }
     
     // This method is currently VERY SLOW once the depth starts approaching 8, please work to improve it
-    pub(crate) fn run(controller: Arc<Mutex<T>>, tt: Arc<Mutex<TTable>>, depth: u8, board: &mut Position) {
-        let mut negamax = Self::new(controller, tt);
+    pub(crate) fn run(controller: Arc<Mutex<T>>, tt: TPT<'a>, depth: u8, board: &mut Position, name: usize) {
+        let mut negamax = Self::new(controller, tt, name);
         negamax.iterative_deepening(depth, board);
     }
 
@@ -238,7 +243,7 @@ impl<T> NegaMax<T> where T: TimeControl {
         // if we had cached the score for this move before, we return it, and confirm that the current node is not a PV node(principal variation)
         if (self.ply > 0) && pv_node == false {
             // read hash entry if we're not in a root ply and hash entry is available, current node is not a principal variation node
-            if let Some(score) =  self.tt.as_ref().lock().unwrap().probe(board.hash_key, depth, alpha, beta, self.ply) {
+            if let Some(score) =  self.tt.probe(board.hash_key, depth, alpha, beta, self.ply) {
                 return score
             }
         }
@@ -411,7 +416,7 @@ impl<T> NegaMax<T> where T: TimeControl {
                 // if mv.to_string() == String::from("e2a6x") {
                 //     println!("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< score={score:10} alpha={alpha:10}, and beta={beta:10} >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
                 // }
-                self.tt.as_ref().lock().unwrap().record(board.hash_key, depth, beta, self.ply, HashFlag::LowerBound, 0, Some(mv));
+                self.tt.record(board.hash_key, depth, beta, self.ply, HashFlag::LowerBound, 0, Some(mv));
                 // println!("ply @3 is {}", self.ply);
                 if !mv.get_capture() { // quiet move (non-capturing quiet move that beats the opponent)
                     self.killer_moves[1][self.ply] = self.killer_moves[0][self.ply];
@@ -470,7 +475,7 @@ impl<T> NegaMax<T> where T: TimeControl {
             return 0 // stalemate | draw
         }
 
-        self.tt.as_ref().lock().unwrap().record(board.hash_key, depth, alpha, self.ply, hash_flag, 0, None);
+        self.tt.record(board.hash_key, depth, alpha, self.ply, hash_flag, 0, None);
         return alpha
     }
 

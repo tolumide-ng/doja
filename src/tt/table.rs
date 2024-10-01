@@ -26,31 +26,28 @@ pub(crate) const BYTES_PER_MB: usize = 0x10000; // 1MB
 /// Transposition Table
 #[derive(Debug)]
 pub(crate) struct TTable {
-//    table: Box<[Option<TTEntry>; BYTES_PER_MB]>, // we need to be able to dynamically allocate this in the future, see CMK's method on Video 88
-        // table: Box<[TTEntry; BYTES_PER_MB]>, // we need to be able to dynamically allocate this in the future, see CMK's method on Video 88
-//    entries: usize,
-    table: Box<[TTEntry; BYTES_PER_MB]>,
+    table: Vec<TTEntry>,
+}
+
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct TPT<'a> {
+    pub(crate) table : &'a [TTEntry]
 }
 
 // const TT_ENTRY: Option<TTEntry> = None;
 impl Default for TTable {
    fn default() -> Self {
-    //    let table = Box::new([TT_ENTRY; BYTES_PER_MB]);
-    //    let table: Box<[TTEntry; BYTES_PER_MB]> = Box::new(core::array::from_fn(|_| TTEntry::default()));
-        let table: Box<[TTEntry; BYTES_PER_MB]> = Box::new(core::array::from_fn(|_| TTEntry::default()));
-        // let table = vec![TTEntry::default(); BYTES_PER_MB];
-        // let table = (0..BYTES_PER_MB).map(|f| TTEntry::default()).collect::<Vec<_>>();
-    Self {
-        // table: Vec::with_capacity(BYTES_PER_MB),
-        table,
-        // entries: 0
-    }
+        // let table: Box<[TTEntry; BYTES_PER_MB]> = Box::new(core::array::from_fn(|_| TTEntry::default()));
+        let table = (0..BYTES_PER_MB).map(|_| TTEntry::default()).collect::<Vec<_>>();
+        Self { table, }
    }
 }
 
 
 impl TTable {
    pub(crate) fn probe(&self, zobrist_key: u64, depth: u8, alpha: i32, beta: i32, ply: usize) -> Option<i32> {
+    // let index = zobrist_key & (BYTES_PER_MB as u64 -1);
        let index = zobrist_key as usize % BYTES_PER_MB;
         let phahse = &self.table[index];
         // we can turst the #[default] implementation to work without any issue because the default key is 0,
@@ -92,6 +89,7 @@ impl TTable {
    }
 
    pub(crate) fn record(&self, zobrist_key: u64, depth: u8, score: i32, ply: usize, flag: HashFlag, age: u8, mv: Option<Move>) {
+        // let index = zobrist_key & (BYTES_PER_MB as u64 -1);
        let index = zobrist_key as usize % BYTES_PER_MB;
        
        let mut replace = false;
@@ -109,17 +107,12 @@ impl TTable {
     
         let value = if score < -MATE_SCORE { score - (ply as i32)} else if score > MATE_SCORE  { score + (ply as i32) } else { score };
         unsafe {
-        //    let ptr = self.table.as_ptr().cast_mut().add(index);
-            // *ptr = Some(TTEntry::new(zobrist_key, age, depth, value, mv, flag))
             let ptr = self.table.as_ptr();
             (*ptr.add(index)).write(zobrist_key, age, depth, value, mv, flag);
        }
+   }
 
-    //    self.entries += 1;
+   pub(crate) fn get(&self) -> TPT {
+        TPT { table: &self.table }
    }
 }
-
-
-
-// unsafe impl Send for TTable {}
-// unsafe  impl Sync for TTable {}
