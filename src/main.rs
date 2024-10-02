@@ -21,6 +21,7 @@ mod perft;
 mod kogge_stone;
 mod uci;
 mod tt;
+mod syzygy;
 
 
 

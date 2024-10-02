@@ -13,7 +13,7 @@ pub(crate) struct NNUEParams {
 
 
 /// NNUE model is initialized from binary values
-pub(crate) static MODEL: NNUEParams = unsafe { std::mem::transmute(*include_bytes!("../../bins/net.bin")) };
+pub(crate) static MODEL: NNUEParams = unsafe { std::mem::transmute(*include_bytes!("../../bin/net.bin")) };
 
 
 /// Retrns white and black feature weight index for given features

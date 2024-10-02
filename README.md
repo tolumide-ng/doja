@@ -51,3 +51,10 @@
 8. [Pesto's evaluation table](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
 9. [Little Chess Evaluation Compedium](https://www.chessprogramming.org/images/7/70/LittleChessEvaluationCompendium.pdf) (****)
 10. [History Heuristic](https://www.chessprogramming.org/History_Heuristic) (*****)
+
+
+
+
+// More
+11. Late Move Reductions
+12. Null Move Prunning

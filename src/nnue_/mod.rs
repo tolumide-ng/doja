@@ -25,7 +25,7 @@ pub(crate) mod accumulator_ptr;
 // };
 
 pub(crate) static PARAMS: NNUEParams<{INPUT * L1_SIZE}, L1_SIZE, {L1_SIZE*2}, i16> = unsafe {
-    let bytes: &[u8] = include_bytes!("../../bins/net.bin");
+    let bytes: &[u8] = include_bytes!("../../bin/net.bin");
     std::ptr::read_unaligned(bytes.as_ptr() as *const NNUEParams<{INPUT*L1_SIZE}, {L1_SIZE}, {L1_SIZE * 2}, i16>)
 };
 
