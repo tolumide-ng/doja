@@ -88,7 +88,7 @@ fn main() {
     let controller = Arc::new(Mutex::new(Control::default()));
     let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
-    let depth = 10;
+    let depth = 5;
     // let mut bb = board.clone();
     let table = TTable::default();
 
@@ -99,74 +99,10 @@ fn main() {
         for td in negamax_thread.iter_mut() {
             let mut bb = board.clone();
             s.spawn(move || {
-                td.iterative_deepening(7, &mut bb);
+                td.iterative_deepening(depth, &mut bb);
             });
         }
     });
-    
-    
-    // thread::scope(|s| {
-    //     let tt = &table;
-
-    //     for i in 0..threads {
-    //         let mut bb = board.clone();
-    //         let cc = Arc::clone(&controller);
-    //         s.spawn(move || {
-    //             unsafe {
-    //                 NegaMax::run(cc, tt.get(), depth, &mut bb, i);
-    
-    //             }
-    //         });
-    //     }
-    // });
-    
-    // let mut threads = vec![];
-
-    // for _ in 0..10 {
-    //     let cc = Arc::clone(&controller);
-    //     // let t = thread::spawn(move || {
-    //     // });
-
-    //     // threads.push(t);
-    // }
-
-    // let axx = [];
-
-    // thread::scope(|s| {
-
-    //     // let mut ttt = Vec::with_capacity(10);
-
-    //     // let xtt = Arc::new(tt);
-
-    //     let negamax = NegaMax::new(controller, &tt);
-    //     // negamax.iterative_deepening(depth, board);
-    //     let limit = 10;
-
-    //     // for i in 0.. 6 {
-    //     //     let mut bb = board.clone();
-    //     //     // let cc = Arc::clone(&controller);
-
-    //     //     let mut nn = negamax.clone();
-
-    //     //     // ttt.push(s.spawn(move || NegaMax::run(cc, &tt, 7, &mut bb)));
-    //     //     println!("########################################################################################################");
-    //     //     s.spawn(move|| {
-    //     //         // let mut ii = limit;
-    //     //         // if i <= limit {
-    //     //         //     ii = ii;
-    //     //         // }
-    //     //         println!("i is ------------------------------------------------------------------------>>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", i);
-    //     //         nn.iterative_deepening(i, &mut bb);
-    //     //         println!("****************************");
-    //     //     });
-    //     // }
-    // });
-
-    // checkings();
-
-
-
-    // println!()
 }
 
 // 8|4|2|1|

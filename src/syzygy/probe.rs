@@ -6,7 +6,7 @@ use crate::{bit_move::Move, board::position::Position};
 use crate::board::piece::{Piece::*, PieceType};
 use crate::color::Color::{self, *};
 
-use super::bindings::{tb_probe_root, TB_PROMOTES_BISHOP, TB_PROMOTES_KNIGHT, TB_PROMOTES_QUEEN, TB_PROMOTES_ROOK, TB_RESULT_DTZ_MASK, TB_RESULT_FAILED, TB_RESULT_FROM_MASK, TB_RESULT_FROM_SHIFT, TB_RESULT_PROMOTES_MASK, TB_RESULT_PROMOTES_SHIFT, TB_RESULT_TO_MASK, TB_RESULT_TO_SHIFT, TB_RESULT_WDL_MASK, TB_RESULT_WDL_SHIFT};
+use super::bindings::{tb_probe_root, TB_PROMOTES_BISHOP, TB_PROMOTES_KNIGHT, TB_PROMOTES_QUEEN, TB_PROMOTES_ROOK, TB_RESULT_DTZ_MASK, TB_RESULT_DTZ_SHIFT, TB_RESULT_FAILED, TB_RESULT_FROM_MASK, TB_RESULT_FROM_SHIFT, TB_RESULT_PROMOTES_MASK, TB_RESULT_PROMOTES_SHIFT, TB_RESULT_TO_MASK, TB_RESULT_TO_SHIFT, TB_RESULT_WDL_MASK, TB_RESULT_WDL_SHIFT};
 use super::{bindings::{tb_init, tb_probe_wdl, TB_BLESSED_LOSS, TB_CURSED_WIN, TB_DRAW, TB_LOSS, TB_WIN}, SyZyGyBoard};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -126,7 +126,7 @@ impl TryFrom<(SyZyGyBoard, u32)> for TBResult {
         };
 
         let moves = board.gen_movement();
-        let dtz = (result & TB_RESULT_DTZ_MASK) >> TB_RESULT_DTZ_MASK;
+        let dtz = (result & TB_RESULT_DTZ_MASK) >> TB_RESULT_DTZ_SHIFT;
 
         moves.into_iter().find(|m| m.get_src() == from && m.get_target() == to && 
             m.get_promotion() == promoted_to

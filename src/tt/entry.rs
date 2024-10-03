@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 
-use crate::{bit_move::Move, tt::flag::HashFlag};
+use crate::{bit_move::Move, constants::MATE_SCORE, tt::flag::HashFlag};
 
 
 
@@ -25,10 +25,10 @@ const SCORE_OFFSET: u64 = 25;
 // #[repr(align(64))]
 pub(crate) struct SMPData {
     pub(super) key: u64,
-    pub(super) depth: u8,
-    pub(super) flag: HashFlag,
-    pub(super) score: i32,
-    pub(super) mv: Option<Move>,
+    pub(crate) depth: u8,
+    pub(crate) flag: HashFlag,
+    score: i32,
+    pub(crate) mv: Option<Move>,
  }
 
 impl From<SMPData> for u64 {
@@ -97,5 +97,10 @@ impl TTEntry {
 impl SMPData {
     fn new(key: u64, depth: u8, score: i32, mv: Option<Move>, flag: HashFlag) -> Self {
         Self {key, depth, score, mv, flag}
+    }
+
+    pub fn score(&self, ply: usize) -> i32 {
+        let score = self.score;
+        return if score < -MATE_SCORE {score + (ply as i32)} else if score > MATE_SCORE {score - (ply as i32)} else {score}
     }
 }

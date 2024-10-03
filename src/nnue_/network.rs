@@ -171,12 +171,8 @@ impl<const U: usize> NNUEState<Feature, U> {
 
     pub(crate) fn evaluate(&self, stm: Color) -> i32 {
         unsafe {
-            // let acc = &self.accumulators[self.current_acc];
             let acc = self.accumulators.add(self.current_acc);
-            // let (us, them) = if stm == Color::White {(&acc.white, &acc.black)} else {(&acc.black, &acc.white)};
-            // let curr_input = if stm == Color::White {[&acc.white, &acc.black]} else {[&acc.black, &acc.white]};
             
-            // let clipped_acc = acc.crelu16(stm); // [i8s; 32]
             let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
             let output = Self::propagate(clipped_acc);
             
