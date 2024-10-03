@@ -36,6 +36,7 @@ use board::{fen::FEN, position::Position, state::board::Board};
 use constants::TRICKY_POSITION;
 use move_scope::MoveScope;
 use search::control::Control;
+use syzygy::probe::TableBase;
 use tt::table::TTable;
 // use zobrist::Zobrist;
 
@@ -88,18 +89,20 @@ fn main() {
     let controller = Arc::new(Mutex::new(Control::default()));
     let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
-    let depth = 5;
+    // let threads = 1;
+    let depth = 7;
     // let mut bb = board.clone();
     let table = TTable::default();
 
     let mut negamax_thread = (0..threads).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
     
+    let tb = TableBase::default();
 
     thread::scope(|s| {
         for td in negamax_thread.iter_mut() {
             let mut bb = board.clone();
             s.spawn(move || {
-                td.iterative_deepening(depth, &mut bb);
+                td.iterative_deepening(depth, &mut bb, &tb);
             });
         }
     });

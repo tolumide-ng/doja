@@ -13,7 +13,7 @@ pub(crate) struct TPT<'a> {
 
 
 impl<'a> TPT<'a> {
-    pub(crate) fn record(&self, zobrist_key: u64, depth: u8, score: i32, ply: usize, flag: HashFlag, age: u8, mv: Option<Move>) {
+    pub(crate) fn record(&self, zobrist_key: u64, depth: u8, score: i32, eval: i32, ply: usize, flag: HashFlag, age: u8, mv: Option<Move>) {
         // let index = zobrist_key & (TOTAL_SIZE as u64 -1);
        let index = zobrist_key as usize % TOTAL_SIZE;
        
@@ -33,7 +33,7 @@ impl<'a> TPT<'a> {
         let value = if score < -MATE_SCORE { score - (ply as i32)} else if score > MATE_SCORE  { score + (ply as i32) } else { score };
         unsafe {
             let ptr = self.table.as_ptr();
-            (*ptr.add(index)).write(zobrist_key, age, depth, value, mv, flag);
+            (*ptr.add(index)).write(zobrist_key, age, depth, value as i16, eval as i16, mv, flag);
        }
     }
 

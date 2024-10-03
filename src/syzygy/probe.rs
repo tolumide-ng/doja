@@ -1,6 +1,7 @@
 use std::ffi::CString;
 use std::ptr;
 
+use crate::constants::MATE_VALUE;
 use crate::squares::Square;
 use crate::{bit_move::Move, board::position::Position};
 use crate::board::piece::{Piece::*, PieceType};
@@ -27,20 +28,34 @@ impl TryFrom<u32> for WDL {
     }
 }
 
+impl WDL {
+    pub(crate) fn eval(&self, ply: usize) -> i32 {
+        let ply = ply as i32;
+        match self {
+            Self::Win => MATE_VALUE - ply,
+            Self::Loss => -MATE_VALUE + ply,
+            Self::Draw => 0,
+        }
+    }
+}
+
 /// SyZyGy Tablase
+#[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct TableBase;
 
 impl TableBase {
-    pub(crate) fn init(path: &str) {
+    pub(crate) fn init(path: &str) -> Self {
         unsafe {
             let p = CString::new(path).unwrap();
             let res = tb_init(p.as_ptr());
             assert!(res, "Could not initialize Syzygy tablebase at: {path}");
         }
+
+        Self
     }
 
     /// tb_probe_wdl probes the Win-Draw-Loss (WDL) table for a given position.
-    pub(crate) fn probe_wdl(board: Position) -> Option<WDL> {
+    pub(crate) fn probe_wdl(&self, board: &Position) -> Option<WDL> {
         let Some(board) =  SyZyGyBoard::try_from(board).ok() else {return None};
 
         // enpassant square
@@ -62,7 +77,7 @@ impl TableBase {
     }
 
     /// Given a position, it probes the DTZ(Distance to zero) table, and returns the bestMove, and possible consequence
-    pub(crate) fn proble_root(board: Position ) -> Option<TBResult> {
+    pub(crate) fn proble_root(&self, board: &Position ) -> Option<TBResult> {
         let Some(board) = SyZyGyBoard::try_from(board).ok() else {return None};
 
         let enp_sq = if let Some(sq) = board.enpassant {sq.flipv() as u32} else {0};
@@ -82,9 +97,9 @@ impl TableBase {
         TBResult::try_from((board, value)).ok()
     }
 
-    pub(crate) fn wdl_white(board: Position) -> Option<WDL> {
+    pub(crate) fn wdl_white(&self, board: &Position) -> Option<WDL> {
         let stm = board.turn == Color::White;
-        let r = Self::proble_root(board)?;
+        let r = self.proble_root(board)?;
 
         let rr = match r.wdl {
             WDL::Draw => WDL::Draw,
@@ -102,7 +117,7 @@ pub(crate) struct TBResult {
 
 
 
-impl TryFrom<(SyZyGyBoard, u32)> for TBResult {
+impl<'a> TryFrom<(SyZyGyBoard<'a>, u32)> for TBResult {
     type Error = &'static str;
 
     fn try_from((board, result): (SyZyGyBoard, u32)) -> Result<Self, Self::Error> {

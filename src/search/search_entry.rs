@@ -9,4 +9,5 @@ pub(crate) struct SearchE {
     pub(crate) mv: Option<Move>,
     pub(crate) score: i32,
     pub(crate) skipped: Option<Move>,
+    pub(crate) eval: i32,
 }
