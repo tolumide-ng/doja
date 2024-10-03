@@ -225,6 +225,44 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         return false;
     }
 
+    /// nmfp: Null Move forward prunning
+    /// https://web.archive.org/web/20040427014629/http://brucemo.com/compchess/programming/nullmove.htm
+    /// "If I do nothing here, can the opponent do anything?"
+    /// Returns the score, only if the score is greater than beta.
+    /// This means that even if we "skip" our play, and allow the opponent to play (instead of us),
+    /// They still won't be better off than they were before we skipped our play
+    fn make_null_move(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &Position) -> Option<i32> {
+            // nmfp: null-move forward prunning (board)
+            let mut nmfp_board = Position::with((**board).clone());
+            self.ply += 1;
+            self.repetition_index+=1;
+            self.repetition_table[self.repetition_index] = nmfp_board.hash_key;
+
+            // update the zobrist hash accordingly, since this mutating actions do not direcly update the zobrist hash
+            if let Some(enpass_sq) = nmfp_board.enpassant {
+                // we know that we're going to remove the enpass if it's available (see 4 lines below), so we remove it from the hashkey if it exists here
+                nmfp_board.set_zobrist(nmfp_board.hash_key ^ ZOBRIST.enpassant_keys[enpass_sq]);
+            }
+            nmfp_board.set_turn(!board.turn);
+            nmfp_board.set_enpassant(None);
+            nmfp_board.set_zobrist(nmfp_board.hash_key ^ ZOBRIST.side_key);
+            nmfp_board.nnue_push();
+            
+            let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut nmfp_board);
+
+            self.ply -= 1;
+            self.repetition_index-=1;
+            nmfp_board.nnue_pop();
+            // return 0 if time is up
+            if self.controller.as_ref().lock().unwrap().stopped() { return None}
+
+            if score >= beta {
+                return Some(beta)
+            }
+            
+            return None;
+    }
+
 
     
     /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
@@ -233,7 +271,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
 
         
         let mut hash_flag = HashFlag::UpperBound; // alpha
-        if self.ply > 0 && self.is_repetition(board) || board.fifty.iter().any(|&p| p >= 50) {
+        if self.ply > 0 && (self.is_repetition(board) || board.fifty.iter().any(|&p| p >= 50)) {
             return 0 // draw
         }
 
@@ -282,35 +320,10 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !king_in_check && self.ply> 0;
         // added 1 to the depth_reduction factor to be sure, there is atleast one more depth that would be checked
         
-        
         if null_move_forward_pruning_conditions {
-            // nmfp: null-move forward prunning (board)
-            let mut nmfp_board = Position::with((**board).clone());
-            self.ply += 1;
-            self.repetition_index+=1;
-            self.repetition_table[self.repetition_index] = nmfp_board.hash_key;
-
-            // update the zobrist hash accordingly, since this mutating actions do not direcly update the zobrist hash
-            if let Some(enpass_sq) = nmfp_board.enpassant {
-                // we know that we're going to remove the enpass if it's available (see 4 lines below), so we remove it from the hashkey if it exists here
-                nmfp_board.set_zobrist(nmfp_board.hash_key ^ ZOBRIST.enpassant_keys[enpass_sq]);
-            }
-            nmfp_board.set_turn(!board.turn);
-            nmfp_board.set_enpassant(None);
-            nmfp_board.set_zobrist(nmfp_board.hash_key ^ ZOBRIST.side_key);
-            let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut nmfp_board);
-
-
-
-            self.ply -= 1;
-            self.repetition_index-=1;
-
-            // return 0 if time is up
-            if self.controller.as_ref().lock().unwrap().stopped() { return 0}
-
-            if score >= beta {
-                return beta
-            }
+            if let Some(beta) = self.make_null_move(alpha, beta, depth, board) {
+                return beta;
+            };
         }
 
 

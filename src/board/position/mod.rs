@@ -1,7 +1,6 @@
 use std::ops::Deref;
 
 use crate::bit_move::MoveType;
-use crate::bitboard::Bitboard;
 use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 use crate::nnue_::accumulator::Feature;
@@ -44,6 +43,10 @@ impl Position {
         let nnue_state = NNUEState::from(&board);
         Self { history: Vec::new(), board, nnue_state }
     }
+
+    pub(crate) fn nnue_push(&mut self) { self.nnue_state.push(); }
+
+    pub(crate) fn nnue_pop(&mut self) { self.nnue_state.pop(); }
 
     pub(crate) fn with(board: Board) -> Self {
         let nnue_state = NNUEState::from(&board);
@@ -144,6 +147,7 @@ impl Position {
 
     pub(crate) fn undo_move(&mut self, with_nnue: bool) {
         if self.history.len() == 0 { return }
+        if *self.history.last().unwrap().mv == 0 { return }; // this means that the last move was a null-move (used during search)
 
         let History { mv, hash, victim, piece } = self.history.pop().unwrap();
         let src = mv.get_src() as u64;

@@ -99,6 +99,14 @@ impl<const U: usize> NNUEState<Feature, U> {
         self.current_acc -= 1;
     }
 
+    /// Increases the curr_acc index, and copies the previous accumualator to the new_idx
+    pub(crate) fn push(&mut self) {
+        unsafe {
+            *self.accumulators.add(self.current_acc + 1) = *self.accumulators.add(self.current_acc);
+            self.current_acc += 1;
+        }
+    }
+
     pub(crate) fn update(&mut self, removed: Vec<(Piece, Square)>, added: Vec<(Piece, Square)>) {
         unsafe {
             let acc = *(self.accumulators.add(self.current_acc));
@@ -114,7 +122,7 @@ impl<const U: usize> NNUEState<Feature, U> {
     pub(crate) fn refresh<T>(&mut self, board: &Board) {
         unsafe {
             let acc = Accumulator::refresh(board);
-            self.current_acc += 1;
+            self.current_acc = 0;
             *self.accumulators.add(self.current_acc) = acc;
         }
     } 
