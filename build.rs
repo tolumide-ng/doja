@@ -19,7 +19,6 @@ fn build_fathom() {
 
 
 fn generate_bindings() {
-    use bindgen;
     let bindings = bindgen::Builder::default()
         .header("./imports/fathom/src/tbprobe.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))

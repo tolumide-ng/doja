@@ -1,8 +1,8 @@
 use std::ffi::CString;
 
-use crate::board::{position::Position, state::board::Board};
+use crate::board::position::Position;
 
-use super::bindings::{tb_init, TB_BLESSED_LOSS, TB_CURSED_WIN, TB_DRAW, TB_LOSS, TB_WIN};
+use super::{bindings::{tb_init, TB_BLESSED_LOSS, TB_CURSED_WIN, TB_DRAW, TB_LOSS, TB_WIN}, SyBoard};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum WDL {
@@ -37,5 +37,15 @@ impl TableBase {
             let res = tb_init(p.as_ptr());
             assert!(res, "Could not initialize Syzygy tablebase at: {path}");
         }
+    }
+
+    pub(crate) fn probe_wdl(board: Position) -> Option<WDL> {
+        let Some(board) =  SyBoard::try_from(board).ok() else {return None};
+
+        unsafe {
+            // let wdl = tb_probe
+        }
+
+        None
     }
 }
