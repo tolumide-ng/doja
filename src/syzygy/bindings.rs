@@ -255,6 +255,41 @@ extern "C" {
 extern "C" {
     pub fn tb_free();
 }
+extern "C" {
+    #[link_name = "tb_probe_wdl__extern"]
+    pub fn tb_probe_wdl(
+        _white: u64,
+        _black: u64,
+        _kings: u64,
+        _queens: u64,
+        _rooks: u64,
+        _bishops: u64,
+        _knights: u64,
+        _pawns: u64,
+        _rule50: ::std::os::raw::c_uint,
+        _castling: ::std::os::raw::c_uint,
+        _ep: ::std::os::raw::c_uint,
+        _turn: bool,
+    ) -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    #[link_name = "tb_probe_root__extern"]
+    pub fn tb_probe_root(
+        _white: u64,
+        _black: u64,
+        _kings: u64,
+        _queens: u64,
+        _rooks: u64,
+        _bishops: u64,
+        _knights: u64,
+        _pawns: u64,
+        _rule50: ::std::os::raw::c_uint,
+        _castling: ::std::os::raw::c_uint,
+        _ep: ::std::os::raw::c_uint,
+        _turn: bool,
+        _results: *mut ::std::os::raw::c_uint,
+    ) -> ::std::os::raw::c_uint;
+}
 pub type TbMove = u16;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

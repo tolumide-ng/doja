@@ -175,9 +175,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         self.nodes+=1;
 
         if self.ply > MAX_PLY - 1 { 
-            // let evaluation = Evaluation::evaluate(board); 
-            // println!("nevaluation = {nevaluation}|||||||||||||| evaluation = {evaluation}");
-            // return evaluation;
+            // let evaluation = Evaluation::evaluate(board);
             return board.evaluate();
         }
 
@@ -262,11 +260,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         
         if self.ply > MAX_PLY -1 {
             let evaluation = board.evaluate();
-            // println!("::::::::::::::::::: {}", e);
-            // println!("^^^^^^^^^^^ {}", non_nnue);
             // let evaluation = Evaluation::evaluate(board);
-            // let nevaluation = board.evaluate();
-            // println!("nevaluation = {nevaluation}|||||||||||||| evaluation = {evaluation}");
             return evaluation;
         }
 
@@ -355,9 +349,6 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         let mut moves_searched = 0;
         
         // loop through hte moves
-        // for mv in &sorted_moves {
-        //     println!("======================>>>>>>> src:::: {} target---{} castling****{}", mv.get_src(), mv.get_target(), mv.get_castling());
-        // }
         for mv in sorted_moves {
             let legal_move = board.make_move_nnue(mv, MoveScope::AllMoves);
             
@@ -428,14 +419,6 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             
             // best score so far
             if score > alpha {
-                // if mv.to_string() == String::from("e2a6x") {
-                //     println!("*******************************************************>>>>>> score={score:10} alpha={alpha:10}, and beta={beta:10}");
-                // }
-
-
-                // if mv.to_string() == String::from("d5e6x") {
-                //     println!("-------------------------------------||||||||||||||||||| score = {:10},alpha={alpha:10}, and beta={beta:10}", score);
-                // }
                 hash_flag = HashFlag::Exact;
                 
                 if !mv.get_capture() {
@@ -450,12 +433,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                 // Traingular PV-Table
                 self.pv_table[self.ply][self.ply] =  mv;
 
-                // if mv.to_string() == String::from("e2a6x") {
-                //     println!("::::::::::::COOOL::::::********:::::::::::::::");
-                // }
-
-                
-                for j in (self.ply+1)..self.pv_length[self.ply+1] {
+               for j in (self.ply+1)..self.pv_length[self.ply+1] {
                     // copy move from deeper ply into current ply's line
                     self.pv_table[self.ply][j] = self.pv_table[self.ply+1][j];
                 }
@@ -478,12 +456,4 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         self.tt.record(board.hash_key, depth, alpha, self.ply, hash_flag, 0, None);
         return alpha
     }
-
-
-
-
-
-
-
-
 }
