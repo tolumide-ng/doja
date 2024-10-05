@@ -1,5 +1,3 @@
-use bitflags::Flags;
-
 use crate::{board::piece::Piece, constants::{RANDOM_STATE_SEED, TOTAL_PIECES, TOTAL_SQUARES}, utils::prng::PRNG};
 
 

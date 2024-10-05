@@ -65,14 +65,18 @@ fn main() {
     
     let tb = TableBase::default();
 
-    thread::scope(|s| {
-        for td in negamax_thread.iter_mut() {
-            let mut bb = board.clone();
-            s.spawn(move || {
-                td.iterative_deepening(depth, &mut bb, &tb);
-            });
-        }
-    });
+    // thread::scope(|s| {
+    //     for td in negamax_thread.iter_mut() {
+    //         let mut bb = board.clone();
+    //         s.spawn(move || {
+    //             td.iterative_deepening(depth, &mut bb, &tb);
+    //         });
+    //     }
+    // });
+
+    let mut bb = board.clone();
+    negamax_thread[0].iterative_deepening(depth, &mut bb, &tb);
+
 }
 
 // 8|4|2|1|

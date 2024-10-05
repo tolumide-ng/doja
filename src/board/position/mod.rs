@@ -7,7 +7,7 @@ use crate::nnue::accumulator::Feature;
 use crate::{bit_move::Move, move_scope::MoveScope, squares::Square};
 use crate::nnue::network::NNUEState;
 use crate::color::Color::{self, *};
-use crate::nnue::constants::customKA0::*;
+use crate::nnue::constants::custom_kp::*;
 use crate::squares::Square::*;
 use super::castling::Castling;
 use super::{piece::{Piece, Piece::*}, state::board::Board};

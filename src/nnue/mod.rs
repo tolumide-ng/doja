@@ -1,6 +1,6 @@
 // The purpose of the ClippedReLu is to introduce non-linearity to the network.
 
-use constants::customKA0::*;
+use constants::custom_kp::*;
 use feature_idx::FeatureIdx;
 use network::NNUEParams;
 

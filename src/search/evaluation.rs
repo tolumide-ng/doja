@@ -100,7 +100,7 @@ impl Evaluation {
                             score_endgame -= OPEN_FILE_SCORE;
                         }
 
-                        let king_shields = ((PIECE_ATTACKS.king_attacks[square] & board.get_occupancy(Color::White)).count_ones() as i32 * KING_SHIELD_BONUS);
+                        let king_shields = (PIECE_ATTACKS.king_attacks[square] & board.get_occupancy(Color::White)).count_ones() as i32 * KING_SHIELD_BONUS;
                         score_opening += king_shields;
                         score_endgame += king_shields;
                     },

@@ -6,7 +6,7 @@ use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
 use crate::squares::Square::*;
 use crate::color::Color::*;
-use crate::move_scope::{MoveScope, *};
+use crate::move_scope::MoveScope;
 
 #[cfg(test)]
 #[path ="./tests.rs"]

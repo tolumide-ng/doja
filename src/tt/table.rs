@@ -1,8 +1,4 @@
-use std::sync::atomic::Ordering;
-
-use crate::{bit_move::Move, constants::MATE_SCORE};
-
-use super::{entry::{SMPData, TTEntry}, flag::HashFlag, tpt::TPT};
+use super::{entry::TTEntry, tpt::TPT};
 
 
 /**

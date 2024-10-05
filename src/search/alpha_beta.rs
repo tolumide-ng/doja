@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{params::MAX_DEPTH, ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, syzygy::probe::TableBase, tt::{flag::HashFlag, tpt::TPT}};
+use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, syzygy::probe::TableBase, tt::{flag::HashFlag, tpt::TPT}};
 use super::{search_entry::SearchE, time_control::TimeControl};
 use crate::constants::INFINITY;
 
@@ -205,30 +205,29 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
 
 
         let stand_pat = board.evaluate();
-        let eval = if !king_in_check {
-            if let Some(data) = tt_data {
-                let score = data.score(self.ply);
-                self.ss[self.ply].eval = if data.eval() == -INFINITY {stand_pat} else {data.eval()};
+        // let eval = if !king_in_check {
+        //     if let Some(data) = tt_data {
+        //         let score = data.score(self.ply);
+        //         self.ss[self.ply].eval = if data.eval() == -INFINITY {stand_pat} else {data.eval()};
 
-                match data.flag {
-                    HashFlag::Exact => return score,
-                    HashFlag::LowerBound if score > self.ss[self.ply].eval => return beta,
-                    HashFlag::UpperBound if score < self.ss[self.ply].eval => return alpha, 
-                    _ => self.ss[self.ply].eval,
-                }
-            } else {
-                self.ss[self.ply].eval = stand_pat;
-                stand_pat
-            }
-        } else {
-            self.ss[self.ply].eval = -INFINITY;
-            -INFINITY
-        };
+        //         match data.flag {
+        //             HashFlag::Exact => return score,
+        //             HashFlag::LowerBound if score > self.ss[self.ply].eval => return beta,
+        //             HashFlag::UpperBound if score < self.ss[self.ply].eval => return alpha, 
+        //             _ => self.ss[self.ply].eval,
+        //         }
+        //     } else {
+        //         self.ss[self.ply].eval = stand_pat;
+        //         stand_pat
+        //     }
+        // } else {
+        //     self.ss[self.ply].eval = -INFINITY;
+        //     -INFINITY
+        // };
 
-        // standing pat
-        let prev_alpha = alpha;
-        alpha = std::cmp::max(alpha, eval);
-        if eval >= beta { return beta; }
+        // // standing pat
+        // alpha = std::cmp::max(alpha, eval);
+        // if eval >= beta { return beta; }
 
 
         if stand_pat >= beta { return beta; } // node (move) fails high
@@ -363,21 +362,6 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             }
         }
 
-        // if !ROOT && !active_singular_search {
-        //     if let Some(wdl) = tb.probe_wdl(board) {
-        //         let tb_value = wdl.eval(self.ply);
-        //         let tb_flag = HashFlag::from(wdl);
-
-        //         if tb_flag == HashFlag::Exact || (tb_flag == HashFlag::LowerBound && tb_value >= beta) || (tb_flag == HashFlag::UpperBound && tb_value <= alpha) {
-        //             self.tt.record(board.hash_key, depth, tb_value, -INFINITY, self.ply, tb_flag, 0, None);
-        //         }
-
-        //         return tb_value;
-        //     }
-
-        //     // still need some extra computations
-        // }
-
         
         // this action will be performed every 2048 nodes
         // if (self.nodes & NODES_2047) == 0 {
@@ -396,7 +380,6 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         }
 
         self.nodes+=1;
-        // println!("::::::: {depth}");
         
         let king_square = u64::from(board[Piece::king(board.turn)].trailing_zeros());
         // is king in check
@@ -453,7 +436,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                     // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
                     // condition for Late Move Reduction
                     let not_tactical_mv = !king_in_check && mv.get_promotion().is_none() && !mv.get_capture();
-                    
+
 
                     let mut value =  if (moves_searched >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && not_tactical_mv {
                         -self.negamax::<false>(-alpha+1, -alpha, depth-2, &mut board, tb)
@@ -499,12 +482,10 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                 hash_flag = HashFlag::Exact;
                 
                 if !mv.get_capture() {
-                    // self.history_moves[board.piece_at(mv.get_src()).unwrap()][mv.get_target() as usize] += depth as u32;
                     // store history moves
                     unsafe {
                         *((*(self.history_moves.as_mut_ptr().add(board.piece_at(mv.get_src()).unwrap() as usize))).as_mut_ptr().add(mv.get_target() as usize)) += depth as u32; 
                     }
-                    // *self.history_moves[board.piece_at(mv.get_src())].get_mut(mv.get_target() as usize).unwrap() += depth as u32;
                 }
                 alpha = score; // PV move (position)
 

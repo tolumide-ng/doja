@@ -1,4 +1,4 @@
-pub(crate) mod simpleHalfKP {
+pub(crate) mod half_kp {
     /// HalfKP features (Half-King Piece Features)
     /// The Accumulator stores 40960 per perspective (white and black)
     /// 40960 * 2 = 81920 features
@@ -36,7 +36,7 @@ pub(crate) mod simpleHalfKP {
 
 
 
-pub(crate) mod halfKA {
+pub(crate) mod half_ka {
     pub(crate) const SCALING_FACTOR: usize = 410;
     /// 2^(6)
     pub(crate) const LOG2_WEIGHT_SCALE: i32 = 64; 
@@ -61,7 +61,7 @@ pub(crate) mod halfKA {
 }
 
 
-pub(crate) mod customKA0 {
+pub(crate) mod custom_kp {
     pub(crate) const INPUT: usize = 768;
     pub(crate) const L1_SIZE: usize = 1024;
     // pub(crate) const L2_SIZE: usize = 1024*2;
