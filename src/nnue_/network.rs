@@ -4,12 +4,15 @@ use std::{ptr, usize};
 
 
 use crate::board::{piece::Piece, state::board::Board};
-use crate::color::Color::{self, *};
-use crate::nnue::net::{halfka_idx, MODEL};
+use crate::color::Color;
+// use crate::color::Color::*;
+use crate::nnue_::PARAMS;
+// use crate::nnue::net::{halfka_idx};
 use crate::squares::Square;
 
 use super::accumulator::{QA, QAB};
 use super::accumulator_ptr::AccumulatorPtr;
+use super::halfka_idx;
 use super::{accumulator::Accumulator, accumulator::Feature, align64::Align64};
 
 pub(crate) const MAX_DEPTH: usize = 127;
@@ -142,7 +145,7 @@ impl<const U: usize> NNUEState<Feature, U> {
             for i in 0..num_chunks {
                 let data = _mm256_load_si256(inputs[color].as_ptr().add(i * INPUT_REGISTER_WIDTH) as *const __m256i);
                 let w_idx = (color * U) + (i * INPUT_REGISTER_WIDTH);
-                let weights = _mm256_load_si256(MODEL.output_weights.as_ptr().add(w_idx) as *const __m256i);
+                let weights = _mm256_load_si256(PARAMS.output_weights.as_ptr().add(w_idx) as *const __m256i);
 
                 let datalo = _mm256_cvtepi16_epi32(_mm256_castsi256_si128(data));
                 let multiplier_lo = _mm256_cvtepi16_epi32(_mm256_castsi256_si128(weights));
@@ -165,10 +168,6 @@ impl<const U: usize> NNUEState<Feature, U> {
 
     }
 
-    fn material_scale() -> i32 {
-        0
-    }
-
     pub(crate) fn evaluate(&self, stm: Color) -> i32 {
         unsafe {
             let acc = self.accumulators.add(self.current_acc);
@@ -176,7 +175,7 @@ impl<const U: usize> NNUEState<Feature, U> {
             let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
             let output = Self::propagate(clipped_acc);
             
-            return (output/QA as i32 + MODEL.output_bias as i32) * SCALE / QAB;
+            return (output/QA as i32 + PARAMS.output_bias as i32) * SCALE / QAB;
         }
     }
 }

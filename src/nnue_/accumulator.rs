@@ -9,11 +9,11 @@ use crate::board::state::board::Board;
 use crate::color::Color::*;
 use crate::color::Color;
 use crate::constants::PLAYERS_COUNT;
-use crate::nnue::net::{halfka_idx, MODEL};
 use crate::squares::Square;
 
 use super::align64::Align64;
 use super::feature_idx::FeatureIdx;
+use super::{halfka_idx, PARAMS};
 
 
 // A single AVX2 register can fit 16 i16 values, and there are 16AVX2 registers (32 since AVX512) (stockfish docs)
@@ -82,7 +82,7 @@ impl<const U: usize> Accumulator<Feature, U> {
             for i in 0..num_chunks {
                 // If there is a problem here, please confirm that halfa_idx works as it should, compare directly with the one from pytorch-NNUE
                 let color_idx = (color as usize * num_chunks) + i;
-                *regs.as_mut_ptr().add(color_idx) = _mm256_load_si256(MODEL.features_bias.as_ptr().add(i * Self::REGISTER_WIDTH) as *const __m256i);
+                *regs.as_mut_ptr().add(color_idx) = _mm256_load_si256(PARAMS.input_bias.as_ptr().add(i * Self::REGISTER_WIDTH) as *const __m256i);
                 // _mm256_store_si256(acc[color].as_mut_ptr().add(i) as *mut __m256i, *(MODEL.features_bias.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i));
             }
         }
@@ -97,7 +97,7 @@ impl<const U: usize> Accumulator<Feature, U> {
                 let idx =  *a + (i*Self::REGISTER_WIDTH);
                 let reg_idx = (color as usize * num_chunks) + i;
 
-                let weights = *(MODEL.feature_weights.as_ptr().add(idx) as *const __m256i);
+                let weights = *(PARAMS.input_weight.as_ptr().add(idx) as *const __m256i);
                 // y = Ax + b (where A is the feature, x is the weight, and b is bias)
                 *regs.as_mut_ptr().add(reg_idx) = _mm256_add_epi16(*(regs.as_ptr().add(reg_idx)), weights);
             }
@@ -132,7 +132,7 @@ impl<const U: usize> Accumulator<Feature, U> {
                 let model_idx = **f_idx + (i * Self::REGISTER_WIDTH);
                 let regs_idx = (*color as usize * num_chunks) + i;
                 
-                let weights = *(MODEL.feature_weights.as_ptr().add(model_idx) as *const __m256i);
+                let weights = *(PARAMS.input_weight.as_ptr().add(model_idx) as *const __m256i);
                 *regs.as_mut_ptr().add(regs_idx) = _mm256_sub_epi16(*(regs.as_ptr().add(regs_idx)), weights);
             }
         }
@@ -143,7 +143,7 @@ impl<const U: usize> Accumulator<Feature, U> {
                 let model_idx = **f_idx+ (i * Self::REGISTER_WIDTH);
                 let regs_idx = (*color as usize * num_chunks) + i;
 
-                let weights = *(MODEL.feature_weights.as_ptr().add(model_idx) as *const __m256i);
+                let weights = *(PARAMS.input_weight.as_ptr().add(model_idx) as *const __m256i);
                 *regs.as_mut_ptr().add(regs_idx) = _mm256_add_epi16(*(regs.as_ptr().add(regs_idx)), weights);
             }
         }

@@ -1,7 +1,13 @@
 // The purpose of the ClippedReLu is to introduce non-linearity to the network.
 
 use constants::customKA0::*;
+use feature_idx::FeatureIdx;
 use network::NNUEParams;
+
+// pub(crate) const FEATURES: usize = 768;
+pub(crate) const HIDDEN: usize = 1024;
+
+use crate::{board::piece::Piece, squares::Square};
 
 pub mod quantmoid;
 pub(crate) mod calc;
@@ -29,57 +35,26 @@ pub(crate) static PARAMS: NNUEParams<{INPUT * L1_SIZE}, L1_SIZE, {L1_SIZE*2}, i1
     std::ptr::read_unaligned(bytes.as_ptr() as *const NNUEParams<{INPUT*L1_SIZE}, {L1_SIZE}, {L1_SIZE * 2}, i16>)
 };
 
+/// NNUE model is initialized from binary values
+// pub(crate) static MODEL: NNUEParamz = unsafe { std::mem::transmute(*include_bytes!("../../bin/net.bin")) };
+
+pub(crate) fn halfka_idx(piece: Piece, sq: Square) -> FeatureIdx {
+    // const COLOR_STRIDE: usize = 64 * 6; // number_of_squares * number of pieces per side
+    const PIECE_STRIDE: usize = 64;
+    let p = (piece as usize) % 6;
+    let c = piece.color() as usize;
+
+    let sqfv =sq.flipv() as usize;
+
+    let white_idx = p * PIECE_STRIDE + sqfv;
+    let black_idx = p * PIECE_STRIDE + sq as usize;
+
+    let idx = (1 - c) * white_idx + c * black_idx; // Choose based on the color
+    FeatureIdx::from(idx * HIDDEN)
+}
+
 
 pub(crate) fn checkings() {
-    // let linear = LinearLayer {
-    //     weight: [[10, 20, 304, 100, 32, 43, 99, 22, 243, 4354, 3786, 452, 4956, 289, 100, 32, 43, 99, 22, 243,],
-    //              [10, 20, 304, 100, 32, 43, 99, 22, 243, 4354, 3786, 452, 4956, 289, 100, 32, 43, 99, 22, 243,],
-    //              [10, 20, 304, 100, 32, 43, 99, 22, 243, 4354, 3786, 452, 4956, 289, 100, 32, 43, 99, 22, 243,],
-    //              [10, 20, 304, 100, 32, 43, 99, 22, 243, 4354, 3786, 452, 4956, 289, 100, 32, 43, 99, 22, 243,],
-    //              [10, 20, 304, 100, 32, 43, 99, 22, 243, 4354, 3786, 452, 4956, 289, 100, 32, 43, 99, 22, 243,],
-    //              [10, 20, 304, 100, 32, 43, 99, 22, 243, 4354, 3786, 452, 4956, 289, 100, 32, 43, 99, 22, 243,],
-    //              [10, 20, 304, 100, 32, 43, 99, 22, 243, 4354, 3786, 452, 4956, 289, 100, 32, 43, 99, 22, 243,],
-    //              [10, 20, 304, 100, 32, 43, 99, 22, 243, 4354, 3786, 452, 4956, 289, 100, 32, 43, 99, 22, 243,],
-    //              [10, 20, 304, 100, 32, 43, 99, 22, 243, 4354, 3786, 452, 4956, 289, 100, 32, 43, 99, 22, 243,],
-    //              [10, 20, 304, 100, 32, 43, 99, 22, 243, 4354, 3786, 452, 4956, 289, 100, 32, 43, 99, 22, 243,],
-    //              ],
-    //     bias: [4, 32, 12, 1, 3, 4, 5, 6, 8, 90, 3, 5, 32, 5, 6, 5, 6, 8, 89, 90],
-    //     num_inputs: 20,
-    //     num_outputs: 20,
-    // };
-
-    // let mut acc = Accumulator::default();
-    // Accumulator::refresh_accumulator(linear, &mut acc,
-    //      &vec![FeatureIdx::new(3), FeatureIdx::new(4), FeatureIdx::new(5), FeatureIdx::new(18)],
-    //      Color::White);
-
-    use crate::board::piece::Piece::*;
-    
-    // let network = &PARAMS;
-    // let b = Board::parse_fen(TRICKY_POSITION).unwrap();
-    // println!("BEFORE IT IS ");
-    // let nn = NNUEState::<Feature, 1024>::from(b);
-
-    // println!("AFTER IT WAS ");
-
-    // println!("the nn is {:#?}", nn);
-
-    // println!("::::::::::::::::::::::::: {:?}", nn);
-    // println!("((((((((((((((((((moddd:::::::::::::::::::::: {:?}
-    //     {}, {}, {}, {}, {}", PARAMS.input_weight[2], 
-    // PARAMS.input_weight[70000],
-    // PARAMS.input_weight[76],
-    // PARAMS.input_weight[28],
-    // PARAMS.input_weight[201],
-    // PARAMS.input_weight[99],);
-
-    // println!("linear layer xxx {:?}", network.input_weight.len());
-    // // let xxo = halfka_index(Piece::BK, Square::E8, Square::A5);
-    // let xxo = nnue_index(WB    , Square::A4);
-
-    // println!(">>>> xxxx w={:#?} \t b={}", xxo.0, xxo.1);
-
-    // println!("{}", 63 + (64 * (5 + 6 * 1)));
-    // let params = &
+    // 
 }
 
