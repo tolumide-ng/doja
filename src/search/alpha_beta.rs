@@ -296,21 +296,23 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
     /// Returns the score, only if the score is greater than beta.
     /// This means that even if we "skip" our play, and allow the opponent to play (instead of us),
     /// They still won't be better off than they were before we skipped our play
-    fn make_null_move(&mut self, beta: i32, depth: u8, board: &Position, tb: &TableBase) -> Option<i32> {
+    fn make_null_move(&mut self, beta: i32, depth: u8, mut nmfp_board: &mut Position, tb: &TableBase) -> Option<i32> {
             // nmfp: null-move forward prunning (board)
-            let mut nmfp_board = Position::with(**board);
             self.ply += 1;
             self.repetition_index+=1;
             self.repetition_table[self.repetition_index] = nmfp_board.hash_key;
 
             // update the zobrist hash accordingly, since this mutating actions do not direcly update the zobrist hash
+            let old_hashkey = nmfp_board.hash_key;
+            let old_enpassant = nmfp_board.enpassant;
+
             if let Some(enpass_sq) = nmfp_board.enpassant {
                 // we know that we're going to remove the enpass if it's available (see 4 lines below), so we remove it from the hashkey if it exists here
                 nmfp_board.set_zobrist(nmfp_board.hash_key ^ ZOBRIST.enpassant_keys[enpass_sq]);
             }
-            nmfp_board.set_turn(!board.turn);
+            nmfp_board.set_turn(!nmfp_board.turn);
             nmfp_board.set_enpassant(None);
-            nmfp_board.set_zobrist(nmfp_board.hash_key ^ ZOBRIST.side_key);
+            nmfp_board.set_zobrist(nmfp_board.hash_key ^ ZOBRIST.side_key); // side about to move
             nmfp_board.nnue_push();
             
             let score = -self.negamax::<false>(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut nmfp_board, tb);
@@ -318,6 +320,11 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             self.ply -= 1;
             self.repetition_index-=1;
             nmfp_board.nnue_pop();
+            
+            // recent change for undo-move in order to avoid cloning the board
+            nmfp_board.set_turn(!nmfp_board.turn);
+            nmfp_board.set_enpassant(old_enpassant);
+            nmfp_board.set_zobrist(old_hashkey);
             // return 0 if time is up
             // if self.controller.as_ref().lock().unwrap().stopped() { return None}
 
@@ -394,7 +401,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         // added 1 to the depth_reduction factor to be sure, there is atleast one more depth that would be checked
         
         if null_move_forward_pruning_conditions {
-            if let Some(beta) = self.make_null_move(beta, depth, board, tb) {
+            if let Some(beta) = self.make_null_move(beta, depth, &mut board, tb) {
                 return beta;
             };
         }
