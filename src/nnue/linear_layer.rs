@@ -1,6 +1,6 @@
 use std::arch::x86_64::{__m128i, __m256i, _mm256_add_epi32, _mm256_castsi256_si128, _mm256_cmpgt_epi8, _mm256_extracti128_si256, _mm256_hadd_epi32, _mm256_load_si256, _mm256_madd_epi16, _mm256_maddubs_epi16, _mm256_movemask_epi8, _mm256_set1_epi16, _mm256_set1_epi32, _mm256_setzero_si256, _mm256_srai_epi32, _mm256_store_si256, _mm256_unpackhi_epi16, _mm256_unpacklo_epi16, _mm_add_epi32, _mm_load_si128, _mm_srai_epi32, _mm_store_si128};
 
-use crate::{color::Color, nnue_::constants::halfKA::LOG2_WEIGHT_SCALE};
+use crate::{color::Color, nnue::constants::halfKA::LOG2_WEIGHT_SCALE};
 
 use super::align64::Align64;
 

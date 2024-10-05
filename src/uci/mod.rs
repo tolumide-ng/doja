@@ -2,7 +2,7 @@ use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread}
 
 use thiserror::Error;
 
-use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, tt::table::TTable};
+use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, syzygy::probe::TableBase, tt::table::TTable};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -39,6 +39,7 @@ impl UCI {
 
     pub(crate) fn process_input<W: Write>(&mut self, input: String, mut writer: W) -> std::io::Result<bool> {
         let mut input = input.trim().split_whitespace();
+        let tb = TableBase::default();
         
         match input.next() {
             Some("position") => {
@@ -80,7 +81,7 @@ impl UCI {
                                 let result = thread::spawn(move || {
                             let mut negamax = (0..1).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
                             let depth = controller.lock().unwrap().depth();
-                            negamax[0].iterative_deepening(depth, &mut board);
+                            negamax[0].iterative_deepening(depth, &mut board, &tb);
                             // println!("done done >>>>");
                             // write!(writer, "{}", board.to_string()).unwrap();
                             board

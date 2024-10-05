@@ -1,7 +1,8 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
-use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, tt::{flag::HashFlag, tpt::TPT}};
-use super::time_control::TimeControl;
+use crate::{bit_move::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{params::MAX_DEPTH, ALPHA, BETA, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, NODES_2047, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, syzygy::probe::TableBase, tt::{flag::HashFlag, tpt::TPT}};
+use super::{search_entry::SearchE, time_control::TimeControl};
+use crate::constants::INFINITY;
 
 
 /// Sometimes you can figure out what kind of node you are dealing with early on. If the first move you search fails high (returns a score greater than or equal to beta).
@@ -19,9 +20,13 @@ pub struct NegaMax<'a, T: TimeControl> {
     tt: TPT<'a>,
     repetition_index: usize,
     repetition_table: [u64; 500],
+
+    // / Search Stack
+    ss: [SearchE; MAX_DEPTH],
     
     // MOVE ORDERING HEURISTICS
     killer_moves: [[u32; 64]; 2],
+    /// https://www.chessprogramming.org/History_Heuristic
     history_moves: [[u32; TOTAL_SQUARES]; TOTAL_PIECES], //[[target_sq; 64]; moving_piece];
     /// The Principal variation (PV) is a sequence of moves that programs consider best and therefore expect to be played. All the nodes included by the PV are PV-nodes
     /// [Principal Variation](https://www.chessprogramming.org/Principal_Variation)
@@ -43,33 +48,33 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             repetition_index: 0,
             repetition_table: [0; 500],
             name,
+            ss: [SearchE::default(); MAX_DEPTH],
         };
 
         x
     }
 
-    pub(crate) fn iterative_deepening(&mut self, limit: u8, board: &mut Position) {
-        let mut alpha = ALPHA;
-        let mut beta = BETA;
+    pub(crate) fn iterative_deepening(&mut self, limit: u8, board: &mut Position, tb: &TableBase) {
+        let mut alpha = -INFINITY;
+        let mut beta = INFINITY;
 
 
         for depth in 1..=(limit) {
             let start_time = Instant::now();
             // return 0 if time is up
-            if self.controller.as_ref().lock().unwrap().stopped() { break; }
+            // if self.controller.as_ref().lock().unwrap().stopped() { break; }
 
             self.follow_pv = true;
             // println!("!!!!<<<before>>");
-            let score = self.negamax(alpha, beta, depth, board);
-            // println!("READY>>");
+            let score = self.negamax::<true>(alpha, beta, depth, board, tb);
             if (score <= alpha) || (score >= beta) {
-                // println!("potentially bad move :::: {:#?}", score);
-                alpha = ALPHA; // We fell outside the window, so try again with a
-                beta = BETA; //  full-width window (and the same depth).
+                // Aspiration window
+                alpha = -INFINITY; // We fell outside the window, so try again with a
+                beta = INFINITY; //  full-width window (and the same depth).
                 continue;
             }
             
-            alpha = score - VAL_WINDOW;
+            alpha = score - VAL_WINDOW; // set up the window for the next iteration
             beta = score + VAL_WINDOW;
 
             if depth == limit {
@@ -99,9 +104,9 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
     }
     
     // This method is currently VERY SLOW once the depth starts approaching 8, please work to improve it
-    pub(crate) fn run(controller: Arc<Mutex<T>>, tt: TPT<'a>, depth: u8, board: &mut Position, name: usize) {
+    pub(crate) fn run(controller: Arc<Mutex<T>>, tt: TPT<'a>, depth: u8, board: &mut Position, name: usize, tb: &TableBase) {
         let mut negamax = Self::new(controller, tt, name);
-        negamax.iterative_deepening(depth, board);
+        negamax.iterative_deepening(depth, board, tb);
     }
 
     
@@ -146,7 +151,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                  }
             }
             
-            // score history move
+            // score history move (for non-capturing moves)
             return self.history_moves[piece][mv.get_target()];
 
         }
@@ -170,50 +175,108 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
   /// https://www.chessprogramming.org/Quiescence_Search
     fn quiescence(&mut self, mut alpha: i32, beta: i32, mut board: &mut Position) -> i32 {
         // this action will be performed every 2048 nodes
-        if (self.nodes & NODES_2047) == 0 { self.controller.as_ref().lock().unwrap().communicate(); }
-
+        // if (self.nodes & NODES_2047) == 0 { self.controller.as_ref().lock().unwrap().communicate(); }
         self.nodes+=1;
 
-        if self.ply > MAX_PLY - 1 { 
-            // let evaluation = Evaluation::evaluate(board); 
-            // println!("nevaluation = {nevaluation}|||||||||||||| evaluation = {evaluation}");
-            // return evaluation;
+        if self.ply > MAX_PLY - 1 {
             return board.evaluate();
         }
-
-
-        let evaluation = board.evaluate();
-        // let evaluation = Evaluation::evaluate(board);
-        // println!("nevaluation = {nevaluation}|||||||||||||| evaluation = {evaluation}");
-        if evaluation >= beta { return beta; } // node (move) fails high
-        if evaluation > alpha { alpha = evaluation; } // found a better score
-
-        let sorted_moves = self.sort_moves(board, board.gen_movement().into_iter());
-        for mv in sorted_moves {
-            if mv.get_capture() {
-                // println!("quiescenece");
-                // if mv.to_string() == String::from("e2a6x") {
-                //     println!("::::::::::::COOOL:::::::::::::::::::::");
-                // }
-                if board.make_move_nnue(mv, MoveScope::CapturesOnly) {
-                    self.ply += 1;
-                    self.repetition_index += 1;
-                    self.repetition_table[self.repetition_index] = board.hash_key;
-                    
-                    let score = -self.quiescence(-beta, -alpha, &mut board);
-                    self.ply -=1;
-                    self.repetition_index-=1;
-                    board.undo_move(true);
         
-                    // return 0 if time is up
-                    if self.controller.as_ref().lock().unwrap().stopped() { return 0}
-                    
-                    if score >= beta { return beta }
-                    if score > alpha { alpha = score; }
-                }
+        if self.ply > 0 && (self.is_repetition(board) || board.fifty.iter().any(|&p| p >= 50)) {
+            return 0 // draw
+        }
 
+        let king_square = u64::from(board[Piece::king(board.turn)].trailing_zeros());
+        let king_in_check = board.is_square_attacked(king_square, !board.turn);
+
+        let mut best_move: Option<Move> = None;
+
+        let tt_data = self.tt.probe(board.hash_key);
+        if let Some(data) =  tt_data {
+            let score = data.score(self.ply);
+
+            match data.flag {
+                HashFlag::Exact => return score,
+                HashFlag::LowerBound if score >= beta => return beta,
+                HashFlag::UpperBound if score <= alpha => return alpha, // Based on the transposition table, this path doesn't get any better
+                _ => best_move = data.mv,
             }
         }
+
+
+        let stand_pat = board.evaluate();
+        let eval = if !king_in_check {
+            if let Some(data) = tt_data {
+                let score = data.score(self.ply);
+                self.ss[self.ply].eval = if data.eval() == -INFINITY {stand_pat} else {data.eval()};
+
+                match data.flag {
+                    HashFlag::Exact => return score,
+                    HashFlag::LowerBound if score > self.ss[self.ply].eval => return beta,
+                    HashFlag::UpperBound if score < self.ss[self.ply].eval => return alpha, 
+                    _ => self.ss[self.ply].eval,
+                }
+            } else {
+                self.ss[self.ply].eval = stand_pat;
+                stand_pat
+            }
+        } else {
+            self.ss[self.ply].eval = -INFINITY;
+            -INFINITY
+        };
+
+        // standing pat
+        let prev_alpha = alpha;
+        alpha = std::cmp::max(alpha, eval);
+        if eval >= beta { return beta; }
+
+
+        if stand_pat >= beta { return beta; } // node (move) fails high
+        if stand_pat > alpha { alpha = stand_pat; } // found a better score
+
+        let mut allow_quiet_moves = false;
+
+        // If the king is in check, allow all possible searches to get him out of there
+        if king_in_check { allow_quiet_moves = true; }
+
+        let mut best_score = stand_pat;
+        let mut moves_made = 0;
+
+        let sorted_moves = self.sort_moves(board, board.gen_movement().into_iter());
+        // until every capture has been examined
+        for mv in sorted_moves {
+            // if self.controller.as_ref().lock().unwrap().stopped() { return 0}
+
+            if !allow_quiet_moves && mv.get_capture() == false { continue; }
+
+            if board.make_move_nnue(mv, MoveScope::AllMoves) {
+                moves_made += 1;
+                self.ply += 1;
+                self.repetition_index += 1;
+                self.repetition_table[self.repetition_index] = board.hash_key;
+                
+                let score = -self.quiescence(-beta, -alpha, &mut board);
+                
+                self.ply -=1;
+                self.repetition_index-=1;
+                board.undo_move(true);
+
+                if score > best_score {
+                    best_score = score;
+                    if score > alpha { best_move = Some(mv);  alpha = score; }
+                    if score >= beta { alpha = beta; break; }
+                }        
+            }
+        }
+
+        // Copy of Viridthias' approach
+        if king_in_check && moves_made == 0 { return -5000 }
+        
+        // return 0 if time is up
+        // if !self.controller.as_ref().lock().unwrap().stopped() { 
+        //     let flag = if best_score >= beta {HashFlag::LowerBound} else if best_score > prev_alpha {HashFlag::Exact} else {HashFlag::UpperBound};
+        //     self.tt.record(board.hash_key, 0, alpha, eval, self.ply, flag, 0, best_move);
+        // }
 
         return alpha
     }
@@ -227,69 +290,13 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         return false;
     }
 
-
-    
-    /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
-    fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, mut board: &mut Position) -> i32 {
-        self.pv_length[self.ply] = self.ply;
-
-        
-        let mut hash_flag = HashFlag::UpperBound; // alpha
-        if self.ply > 0 && self.is_repetition(board) || board.fifty.iter().any(|&p| p >= 50) {
-            return 0 // draw
-        }
-
-        let pv_node = (beta - alpha) > 1;
-        // if we had cached the score for this move before, we return it, and confirm that the current node is not a PV node(principal variation)
-        if (self.ply > 0) && pv_node == false {
-            // read hash entry if we're not in a root ply and hash entry is available, current node is not a principal variation node
-            if let Some(score) =  self.tt.probe(board.hash_key, depth, alpha, beta, self.ply) {
-                return score
-            }
-        }
-
-        
-        // this action will be performed every 2048 nodes
-        if (self.nodes & NODES_2047) == 0 {
-            self.controller.as_ref().lock().unwrap().communicate();
-        }
-        // println!("ply is {}", self.ply);
-        if depth == 0 {
-            // self.tt.record(board.hash_key, depth, score, self.ply, HashFlag::Exact);
-            return self.quiescence(alpha, beta, board);
-        }
-
-        
-        if self.ply > MAX_PLY -1 {
-            let evaluation = board.evaluate();
-            // println!("::::::::::::::::::: {}", e);
-            // println!("^^^^^^^^^^^ {}", non_nnue);
-            // let evaluation = Evaluation::evaluate(board);
-            // let nevaluation = board.evaluate();
-            // println!("nevaluation = {nevaluation}|||||||||||||| evaluation = {evaluation}");
-            return evaluation;
-        }
-
-        self.nodes+=1;
-        // println!("::::::: {depth}");
-        
-        let king_square = u64::from(board[Piece::king(board.turn)].trailing_zeros());
-        // is king in check
-        let king_in_check = board.is_square_attacked(king_square, !board.turn);
-        let depth = if king_in_check {depth +1} else {depth};
-        let mut legal_moves = 0;
-        
-        let static_eval = board.evaluate();
-        
-        // Null-Move Forward Pruning
-        // Null-move forward pruning is a step you perform prior to searching any of the moves.  You ask the question, "If I do nothing here, can the opponent do anything?"
-        // In order to test this, we allow the opponent play this turn(even though its ours), if they play and we're not in harms way (greater than beat), then we're good.
-        // -- "Null-move forward pruning is not used, at least in endgames.  If you do try to use it in endgames, very bad things will happen very often."
-        let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !king_in_check && self.ply> 0;
-        // added 1 to the depth_reduction factor to be sure, there is atleast one more depth that would be checked
-        
-        
-        if null_move_forward_pruning_conditions {
+    /// nmfp: Null Move forward prunning
+    /// https://web.archive.org/web/20040427014629/http://brucemo.com/compchess/programming/nullmove.htm
+    /// "If I do nothing here, can the opponent do anything?"
+    /// Returns the score, only if the score is greater than beta.
+    /// This means that even if we "skip" our play, and allow the opponent to play (instead of us),
+    /// They still won't be better off than they were before we skipped our play
+    fn make_null_move(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &Position, tb: &TableBase) -> Option<i32> {
             // nmfp: null-move forward prunning (board)
             let mut nmfp_board = Position::with((**board).clone());
             self.ply += 1;
@@ -304,44 +311,114 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             nmfp_board.set_turn(!board.turn);
             nmfp_board.set_enpassant(None);
             nmfp_board.set_zobrist(nmfp_board.hash_key ^ ZOBRIST.side_key);
-            let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut nmfp_board);
-
-
+            nmfp_board.nnue_push();
+            
+            let score = -self.negamax::<false>(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut nmfp_board, tb);
 
             self.ply -= 1;
             self.repetition_index-=1;
-
+            nmfp_board.nnue_pop();
             // return 0 if time is up
-            if self.controller.as_ref().lock().unwrap().stopped() { return 0}
+            // if self.controller.as_ref().lock().unwrap().stopped() { return None}
 
             if score >= beta {
-                return beta
+                return Some(beta)
             }
+            
+            return None;
+    }
+
+
+    /// Detect Extension conditions(Situations that warrant a deeper search): check, captures, promotion, best move whose evaluation is greater than every other move 
+    fn search_extension() {}
+
+
+    
+    /// https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework
+    fn negamax<const ROOT: bool>(&mut self, mut alpha: i32, beta: i32, depth: u8, mut board: &mut Position, tb: &TableBase) -> i32 {
+        self.pv_length[self.ply] = self.ply;
+        
+        let mut hash_flag = HashFlag::UpperBound; // alpha
+        if self.ply > 0 && (self.is_repetition(board) || board.fifty.iter().any(|&p| p >= 50)) {
+            return 0 // draw
         }
 
+        let mut singularity_search = false;
+        let active_singular_search = self.ss[self.ply].skipped.is_some();
 
-
-        
-        // [Strelka's Razoring](https://www.chessprogramming.org/Razoring)
-        if !pv_node && !king_in_check && depth <= 3 {
-            let mut value = static_eval + 125;
-
-            if value < beta {
-                if depth == 1 {
-                    let new_value = self.quiescence(alpha, beta, board);
-                    return i32::max(value, new_value);
-                }
-                value += 175;
-                if value < beta && depth <= 32 {
-                    let new_value = self.quiescence(alpha, beta, board);
-                    if new_value < beta {
-                        return i32::max(new_value, value);
+        let pv_node = (beta - alpha) > 1;
+        // if we had cached the score for this move before, we return it, and confirm that the current node is not a PV node(principal variation)
+        if (self.ply > 0) && pv_node == false {
+            // read hash entry if we're not in a root ply and hash entry is available, current node is not a principal variation node
+            if let Some(entry) =  self.tt.probe(board.hash_key) {
+                if !singularity_search && entry.depth >= depth {
+                    let entry_value = entry.score(self.ply);
+                    match entry.flag {
+                        HashFlag::Exact => return entry_value,
+                        HashFlag::LowerBound if entry_value >= beta => return beta,
+                        HashFlag::UpperBound if entry_value <= alpha =>  return alpha,
+                        _ => {}
                     }
                 }
             }
         }
 
+        // if !ROOT && !active_singular_search {
+        //     if let Some(wdl) = tb.probe_wdl(board) {
+        //         let tb_value = wdl.eval(self.ply);
+        //         let tb_flag = HashFlag::from(wdl);
+
+        //         if tb_flag == HashFlag::Exact || (tb_flag == HashFlag::LowerBound && tb_value >= beta) || (tb_flag == HashFlag::UpperBound && tb_value <= alpha) {
+        //             self.tt.record(board.hash_key, depth, tb_value, -INFINITY, self.ply, tb_flag, 0, None);
+        //         }
+
+        //         return tb_value;
+        //     }
+
+        //     // still need some extra computations
+        // }
+
         
+        // this action will be performed every 2048 nodes
+        // if (self.nodes & NODES_2047) == 0 {
+        //     self.controller.as_ref().lock().unwrap().communicate();
+        // }
+        // println!("ply is {}", self.ply);
+        if depth == 0 || self.ply >= MAX_DEPTH {
+            return self.quiescence(alpha, beta, board);
+        }
+
+        
+        if self.ply > MAX_PLY -1 {
+            let evaluation = board.evaluate();
+            // let evaluation = Evaluation::evaluate(board);
+            return evaluation;
+        }
+
+        self.nodes+=1;
+        // println!("::::::: {depth}");
+        
+        let king_square = u64::from(board[Piece::king(board.turn)].trailing_zeros());
+        // is king in check
+        let king_in_check = board.is_square_attacked(king_square, !board.turn);
+        let depth = if king_in_check {depth +1} else {depth};
+        let mut legal_moves = 0;
+        
+        // let static_eval = board.evaluate();
+        
+        // Null-Move Forward Pruning
+        // Null-move forward pruning is a step you perform prior to searching any of the moves.  You ask the question, "If I do nothing here, can the opponent do anything?"
+        // In order to test this, we allow the opponent play this turn(even though its ours), if they play and we're not in harms way (greater than beat), then we're good.
+        // -- "Null-move forward pruning is not used, at least in endgames.  If you do try to use it in endgames, very bad things will happen very often."
+        let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !king_in_check && self.ply> 0;
+        // added 1 to the depth_reduction factor to be sure, there is atleast one more depth that would be checked
+        
+        if null_move_forward_pruning_conditions {
+            if let Some(beta) = self.make_null_move(alpha, beta, depth, board, tb) {
+                return beta;
+            };
+        }
+
         
         let moves = board.gen_movement().into_iter();
         if self.follow_pv {
@@ -355,9 +432,6 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         let mut moves_searched = 0;
         
         // loop through hte moves
-        // for mv in &sorted_moves {
-        //     println!("======================>>>>>>> src:::: {} target---{} castling****{}", mv.get_src(), mv.get_target(), mv.get_castling());
-        // }
         for mv in sorted_moves {
             let legal_move = board.make_move_nnue(mv, MoveScope::AllMoves);
             
@@ -376,7 +450,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             let score = match moves_searched {
                 0 => {
                     // full depth search
-                    -self.negamax(-beta, -alpha, depth-1, &mut board)
+                    -self.negamax::<false>(-beta, -alpha, depth-1, &mut board, tb)
                 },
                 _ => {
                     // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
@@ -384,15 +458,15 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                     let ok_to_reduce = !king_in_check && mv.get_promotion().is_none() && !mv.get_capture();
 
                     let mut value =  if (moves_searched >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && ok_to_reduce {
-                        -self.negamax(-alpha-1, -alpha, depth-2, &mut board)
+                        -self.negamax::<false>(-alpha-1, -alpha, depth-2, &mut board, tb)
                     } else {
                         alpha +1
                     };
 
                     if value > alpha {
-                        value = -self.negamax(-alpha-1, -alpha, depth-1, &mut board);
+                        value = -self.negamax::<false>(-alpha-1, -alpha, depth-1, &mut board, tb);
                         if (value > alpha) && (value < beta) {
-                            value = -self.negamax(-beta, -alpha, depth-1, &mut board);
+                            value = -self.negamax::<false>(-beta, -alpha, depth-1, &mut board, tb);
                         }
                     }
                     value
@@ -407,17 +481,13 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             self.repetition_index-=1;
             moves_searched += 1;
             // return 0 if time is up
-            if self.controller.as_ref().lock().unwrap().stopped() { return 0}
+            // if self.controller.as_ref().lock().unwrap().stopped() { return 0}
 
             
             
             // fail-hard beta cutoff
             if score >= beta {
-                // if mv.to_string() == String::from("e2a6x") {
-                //     println!("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< score={score:10} alpha={alpha:10}, and beta={beta:10} >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-                // }
-                self.tt.record(board.hash_key, depth, beta, self.ply, HashFlag::LowerBound, 0, Some(mv));
-                // println!("ply @3 is {}", self.ply);
+                self.tt.record(board.hash_key, depth, beta, self.ss[self.ply].eval, self.ply, HashFlag::LowerBound, 0, Some(mv));
                 if !mv.get_capture() { // quiet move (non-capturing quiet move that beats the opponent)
                     self.killer_moves[1][self.ply] = self.killer_moves[0][self.ply];
                     self.killer_moves[0][self.ply] = (*mv).into();
@@ -428,34 +498,24 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             
             // best score so far
             if score > alpha {
-                // if mv.to_string() == String::from("e2a6x") {
-                //     println!("*******************************************************>>>>>> score={score:10} alpha={alpha:10}, and beta={beta:10}");
-                // }
-
-
-                // if mv.to_string() == String::from("d5e6x") {
-                //     println!("-------------------------------------||||||||||||||||||| score = {:10},alpha={alpha:10}, and beta={beta:10}", score);
-                // }
                 hash_flag = HashFlag::Exact;
                 
                 if !mv.get_capture() {
+                    // self.history_moves[board.piece_at(mv.get_src()).unwrap()][mv.get_target() as usize] += depth as u32;
                     // store history moves
-                    self.history_moves[board.piece_at(mv.get_src()).unwrap()][mv.get_target() as usize] += depth as u32;
-                    // *self.history_moves[mv.get_piece()].get_mut(mv.get_target() as usize).unwrap() += depth as u32;
+                    unsafe {
+                        *((*(self.history_moves.as_mut_ptr().add(board.piece_at(mv.get_src()).unwrap() as usize))).as_mut_ptr().add(mv.get_target() as usize)) += depth as u32; 
+                    }
+                    // *self.history_moves[board.piece_at(mv.get_src())].get_mut(mv.get_target() as usize).unwrap() += depth as u32;
                 }
                 alpha = score; // PV move (position)
 
-                // println!("ply @2 is {}", self.ply);
+
                 // write PV move
                 // Traingular PV-Table
                 self.pv_table[self.ply][self.ply] =  mv;
 
-                // if mv.to_string() == String::from("e2a6x") {
-                //     println!("::::::::::::COOOL::::::********:::::::::::::::");
-                // }
-
-                
-                for j in (self.ply+1)..self.pv_length[self.ply+1] {
+               for j in (self.ply+1)..self.pv_length[self.ply+1] {
                     // copy move from deeper ply into current ply's line
                     self.pv_table[self.ply][j] = self.pv_table[self.ply+1][j];
                 }
@@ -475,15 +535,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             return 0 // stalemate | draw
         }
 
-        self.tt.record(board.hash_key, depth, alpha, self.ply, hash_flag, 0, None);
+        self.tt.record(board.hash_key, depth, alpha, self.ss[self.ply].eval, self.ply, hash_flag, 0, None);
         return alpha
     }
-
-
-
-
-
-
-
-
 }

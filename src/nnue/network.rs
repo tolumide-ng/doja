@@ -4,12 +4,15 @@ use std::{ptr, usize};
 
 
 use crate::board::{piece::Piece, state::board::Board};
-use crate::color::Color::{self, *};
-use crate::nnue::net::{halfka_idx, MODEL};
+use crate::color::Color;
+// use crate::color::Color::*;
+use crate::nnue::PARAMS;
+// use crate::nnue::net::{halfka_idx};
 use crate::squares::Square;
 
 use super::accumulator::{QA, QAB};
 use super::accumulator_ptr::AccumulatorPtr;
+use super::halfka_idx;
 use super::{accumulator::Accumulator, accumulator::Feature, align64::Align64};
 
 pub(crate) const MAX_DEPTH: usize = 127;
@@ -99,6 +102,14 @@ impl<const U: usize> NNUEState<Feature, U> {
         self.current_acc -= 1;
     }
 
+    /// Increases the curr_acc index, and copies the previous accumualator to the new_idx
+    pub(crate) fn push(&mut self) {
+        unsafe {
+            *self.accumulators.add(self.current_acc + 1) = *self.accumulators.add(self.current_acc);
+            self.current_acc += 1;
+        }
+    }
+
     pub(crate) fn update(&mut self, removed: Vec<(Piece, Square)>, added: Vec<(Piece, Square)>) {
         unsafe {
             let acc = *(self.accumulators.add(self.current_acc));
@@ -114,7 +125,7 @@ impl<const U: usize> NNUEState<Feature, U> {
     pub(crate) fn refresh<T>(&mut self, board: &Board) {
         unsafe {
             let acc = Accumulator::refresh(board);
-            self.current_acc += 1;
+            self.current_acc = 0;
             *self.accumulators.add(self.current_acc) = acc;
         }
     } 
@@ -134,7 +145,7 @@ impl<const U: usize> NNUEState<Feature, U> {
             for i in 0..num_chunks {
                 let data = _mm256_load_si256(inputs[color].as_ptr().add(i * INPUT_REGISTER_WIDTH) as *const __m256i);
                 let w_idx = (color * U) + (i * INPUT_REGISTER_WIDTH);
-                let weights = _mm256_load_si256(MODEL.output_weights.as_ptr().add(w_idx) as *const __m256i);
+                let weights = _mm256_load_si256(PARAMS.output_weights.as_ptr().add(w_idx) as *const __m256i);
 
                 let datalo = _mm256_cvtepi16_epi32(_mm256_castsi256_si128(data));
                 let multiplier_lo = _mm256_cvtepi16_epi32(_mm256_castsi256_si128(weights));
@@ -152,27 +163,17 @@ impl<const U: usize> NNUEState<Feature, U> {
                 output += r_lo.iter().sum::<i32>();
             }
         }
-
         output
-
-    }
-
-    fn material_scale() -> i32 {
-        0
     }
 
     pub(crate) fn evaluate(&self, stm: Color) -> i32 {
         unsafe {
-            // let acc = &self.accumulators[self.current_acc];
             let acc = self.accumulators.add(self.current_acc);
-            // let (us, them) = if stm == Color::White {(&acc.white, &acc.black)} else {(&acc.black, &acc.white)};
-            // let curr_input = if stm == Color::White {[&acc.white, &acc.black]} else {[&acc.black, &acc.white]};
             
-            // let clipped_acc = acc.crelu16(stm); // [i8s; 32]
             let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
             let output = Self::propagate(clipped_acc);
             
-            return (output/QA as i32 + MODEL.output_bias as i32) * SCALE / QAB;
+            return (output/QA as i32 + PARAMS.output_bias as i32) * SCALE / QAB;
         }
     }
 }

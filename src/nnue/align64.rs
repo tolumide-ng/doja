@@ -2,8 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C, align(64))]
-pub(crate) struct Align64<T>(T);
-
+pub(crate) struct Align64<T>(pub(crate) T);
 
 impl<T, const SIZE: usize> Deref for Align64<[T; SIZE]> {
     type Target = [T; SIZE];

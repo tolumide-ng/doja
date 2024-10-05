@@ -1,6 +1,6 @@
 use std::{num::NonZero, sync::{Arc, Mutex}, thread};
 
-use crate::{board::{fen::FEN, position::Position, state::board::Board}, constants::TRICKY_POSITION, search::{alpha_beta::NegaMax, control::Control}, tt::table::TTable};
+use crate::{board::{fen::FEN, position::Position, state::board::Board}, constants::TRICKY_POSITION, search::{alpha_beta::NegaMax, control::Control}, syzygy::probe::TableBase, tt::table::TTable};
 
 
 pub(crate) struct LazySMP;
@@ -22,6 +22,7 @@ impl LazySMP {
         let depth = 10;
         // let mut bb = board.clone();
         let table = TTable::default();
+        let tb = TableBase::default();
     
         let mut negamax_thread = (0..threads).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
         
@@ -30,7 +31,7 @@ impl LazySMP {
             for td in negamax_thread.iter_mut() {
                 let mut bb = board.clone();
                 s.spawn(move || {
-                    td.iterative_deepening(7, &mut bb);
+                    td.iterative_deepening(7, &mut bb, &tb);
                 });
             }
         });

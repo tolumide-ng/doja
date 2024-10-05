@@ -1,3 +1,5 @@
+use crate::syzygy::probe::WDL;
+
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -25,3 +27,12 @@ impl From<u8> for HashFlag {
 }
 
 
+impl From<WDL> for HashFlag {
+    fn from(value: WDL) -> Self {
+        match value {
+            WDL::Win => HashFlag::LowerBound,
+            WDL::Draw => HashFlag::Exact,
+            WDL::Loss => HashFlag::UpperBound,
+        }
+    }
+}
