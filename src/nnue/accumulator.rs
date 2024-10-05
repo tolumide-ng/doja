@@ -13,7 +13,7 @@ use crate::squares::Square;
 
 use super::align64::Align64;
 use super::feature_idx::FeatureIdx;
-use super::{halfka_idx, PARAMS};
+use super::{halfka_idx, L1_SIZE, PARAMS};
 
 
 // A single AVX2 register can fit 16 i16 values, and there are 16AVX2 registers (32 since AVX512) (stockfish docs)
@@ -39,17 +39,22 @@ impl<const U: usize> Default for Accumulator<Feature, U> {
 }
 
 
-// impl<T, const U: usize> From<*mut Accumulator<T, U>> for AccumulatorPtr<T, U> {
-//     fn from(value: *mut Accumulator<T, U>) -> Self {
-//         Self(value)
-//     }
-// }
 
-
-
-
+/// U is the L1 Size (i.e number of first output)
 impl<const U: usize> Accumulator<Feature, U> {
     const REGISTER_WIDTH: usize = 256/16; // 16
+
+    const CHUNK_SIZE: usize = 4;
+
+    const fn get_weight_index_scrambled<const NUM_INPUTS: usize>(i: usize) -> usize {
+        (i / Self::CHUNK_SIZE) % (NUM_INPUTS / Self::CHUNK_SIZE) * U * Self::CHUNK_SIZE + i / NUM_INPUTS * Self::CHUNK_SIZE + i % Self::CHUNK_SIZE
+    }
+
+    // fn load_weights(regs: &mut Vec<Feature>) {
+    //     for i in 0..(U * L1_SIZE) {
+    //         *regs.as_mut_ptr().add(i) = mm256add
+    //     }
+    // }
 
     pub(crate) unsafe fn refresh(board: &Board) -> Self {
         let mut acc = Accumulator::default();
@@ -137,8 +142,7 @@ impl<const U: usize> Accumulator<Feature, U> {
             }
         }
         
-        // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> model_idx>>>> {model_idx}, and weights is {}", MODEL.feature_weights.len());
-        for (color, f_idx) in added_features.into_iter() {
+       for (color, f_idx) in added_features.into_iter() {
             for i in 0..num_chunks {
                 let model_idx = **f_idx+ (i * Self::REGISTER_WIDTH);
                 let regs_idx = (*color as usize * num_chunks) + i;

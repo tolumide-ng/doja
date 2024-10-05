@@ -57,7 +57,7 @@ fn main() {
     let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     // let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
     let threads = 1;
-    let depth = 7;
+    let depth = 10;
     // let mut bb = board.clone();
     let table = TTable::default();
 

@@ -343,15 +343,15 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             return 0 // draw
         }
 
-        let mut singularity_search = false;
-        let active_singular_search = self.ss[self.ply].skipped.is_some();
+        // let mut singularity_search = false;
+        // let active_singular_search = self.ss[self.ply].skipped.is_some();
 
         let pv_node = (beta - alpha) > 1;
         // if we had cached the score for this move before, we return it, and confirm that the current node is not a PV node(principal variation)
         if (self.ply > 0) && pv_node == false {
             // read hash entry if we're not in a root ply and hash entry is available, current node is not a principal variation node
             if let Some(entry) =  self.tt.probe(board.hash_key) {
-                if !singularity_search && entry.depth >= depth {
+                if entry.depth >= depth {
                     let entry_value = entry.score(self.ply);
                     match entry.flag {
                         HashFlag::Exact => return entry_value,
@@ -435,9 +435,6 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         for mv in sorted_moves {
             let legal_move = board.make_move_nnue(mv, MoveScope::AllMoves);
             
-        
-
-            // let Some(new_board) = play_moves else {continue};
             if !legal_move { continue; }
             
             self.ply +=1;
@@ -455,16 +452,17 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                 _ => {
                     // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
                     // condition for Late Move Reduction
-                    let ok_to_reduce = !king_in_check && mv.get_promotion().is_none() && !mv.get_capture();
+                    let not_tactical_mv = !king_in_check && mv.get_promotion().is_none() && !mv.get_capture();
+                    
 
-                    let mut value =  if (moves_searched >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && ok_to_reduce {
-                        -self.negamax::<false>(-alpha-1, -alpha, depth-2, &mut board, tb)
+                    let mut value =  if (moves_searched >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && not_tactical_mv {
+                        -self.negamax::<false>(-alpha+1, -alpha, depth-2, &mut board, tb)
                     } else {
-                        alpha +1
+                        alpha +1 // Hack to ensure that full-depth search is done
                     };
 
                     if value > alpha {
-                        value = -self.negamax::<false>(-alpha-1, -alpha, depth-1, &mut board, tb);
+                        value = -self.negamax::<false>(-alpha+1, -alpha, depth-1, &mut board, tb);
                         if (value > alpha) && (value < beta) {
                             value = -self.negamax::<false>(-beta, -alpha, depth-1, &mut board, tb);
                         }
