@@ -6,7 +6,7 @@ mod squares;
 mod zobrist;
 mod color;
 mod search;
-mod nnue_;
+mod nnue;
 mod shift;
 mod board;
 mod command;
@@ -24,16 +24,11 @@ mod syzygy;
 
 
 
-// use std::io::Read;
-// use std::sync::{Arc, Mutex};
-// use std::{sync::mpsc, time::Instant};
-// use std::{ptr, thread};
 
-use std::{clone, num::NonZero, sync::{Arc, Mutex}, thread::{self, Thread}};
+use std::{num::NonZero, sync::{Arc, Mutex}, thread};
 
 use board::{fen::FEN, position::Position, state::board::Board};
 use constants::TRICKY_POSITION;
-use move_scope::MoveScope;
 use search::control::Control;
 use syzygy::probe::TableBase;
 use tt::table::TTable;
@@ -49,40 +44,13 @@ use crate::search::alpha_beta::NegaMax;
 fn main() {
     // let _ = UCI::default().reader();
 
-    // // let board = Board::parse_fen("6k1/5p1p/8/8/8/8/5P1P/6K1 w - - ").unwrap();
-    // // let board = Board::parse_fen("8/8/8/8/8/8/8/8 w - - ").unwrap();
-    
-    // // let board = Board::parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap();
-    // let board = Board::parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ").unwrap();
-    // // let board = Board::parse_fen("r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap();
-    // println!("{}", board.to_string());
-    // println!("the score {}", Evaluation::evaluate(&board));
-
-    // println!("STARTING>>>>>");
-
-    // Perft::start(6);
-
-
-    
-    // println!("{}", board.to_string());
-    // Evaluation::evaluate(&board);
-    // Evaluation::get_game_phase_score(&board);
-
-    // let score = Evaluation::evaluate(&board);
-    // println!("the scoer now ius >>>> {}", score)::::
-    // EvaluationMasks::init();
-
-    // NegaMax::run(controller, &tt, 7, &mut board);
-    // println!("{}", board.to_string());
     println!("**********************AFTER*****************************");
     
     let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     // println!("**********************BEFORE*****************************");
     println!("{}", board.to_string());
     
-    let bb = board.clone();
-    // NegaMax::run(controller, &tt, 1, &mut board);
-    
+
     println!("num of cpus {:?}", std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()));
     // let tt = TTable::default();
     let controller = Arc::new(Mutex::new(Control::default()));

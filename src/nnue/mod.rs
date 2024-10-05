@@ -24,11 +24,6 @@ pub(crate) mod accumulator_ptr;
 
 // HalfKP is just P taken 64 times, once for each king square
 
-// pub(crate) static MODEL: LinearLayer<{INPUT*L1_SIZE}, L1_SIZE, i16> = unsafe {
-//     let bytes: &[u8] = include_bytes!("../../bins/net.bin");
-//     // const _: () = assert_eq!(BYTES.len(), std::mem::size_of::<LinearLayer<{768*1024}, 1024, i16>>());
-//     std::ptr::read_unaligned(bytes.as_ptr() as *const LinearLayer<{INPUT*L1_SIZE}, L1_SIZE, i16>)
-// };
 
 pub(crate) static PARAMS: NNUEParams<{INPUT * L1_SIZE}, L1_SIZE, {L1_SIZE*2}, i16> = unsafe {
     let bytes: &[u8] = include_bytes!("../../bin/net.bin");

@@ -6,7 +6,7 @@ use std::{ptr, usize};
 use crate::board::{piece::Piece, state::board::Board};
 use crate::color::Color;
 // use crate::color::Color::*;
-use crate::nnue_::PARAMS;
+use crate::nnue::PARAMS;
 // use crate::nnue::net::{halfka_idx};
 use crate::squares::Square;
 
@@ -163,9 +163,7 @@ impl<const U: usize> NNUEState<Feature, U> {
                 output += r_lo.iter().sum::<i32>();
             }
         }
-
         output
-
     }
 
     pub(crate) fn evaluate(&self, stm: Color) -> i32 {
