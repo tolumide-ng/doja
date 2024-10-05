@@ -5,9 +5,7 @@ use std::{ptr, usize};
 
 use crate::board::{piece::Piece, state::board::Board};
 use crate::color::Color;
-// use crate::color::Color::*;
 use crate::nnue::PARAMS;
-// use crate::nnue::net::{halfka_idx};
 use crate::squares::Square;
 
 use super::accumulator::{QA, QAB};
@@ -21,7 +19,6 @@ pub(crate) const SCALE: i32 = 400;
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: Copy> {
-    // pub(crate) weight: [[T; M]; 2], // where U = 2(colors) * layer's size
     pub(crate) input_weight: Align64<[T; M]>,
     pub(crate) input_bias: Align64<[T; N]>,
 

@@ -12,7 +12,6 @@ use crate::{board::piece::Piece, squares::Square};
 pub mod quantmoid;
 pub(crate) mod calc;
 pub(crate) mod accumulator;
-pub(crate) mod linear_layer;
 pub(crate) mod feature_idx;
 pub(crate) mod constants;
 pub(crate) mod network;
