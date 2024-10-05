@@ -363,21 +363,6 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
             }
         }
 
-        // if !ROOT && !active_singular_search {
-        //     if let Some(wdl) = tb.probe_wdl(board) {
-        //         let tb_value = wdl.eval(self.ply);
-        //         let tb_flag = HashFlag::from(wdl);
-
-        //         if tb_flag == HashFlag::Exact || (tb_flag == HashFlag::LowerBound && tb_value >= beta) || (tb_flag == HashFlag::UpperBound && tb_value <= alpha) {
-        //             self.tt.record(board.hash_key, depth, tb_value, -INFINITY, self.ply, tb_flag, 0, None);
-        //         }
-
-        //         return tb_value;
-        //     }
-
-        //     // still need some extra computations
-        // }
-
         
         // this action will be performed every 2048 nodes
         // if (self.nodes & NODES_2047) == 0 {
@@ -453,7 +438,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                     // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
                     // condition for Late Move Reduction
                     let not_tactical_mv = !king_in_check && mv.get_promotion().is_none() && !mv.get_capture();
-                    
+
 
                     let mut value =  if (moves_searched >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && not_tactical_mv {
                         -self.negamax::<false>(-alpha+1, -alpha, depth-2, &mut board, tb)
@@ -499,12 +484,10 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                 hash_flag = HashFlag::Exact;
                 
                 if !mv.get_capture() {
-                    // self.history_moves[board.piece_at(mv.get_src()).unwrap()][mv.get_target() as usize] += depth as u32;
                     // store history moves
                     unsafe {
                         *((*(self.history_moves.as_mut_ptr().add(board.piece_at(mv.get_src()).unwrap() as usize))).as_mut_ptr().add(mv.get_target() as usize)) += depth as u32; 
                     }
-                    // *self.history_moves[board.piece_at(mv.get_src())].get_mut(mv.get_target() as usize).unwrap() += depth as u32;
                 }
                 alpha = score; // PV move (position)
 
