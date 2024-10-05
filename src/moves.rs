@@ -60,8 +60,8 @@ impl Iterator for Moves {
 impl Display for Moves {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let pieces = Piece::unicode_pieces();
-        println!(" I/O |    move      | piece     | promotion   | capture   | double  | enpassant  | castling   |");
-        println!("------------------------------------------------------------------------------------------------");
+        writeln!(f, " I/O |    move      | piece     | promotion   | capture   | double  | enpassant  | castling   |")?;
+        writeln!(f, "------------------------------------------------------------------------------------------------")?;
         for count in 0..self.count {
             print!("   {count:2}");
             let l = self.list[count];
@@ -75,14 +75,8 @@ impl Display for Moves {
              promotion, l.get_capture(), l.get_double_push(), l.get_enpassant(), l.get_castling());
         }
  
-        println!("\n\nTotal number of moves {} \n\n", self.count);
+        writeln!(f, "\n\nTotal number of moves {} \n\n", self.count)?;
 
         Ok(())
     }
 }
-
-
-// pub(crate) struct MoveIterator {
-//     at: usize
-// }
-

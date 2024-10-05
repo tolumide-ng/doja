@@ -295,7 +295,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
     /// Returns the score, only if the score is greater than beta.
     /// This means that even if we "skip" our play, and allow the opponent to play (instead of us),
     /// They still won't be better off than they were before we skipped our play
-    fn make_null_move(&mut self, mut alpha: i32, beta: i32, depth: u8, board: &Position, tb: &TableBase) -> Option<i32> {
+    fn make_null_move(&mut self, beta: i32, depth: u8, board: &Position, tb: &TableBase) -> Option<i32> {
             // nmfp: null-move forward prunning (board)
             let mut nmfp_board = Position::with((**board).clone());
             self.ply += 1;
@@ -397,7 +397,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         // added 1 to the depth_reduction factor to be sure, there is atleast one more depth that would be checked
         
         if null_move_forward_pruning_conditions {
-            if let Some(beta) = self.make_null_move(alpha, beta, depth, board, tb) {
+            if let Some(beta) = self.make_null_move(beta, depth, board, tb) {
                 return beta;
             };
         }

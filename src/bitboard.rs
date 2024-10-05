@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{constants::{NOT_A_FILE, NOT_H_FILE}, squares::BIT_TABLE};
+use crate::constants::{NOT_A_FILE, NOT_H_FILE};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
@@ -41,14 +41,6 @@ impl Bitboard {
         self.0 |= 1 << square;
     }
 
-
-    /// Counts the number of set bits on this bitboard
-    #[inline]
-    pub(crate) fn count_bits(&self) -> u32 {
-        self.count_ones()
-    }
-
-
     /// Returns the least significant bit on this bitboard, 
     /// or returns None otherwise
     #[inline]
@@ -62,27 +54,6 @@ impl Bitboard {
         // let lsb = (self.0 as i64 & -(self.0 as i64)) -1
         // asset_eq(self.get_lsb1(), lsb);
         Some(self.trailing_zeros() as u64)
-    }
-
-    /// https://www.chessprogramming.org/Looking_for_Magics
-    fn pop_first_bit(&mut self) -> u64 {
-        let b = self.0 ^ (self.0 - 1);
-        let fold = (b as u32) ^ (b >> 32) as u32;
-        self.0 &= self.0 - 1;
-        BIT_TABLE[(fold.wrapping_mul(0x783a9b23) >> 26) as usize]
-    }
-
-    /// https://www.chessprogramming.org/Looking_for_Magics
-    /// Does exactly the same as set_occupancy, but this uses Tord Romstad's approach
-    pub(crate) fn index_to_u64(&self, index: usize, bits: u32) -> u64 {
-        let mut bitboard = self.clone();
-        let mut result = 0_u64;
-
-        for i in 0..bits {
-            let j = bitboard.pop_first_bit();
-            if index & (1<<i) !=0 {result |= 1 << j}
-        }
-        result
     }
 
     /// One shift only
@@ -121,17 +92,6 @@ impl Bitboard {
 fn format_u64(input: u64) -> String {
     format!("{:064b}", input)
 }
-
-// pub fn string_u64(input: u64) -> String {
-//     let mut s = String::new();
-//     let format_in = format_u64(input);
-//     for x in 0..8 {
-//         let slice = &format_in[x * 8..((x * 8) + 8)];
-//         s += slice;
-//         s += "\n";
-//     }
-//     s
-// }
 
 impl Display for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -210,7 +170,7 @@ mod bitboard_tests {
         assert_eq!(bitboard.get_bit(56), 0);
 
 
-        assert_eq!(bitboard.count_bits(), 6);
+        assert_eq!(bitboard.count_ones(), 6);
         assert_eq!(bitboard.get_lsb1(), Some(8));
     }
 

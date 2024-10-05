@@ -10,6 +10,7 @@ mod nnue;
 mod shift;
 mod board;
 mod command;
+#[allow(dead_code)]
 mod constants;
 mod moves;
 // mod random_magic;
@@ -25,7 +26,7 @@ mod syzygy;
 
 
 
-use std::{num::NonZero, sync::{Arc, Mutex}, thread};
+use std::{num::NonZero, sync::{Arc, Mutex}};
 
 use board::{fen::FEN, position::Position, state::board::Board};
 use constants::TRICKY_POSITION;

@@ -268,7 +268,7 @@ impl PieceAttacks {
             };
 
             // init relevant occupancy bit count
-            let relevant_bits_count = Bitboard::from(attack_bitboard).count_bits();
+            let relevant_bits_count = Bitboard::from(attack_bitboard).count_ones();
             let occupany_indices = 1 << relevant_bits_count;
             
             // loop over occupancy indices

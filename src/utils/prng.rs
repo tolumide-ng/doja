@@ -33,6 +33,7 @@ impl PRNG {
     }
 
 
+    #[allow(dead_code)]
     pub(crate) fn generate_magic(&mut self) -> u64 {
         self.get_random_u64() & self.get_random_u64() & self.get_random_u64() 
     }
