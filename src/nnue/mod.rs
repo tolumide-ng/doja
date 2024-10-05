@@ -3,6 +3,8 @@
 use constants::custom_kp::*;
 use feature_idx::FeatureIdx;
 use network::NNUEParams;
+use crate::color::Color::*;
+
 
 // pub(crate) const FEATURES: usize = 768;
 pub(crate) const HIDDEN: usize = 1024;
@@ -10,7 +12,6 @@ pub(crate) const HIDDEN: usize = 1024;
 use crate::{board::piece::Piece, squares::Square};
 
 pub mod quantmoid;
-pub(crate) mod calc;
 pub(crate) mod accumulator;
 pub(crate) mod feature_idx;
 #[allow(dead_code)]
@@ -49,7 +50,33 @@ pub(crate) fn halfka_idx(piece: Piece, sq: Square) -> FeatureIdx {
 }
 
 
-pub(crate) fn checkings() {
-    // 
+
+/// HalfKP: (our_king_square, piece_square, piece_type, color)
+/// 64 * 64 * 5 * 2 = 40960
+pub(crate) fn feature_index(piece: Piece, piece_sq: Square, king_sq: Square) -> usize {
+    let p_idx = piece as usize * 2 + piece.color() as usize;
+    let halfkp_idx = piece_sq as usize + (p_idx + king_sq as usize * 10) * 64;
+    halfkp_idx
 }
 
+pub(crate) mod halfka {
+    use super::*;
+
+    const NUM_SQ: usize = 64;
+    const NUM_PT: usize = 10;
+    const NUM_PLANES: usize = NUM_SQ * NUM_PT + 1;
+
+    
+
+    pub(crate) fn halfka_index(p: Piece, king_sq: Square, sq: Square) -> usize {
+        let pp = if p.color() == White { p as usize * 2} else { p as usize };
+
+        let p_idx = pp + p.color() as usize;
+        let xxx = 1 + orient(p, sq) + p_idx * NUM_SQ + king_sq as usize * NUM_PLANES;
+        return xxx;
+    }
+    
+    pub(crate) fn orient(piece: Piece, sq: Square) -> usize {
+        ((56 * (!(piece.color() == White) as u64)) ^ sq as u64) as usize
+    }
+}

@@ -8,7 +8,6 @@ impl FeatureIdx {
     }
 }
 
-
 impl From<usize> for FeatureIdx {
     fn from(value: usize) -> Self {
         Self(value)
