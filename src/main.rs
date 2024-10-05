@@ -10,6 +10,7 @@ mod nnue;
 mod shift;
 mod board;
 mod command;
+#[allow(dead_code)]
 mod constants;
 mod moves;
 // mod random_magic;
@@ -25,7 +26,7 @@ mod syzygy;
 
 
 
-use std::{num::NonZero, sync::{Arc, Mutex}, thread};
+use std::{num::NonZero, sync::{Arc, Mutex}};
 
 use board::{fen::FEN, position::Position, state::board::Board};
 use constants::TRICKY_POSITION;
@@ -57,7 +58,7 @@ fn main() {
     let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     // let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
     let threads = 1;
-    let depth = 7;
+    let depth = 10;
     // let mut bb = board.clone();
     let table = TTable::default();
 
@@ -65,14 +66,18 @@ fn main() {
     
     let tb = TableBase::default();
 
-    thread::scope(|s| {
-        for td in negamax_thread.iter_mut() {
-            let mut bb = board.clone();
-            s.spawn(move || {
-                td.iterative_deepening(depth, &mut bb, &tb);
-            });
-        }
-    });
+    // thread::scope(|s| {
+    //     for td in negamax_thread.iter_mut() {
+    //         let mut bb = board.clone();
+    //         s.spawn(move || {
+    //             td.iterative_deepening(depth, &mut bb, &tb);
+    //         });
+    //     }
+    // });
+
+    let mut bb = board.clone();
+    negamax_thread[0].iterative_deepening(depth, &mut bb, &tb);
+
 }
 
 // 8|4|2|1|

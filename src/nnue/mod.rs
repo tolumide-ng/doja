@@ -1,6 +1,6 @@
 // The purpose of the ClippedReLu is to introduce non-linearity to the network.
 
-use constants::customKA0::*;
+use constants::custom_kp::*;
 use feature_idx::FeatureIdx;
 use network::NNUEParams;
 
@@ -12,8 +12,8 @@ use crate::{board::piece::Piece, squares::Square};
 pub mod quantmoid;
 pub(crate) mod calc;
 pub(crate) mod accumulator;
-pub(crate) mod linear_layer;
 pub(crate) mod feature_idx;
+#[allow(dead_code)]
 pub(crate) mod constants;
 pub(crate) mod network;
 pub(crate) mod relu;

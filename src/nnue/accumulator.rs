@@ -39,15 +39,8 @@ impl<const U: usize> Default for Accumulator<Feature, U> {
 }
 
 
-// impl<T, const U: usize> From<*mut Accumulator<T, U>> for AccumulatorPtr<T, U> {
-//     fn from(value: *mut Accumulator<T, U>) -> Self {
-//         Self(value)
-//     }
-// }
 
-
-
-
+/// U is the L1 Size (i.e number of first output)
 impl<const U: usize> Accumulator<Feature, U> {
     const REGISTER_WIDTH: usize = 256/16; // 16
 
@@ -137,8 +130,7 @@ impl<const U: usize> Accumulator<Feature, U> {
             }
         }
         
-        // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> model_idx>>>> {model_idx}, and weights is {}", MODEL.feature_weights.len());
-        for (color, f_idx) in added_features.into_iter() {
+       for (color, f_idx) in added_features.into_iter() {
             for i in 0..num_chunks {
                 let model_idx = **f_idx+ (i * Self::REGISTER_WIDTH);
                 let regs_idx = (*color as usize * num_chunks) + i;

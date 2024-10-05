@@ -5,9 +5,7 @@ use std::{ptr, usize};
 
 use crate::board::{piece::Piece, state::board::Board};
 use crate::color::Color;
-// use crate::color::Color::*;
 use crate::nnue::PARAMS;
-// use crate::nnue::net::{halfka_idx};
 use crate::squares::Square;
 
 use super::accumulator::{QA, QAB};
@@ -18,10 +16,14 @@ use super::{accumulator::Accumulator, accumulator::Feature, align64::Align64};
 pub(crate) const MAX_DEPTH: usize = 127;
 pub(crate) const SCALE: i32 = 400;
 
+
+/// M: is input_size(768 for halfKPA) * l1_size(1024 for HalfKPA in this case)
+/// N: is L1_SIZE
+/// P: L1_SIZE * 2
+/// T: Expected type of the weight/bias
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: Copy> {
-    // pub(crate) weight: [[T; M]; 2], // where U = 2(colors) * layer's size
     pub(crate) input_weight: Align64<[T; M]>,
     pub(crate) input_bias: Align64<[T; N]>,
 
@@ -30,6 +32,7 @@ pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: 
 }
 
 
+/// U is the size of L1 in this case (i.e. (768*2) -> 1024 -> 1 model), that would be 1024
 #[derive(Debug)]
 pub(crate) struct NNUEState<T, const U: usize> {
     accumulators: AccumulatorPtr<T, U>,
