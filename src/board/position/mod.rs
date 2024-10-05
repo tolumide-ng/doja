@@ -257,10 +257,3 @@ impl Deref for Position {
         &self.board
     }
 }
-
-
-// impl DerefMut for Position {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.board
-//     }
-// }

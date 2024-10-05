@@ -298,7 +298,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
     /// They still won't be better off than they were before we skipped our play
     fn make_null_move(&mut self, beta: i32, depth: u8, board: &Position, tb: &TableBase) -> Option<i32> {
             // nmfp: null-move forward prunning (board)
-            let mut nmfp_board = Position::with((**board).clone());
+            let mut nmfp_board = Position::with(**board);
             self.ply += 1;
             self.repetition_index+=1;
             self.repetition_table[self.repetition_index] = nmfp_board.hash_key;

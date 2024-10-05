@@ -22,7 +22,7 @@ pub(crate) const SCALE: i32 = 400;
 /// P: L1_SIZE * 2
 /// T: Expected type of the weight/bias
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: Copy> {
     pub(crate) input_weight: Align64<[T; M]>,
     pub(crate) input_bias: Align64<[T; N]>,
@@ -33,7 +33,7 @@ pub(crate) struct NNUEParams<const M: usize, const N: usize, const P: usize, T: 
 
 
 /// U is the size of L1 in this case (i.e. (768*2) -> 1024 -> 1 model), that would be 1024
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct NNUEState<T, const U: usize> {
     accumulators: AccumulatorPtr<T, U>,
     current_acc: usize,
@@ -54,39 +54,38 @@ impl<T, const U: usize>  NNUEState<T, U> {
     }
 }
 
-impl<T, const U: usize> Clone for NNUEState<T, U> {
-    fn clone(&self) -> Self {
-        unsafe {
-            let layout = Layout::array::<Accumulator<T, U>>(MAX_DEPTH + 1).unwrap();
-            let ptr = alloc_zeroed(layout) as *mut Accumulator<T, U>;
-            if ptr.is_null() {
-                alloc::handle_alloc_error(layout);
-            }
+// impl<T, const U: usize> Clone for NNUEState<T, U> {
+//     fn clone(&self) -> Self {
+//         unsafe {
+//             let layout = Layout::array::<Accumulator<T, U>>(MAX_DEPTH + 1).unwrap();
+//             let ptr = alloc_zeroed(layout) as *mut Accumulator<T, U>;
+//             if ptr.is_null() {
+//                 alloc::handle_alloc_error(layout);
+//             }
 
-            std::ptr::copy_nonoverlapping(*self.accumulators, ptr, MAX_DEPTH + 1);
+//             std::ptr::copy_nonoverlapping(*self.accumulators, ptr, MAX_DEPTH + 1);
 
-            Self { accumulators: AccumulatorPtr(ptr), current_acc: self.current_acc }
-        }
-    }
-}
+//             Self { accumulators: AccumulatorPtr(ptr), current_acc: self.current_acc }
+//         }
+//     }
+// }
 
-impl<T, const U: usize> Drop for NNUEState<T, U> {
-    fn drop(&mut self) {
-        unsafe {
-            let layout = Layout::array::<Accumulator<T, U>>(MAX_DEPTH + 1).unwrap();
-            let ptr = self.accumulators.0;
-            if !ptr.is_null() {
-                dealloc(ptr as *mut u8, layout);
-            }
-        }
-    }
-}
+// impl<T, const U: usize> Drop for NNUEState<T, U> {
+//     fn drop(&mut self) {
+//         unsafe {
+//             let layout = Layout::array::<Accumulator<T, U>>(MAX_DEPTH + 1).unwrap();
+//             let ptr = self.accumulators.0;
+//             if !ptr.is_null() {
+//                 dealloc(ptr as *mut u8, layout);
+//             }
+//         }
+//     }
+// }
 
 impl<const U: usize> From<&Board> for NNUEState<Feature, U> {
     fn from(board: &Board) -> Self {
         let mut state = NNUEState::<Feature, U>::new();
 
-        
         unsafe {
             let acc = Accumulator::refresh(&board);
             let target = state.accumulators.add(0);

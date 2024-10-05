@@ -4,7 +4,7 @@ use crate::board::piece::Piece;
 use crate::bitboard::Bitboard;
 
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PieceMap([Bitboard; 12]);
 
 impl Deref for PieceMap {

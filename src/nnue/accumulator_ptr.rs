@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use super::accumulator::Accumulator;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct AccumulatorPtr<T, const U: usize>(pub(crate) *mut Accumulator<T, U>);
 unsafe impl<T: Send, const U: usize> Send for AccumulatorPtr<T, U> {}
 unsafe impl<T: Sync, const U: usize> Sync for AccumulatorPtr<T, U> {}

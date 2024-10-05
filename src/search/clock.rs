@@ -1,3 +1,5 @@
+use std::{sync::atomic::AtomicBool, time::Instant};
+
 pub(crate) struct Clock {
     movestogo: u32,
     movetime: u128,

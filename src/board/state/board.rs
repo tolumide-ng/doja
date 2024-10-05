@@ -13,7 +13,7 @@ use crate::move_scope::MoveScope;
 mod tests;
 
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Board {
     pub(crate) turn: Color,
     // change this name eventually to piece_map everywhere too
