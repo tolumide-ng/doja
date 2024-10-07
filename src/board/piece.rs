@@ -231,8 +231,9 @@ impl Piece {
         let attacker = *self as usize;
         let victim = *victim as usize;
 
-        let index = ((attacker % PLAYER_PIECES) * PLAYER_PIECES) + (victim % PLAYER_PIECES);
-        return MVV_LVA[index];
+        // let index = ((attacker % PLAYER_PIECES) * PLAYER_PIECES) + (victim % PLAYER_PIECES);
+        // return MVV_LVA[index];
+        return MVV_LVA[attacker][victim]
     }
 }
 

@@ -176,37 +176,37 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
     pub(crate) fn sort_moves(&mut self, board: &Board, mv_list: Moves, best_move: Option<Move>, depth: u8) -> Vec<Move> {
         // println!("------------------------------------------------------------------------- {depth}");
         let mut sorted_moves: Vec<Move> = Vec::with_capacity(mv_list.count_mvs());
-        if depth == 2 {
-            if (board.get_occupancy(Color::White) & 1 << Square::E2 as u64) == 0 && (board.get_occupancy(Color::Black) & 1 << Square::A6 as u64) == 0  {
-                if (board.get_occupancy(Color::Black) & 1 << Square::B4 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
-                    println!("provided best mv is {:?}", best_move);
-                    println!("{}", board);
-                    // let mut ap = Vec::new();
-                    for x in mv_list {
-                        print!("{}, ", x.to_string());
-                    }
-                    println!("\ndone ======================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n");
-                }
-            }
-        }
+        // if depth == 2 {
+        //     if (board.get_occupancy(Color::White) & 1 << Square::E2 as u64) == 0 && (board.get_occupancy(Color::Black) & 1 << Square::A6 as u64) == 0  {
+        //         if (board.get_occupancy(Color::Black) & 1 << Square::B4 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
+        //             println!("provided best mv is {:?}", best_move);
+        //             println!("{}", board);
+        //             // let mut ap = Vec::new();
+        //             for x in mv_list {
+        //                 print!("{}, ", x.to_string());
+        //             }
+        //             println!("\ndone ======================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n");
+        //         }
+        //     }
+        // }
         sorted_moves.extend_from_slice(&mv_list.list[..mv_list.count_mvs()]);
         let mut w_scores = mv_list.into_iter().map(|m| (self.score_move(board, m, best_move), m)).collect::<Vec<_>>();
         w_scores.sort_by(|a, b| b.0.cmp(&a.0));
 
         sorted_moves.sort_by(|a, b| self.score_move(board, *b, best_move).cmp(&self.score_move(board, *a, best_move)));
         // println!("vcalled {depth}");
-        if depth == 2 {
-            if (board.get_occupancy(Color::White) & 1 << Square::E2 as u64) == 0 && (board.get_occupancy(Color::Black) & 1 << Square::A6 as u64) == 0  {
-                if (board.get_occupancy(Color::Black) & 1 << Square::B4 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
-                    println!("the sorted mvs now is");
-                    for (s, x) in w_scores {
-                        print!("{s}={}, ", x.to_string());
-                    }
+        // if depth == 2 {
+        //     if (board.get_occupancy(Color::White) & 1 << Square::E2 as u64) == 0 && (board.get_occupancy(Color::Black) & 1 << Square::A6 as u64) == 0  {
+        //         if (board.get_occupancy(Color::Black) & 1 << Square::B4 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
+        //             println!("the sorted mvs now is");
+        //             for (s, x) in w_scores {
+        //                 print!("{s}={}, ", x.to_string());
+        //             }
         
-                    println!("\n\n\n\n\n")
-                }
-            }
-        }
+        //             println!("\n\n\n\n\n")
+        //         }
+        //     }
+        // }
         return sorted_moves
     }
 
@@ -221,11 +221,11 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         
         let eval = board.evaluate();
 
-        if let Some(parent_m) = xm{
-            if parent_m.to_string() == String::from("e6d5x") {
-                println!("<><><><> AT THIS alpha {alpha} beta={beta}, and eval={eval}");
-            }
-        }
+        // if let Some(parent_m) = xm{
+        //     if parent_m.to_string() == String::from("e6d5x") {
+        //         println!("<><><><> AT THIS alpha {alpha} beta={beta}, and eval={eval}");
+        //     }
+        // }
         // let eval = Evaluation::evaluate(board);
 
         // if let Some(the_m) = xm {
@@ -302,33 +302,33 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         // let mut moves_made = 0;
 
         let sorted_moves = self.sort_moves(board, board.gen_movement().into_iter(), None, 0);
-        if let Some(mk) = xm {
-            println!("HERE--HERE_----------------------------------- {}", mk);
-            if mk.to_string() == String::from("e6d5x") {println!("HERE--HERE")}}
+        // if let Some(mk) = xm {
+        //     println!("HERE--HERE_----------------------------------- {}", mk);
+        //     if mk.to_string() == String::from("e6d5x") {println!("HERE--HERE")}}
         // until every capture has been examined
         for mv in sorted_moves {
             // if self.controller.as_ref().lock().unwrap().stopped() { return 0}
 
             // if !allow_quiet_moves && mv.get_capture() == false { continue; }
 
-            if let Some(mk) = xm {
-                if [String::from("f3f6x"), String::from("d2c3x")].contains(&mk.to_string()) {
-                    if [String::from("g7f6x")].contains(&mv.to_string()) {
-                    println!("|||||||||||||||||||||||||||||||||r4sult   alpha-->{alpha}, beta is -->>{beta}, xm is {}, and mv is {}||||", mk.to_string(), mv.to_string());
-                        // if (board.get_occupancy(Color::White) & 1 << Square::E2 as u64) == 0 && (board.get_occupancy(Color::Black) & 1 << Square::A6 as u64) == 0  {
-                        //     if (board.get_occupancy(Color::Black) & 1 << Square::B4 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
-                        //         if (board.get_occupancy(Color::White) & 1 << Square::D2 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
-                        //             if (board.get_occupancy(Color::Black) & 1 << Square::E6 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::D5 as u64) == 0  {
-                        //                 println!("\n\n**************************************************************************************************{}", board.hash_key);
-                        //                 // println!("&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$");
-                        //                 // println!("{}", board.to_string());
-                        //             }
-                        //         }
-                        //     }
-                        // }
-                    }
-                }
-            }
+            // if let Some(mk) = xm {
+            //     if [String::from("f3f6x"), String::from("d2c3x")].contains(&mk.to_string()) {
+            //         if [String::from("g7f6x")].contains(&mv.to_string()) {
+            //         println!("|||||||||||||||||||||||||||||||||r4sult   alpha-->{alpha}, beta is -->>{beta}, xm is {}, and mv is {}||||", mk.to_string(), mv.to_string());
+            //             // if (board.get_occupancy(Color::White) & 1 << Square::E2 as u64) == 0 && (board.get_occupancy(Color::Black) & 1 << Square::A6 as u64) == 0  {
+            //             //     if (board.get_occupancy(Color::Black) & 1 << Square::B4 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
+            //             //         if (board.get_occupancy(Color::White) & 1 << Square::D2 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
+            //             //             if (board.get_occupancy(Color::Black) & 1 << Square::E6 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::D5 as u64) == 0  {
+            //             //                 println!("\n\n**************************************************************************************************{}", board.hash_key);
+            //             //                 // println!("&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$");
+            //             //                 // println!("{}", board.to_string());
+            //             //             }
+            //             //         }
+            //             //     }
+            //             // }
+            //         }
+            //     }
+            // }
 
             if board.make_move_nnue(mv, MoveScope::CapturesOnly) {
                 // moves_made += 1;
@@ -343,25 +343,25 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                 // self.repetition_index-=1;
                 board.undo_move(true);
 
-                if let Some(mk) = xm {
-                    if [String::from("f3f6x"), String::from("d2c3x")].contains(&mk.to_string()) {
-                        println!("r4sult for xxx is score-->>{score} alpha-->{alpha}, beta is -->>{beta}, mv  {}||||", mv.to_string());
-                        if [String::from("g7f6x")].contains(&mv.to_string()) {
-                            // if (board.get_occupancy(Color::White) & 1 << Square::E2 as u64) == 0 && (board.get_occupancy(Color::Black) & 1 << Square::A6 as u64) == 0  {
-                            //     if (board.get_occupancy(Color::Black) & 1 << Square::B4 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
-                            //         if (board.get_occupancy(Color::White) & 1 << Square::D2 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
-                            //             if (board.get_occupancy(Color::Black) & 1 << Square::E6 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::D5 as u64) == 0  {
-                            //                 println!("\n\n**************************************************************************************************{}", board.hash_key);
-                            //                 // println!("&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$");
-                            //                 // println!("{}", board.to_string());
-                            //             }
-                            //         }
-                            //     }
-                            // }
+                // if let Some(mk) = xm {
+                //     if [String::from("f3f6x"), String::from("d2c3x")].contains(&mk.to_string()) {
+                //         println!("r4sult for xxx is score-->>{score} alpha-->{alpha}, beta is -->>{beta}, mv  {}||||", mv.to_string());
+                //         if [String::from("g7f6x")].contains(&mv.to_string()) {
+                //             // if (board.get_occupancy(Color::White) & 1 << Square::E2 as u64) == 0 && (board.get_occupancy(Color::Black) & 1 << Square::A6 as u64) == 0  {
+                //             //     if (board.get_occupancy(Color::Black) & 1 << Square::B4 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
+                //             //         if (board.get_occupancy(Color::White) & 1 << Square::D2 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::C3 as u64) == 0  {
+                //             //             if (board.get_occupancy(Color::Black) & 1 << Square::E6 as u64) == 0 && (board.get_occupancy(Color::White) & 1 << Square::D5 as u64) == 0  {
+                //             //                 println!("\n\n**************************************************************************************************{}", board.hash_key);
+                //             //                 // println!("&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$&&&&&&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$$");
+                //             //                 // println!("{}", board.to_string());
+                //             //             }
+                //             //         }
+                //             //     }
+                //             // }
 
-                        }
-                    }
-                }
+                //         }
+                //     }
+                // }
 
                 if score > alpha {
                     alpha = score;
@@ -484,11 +484,11 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         
         if depth == 0 {
             let rss = self.quiescence(alpha, beta, board, mmm);
-            if let Some(parent_m) = mmm {
-                if parent_m.to_string() == String::from("e6d5x") && depth == 0 {
-                    println!("<><><><> AT THIS DEPTH OF {depth} probing -->> {:?}", rss);
-                }
-            }
+            // if let Some(parent_m) = mmm {
+            //     if parent_m.to_string() == String::from("e6d5x") && depth == 0 {
+            //         println!("<><><><> AT THIS DEPTH OF {depth} probing -->> {:?}", rss);
+            //     }
+            // }
             // if let Some(mk) = mmm {
             //     if mk.to_string() == String::from("e6d5x") {
             //         if (board.get_occupancy(Color::White) & 1 << Square::E2 as u64) == 0 && (board.get_occupancy(Color::Black) & 1 << Square::A6 as u64) == 0  {
@@ -608,14 +608,14 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
 
 
             if depth == 1 && self.dd == 4 {
-                if let Some(mmmm) = mmm {
-                //     if mmmm.to_string() == String::from("f3f6x") {
-                //         println!("<<**f3f6**>> score={score}, depth={depth}, alpha={alpha}, beta={beta} mv={}", mv.to_string())
-                //     }
-                    if mmmm.to_string() == String::from("d2c3x") {
-                        println!("((((((((((((({}))))))))))))) moves_searched={moves_searched} score={score}, depth={depth}, alpha={alpha}, beta={beta} mv={}", mmmm.to_string(), mv.to_string())
-                    }
-                }
+                // if let Some(mmmm) = mmm {
+                // //     if mmmm.to_string() == String::from("f3f6x") {
+                // //         println!("<<**f3f6**>> score={score}, depth={depth}, alpha={alpha}, beta={beta} mv={}", mv.to_string())
+                // //     }
+                //     // if mmmm.to_string() == String::from("d2c3x") {
+                //     //     println!("((((((((((((({}))))))))))))) moves_searched={moves_searched} score={score}, depth={depth}, alpha={alpha}, beta={beta} mv={}", mmmm.to_string(), mv.to_string())
+                //     // }
+                // }
             }
 
 
@@ -657,16 +657,16 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                 }
             };
 
-            if depth == 1 && self.dd == 4 {
-                if let Some(mmmm) = mmm {
-                //     if mmmm.to_string() == String::from("f3f6x") {
-                //         println!("<<**f3f6**>> score={score}, depth={depth}, alpha={alpha}, beta={beta} mv={}", mv.to_string())
-                //     }
-                    if mmmm.to_string() == String::from("d2c3x") {
-                        println!("<<==={}===>> moves_searched={moves_searched} score={score}, depth={depth}, alpha={alpha}, beta={beta} mv={}", mmmm.to_string(), mv.to_string())
-                    }
-                }
-            }
+            // if depth == 1 && self.dd == 4 {
+            //     if let Some(mmmm) = mmm {
+            //     //     if mmmm.to_string() == String::from("f3f6x") {
+            //     //         println!("<<**f3f6**>> score={score}, depth={depth}, alpha={alpha}, beta={beta} mv={}", mv.to_string())
+            //     //     }
+            //         if mmmm.to_string() == String::from("d2c3x") {
+            //             println!("<<==={}===>> moves_searched={moves_searched} score={score}, depth={depth}, alpha={alpha}, beta={beta} mv={}", mmmm.to_string(), mv.to_string())
+            //         }
+            //     }
+            // }
 
 
             // if mv.to_string() == String::from("f3f6x") {
