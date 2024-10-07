@@ -194,6 +194,9 @@ pub mod params {
     pub const PIECE_VALUES: [Eval; 6] = [161, 446, 464, 705, 1322, 0];
 }
 
+// COPIED FROM STOCKFISH
+pub const PIECE_VALUES: [i32; 6] = [ 208, 781, 825, 1276, 2538, 0];
+
 // 0xFEFE_FEFE_FEFE_FEFE
 
 

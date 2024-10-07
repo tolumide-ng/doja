@@ -44,6 +44,14 @@ impl Position {
         Self { history: Vec::new(), board, nnue_state }
     }
 
+    /// NOT YET IMPLEMENTED, PLEASE IMPLEMENT ME!!!
+    /// Read: https://www.chessprogramming.org/Material#InsufficientMaterial
+    /// https://www.chessprogramming.org/Delta_Pruning
+    /// https://www.chessprogramming.org/Zugzwang
+    pub(crate) fn is_engame() {
+        todo!()
+    }
+
     pub(crate) fn nnue_push(&mut self) { self.nnue_state.push(); }
 
     pub(crate) fn nnue_pop(&mut self) { self.nnue_state.pop(); }

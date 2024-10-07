@@ -8,8 +8,10 @@ use crate::{bit_move::Move, board::{piece::Piece, position::Position}, constants
 /// GOALS:
 ///  1. [-] AlphaBeta 
 ///  2. [-] Quiescence Search
-///         a. [-] Standing Pat
+///         a. [x] Standing Pat
 ///         b. [-] Delta Pruning
+///             i. https://www.chessprogramming.org/Delta_Pruning
+///             ii. https://www.chessprogramming.org/CPW-Engine_quiescence (check how CPW implements its beta pruning)
 ///  3. [-] Late Move Reduction
 ///  4. [-] MVV_LVA - (Most Viable Victim -- Least Viable Attacker)
 ///  5. [-] Move Ordering
@@ -61,7 +63,9 @@ impl Search {
                 // all evastions to the check are searched. Stand pat is not allowed if we are in check.
                 // So, if the king of the stm is in check - WE MUST SEARCH EVERY MOVE IN THE POSITION, RATHER THAN ONLY CAPTURES.
                     // - LIMIT THE GENERATION OF CHECKS TO THE FIRST X PLIES OF QUIESCENCE (AND USE "DELTA PRUNNING" TO AVOID LONG FRUITLESS SEARCHES TO GET OUT OF BEEN IN CHECK)
+        // beta cutoff
         if stand_pat >= beta { return beta }
+
         if stand_pat > alpha { alpha = stand_pat }
 
         // Probe the Transposition Table here
