@@ -1,5 +1,6 @@
 1. [Killer Moves: (i.e. killer_moves):](https://www.chessprogramming.org/Killer_Move)
-<br />The Killer Move is a quiet move which caused a beta-cutoff in a sibling Cut-node, or any other earlier branch in the tree with the same ply distance to the root 
+<br />In Move ordering, killer moves usually come right after the has move, and (good) captures.
+<br />        - In many positions, ther is only a small set of moves creating a threat or defending against it(threats). Those that cannot create, or defend against a threat might(should) be refuted.
 
 2. [History Moves:](https://www.chessprogramming.org/History_Heuristic)
 <br /> This is another move ordering heuristic. History moves record how successful a `move` has been across multiple search(tree) branches, regardless of the position(the state of the board. We are only concerned about the `Move` irrespective of other pieces and their positions on the board).

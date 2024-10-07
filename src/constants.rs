@@ -117,6 +117,8 @@ pub(crate) const MATE_VALUE: i32 = 49_000;
 pub(crate) const MATE_SCORE: i32 = 48_000; // i.e. MATE_VALUE - 1000
 pub(crate) const INFINITY: i32 = 50_000;
 
+pub(crate) const NO_HASH_ENTRY: i32 = 100000;
+
 pub(crate) const ALPHA: i32 = -INFINITY;
 pub(crate) const BETA: i32 = INFINITY;
 pub(crate) const FULL_DEPTH_MOVE: u8 = 4;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
@@ -435,14 +437,14 @@ pub(crate) const MIRROR_SCORE: [Square; 64] = [
 
 
 /// Most Valuable victim & Less valuable attacker
-/// (Victims)    Pawn    Knight  Bishop  Rook  Queen  King
+/// (Victims ->)    Pawn    Knight  Bishop  Rook  Queen  King
 /// (Attackers)  
-///     Pawn      105     205    305     405    505    605
-///   Knight      104     204    304     404    504    604
-///   Bishop      103     203    303     403    503    603
-///     Rook      102     202    302     402    502    602
-///    Queen      101     201    301     401    501    601
-///     King      100     200    300     400    500    600
+///     Pawn  -->>  105     205    305     405    505    605
+///   Knight  -->>  104     204    304     404    504    604
+///   Bishop  -->>  103     203    303     403    503    603
+///     Rook  -->>  102     202    302     402    502    602
+///    Queen  -->>  101     201    301     401    501    601
+///     King  -->>  100     200    300     400    500    600
 ///
 /// In order to get this claculation
 /// simply do this:

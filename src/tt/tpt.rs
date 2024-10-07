@@ -1,6 +1,6 @@
 use std::sync::atomic::Ordering;
 
-use crate::{bit_move::Move, constants::MATE_SCORE};
+use crate::{bit_move::Move, constants::{MATE_SCORE, NO_HASH_ENTRY}};
 
 use super::{entry::{SMPData, TTEntry}, flag::HashFlag, table::TOTAL_SIZE};
 
@@ -37,19 +37,17 @@ impl<'a> TPT<'a> {
        }
     }
 
-   pub(crate) fn probe(&self, zobrist_key: u64) -> Option<SMPData> { 
+    pub(crate) fn probe(&self, zobrist_key: u64) -> Option<SMPData> { 
         // let index = zobrist_key & (TOTAL_SIZE as u64 -1);
         let index = zobrist_key as usize % TOTAL_SIZE;
-        let phahse = &self.table[index];
+        let entry = &self.table[index];
         // we can turst the #[default] implementation to work without any issue because the default key is 0,
         // and that would likely not match any zobtist key
 
-        // let Some(entry) = phahse else {return None};
-        if phahse.smp_data.load(Ordering::Relaxed) == 0 {return None};
-        let entry = phahse;
+        let atomic_data = entry.smp_data.load(Ordering::Relaxed);
+        if atomic_data == 0 {return None};
 
-        let data = SMPData::from(entry.smp_data.load(Ordering::Relaxed));
-
+        let data = SMPData::from(atomic_data);
         if zobrist_key ^ u64::from(data) == entry.smp_key.load(Ordering::Relaxed) {
             return Some(data)
         }
