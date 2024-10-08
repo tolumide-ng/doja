@@ -1,4 +1,4 @@
-use crate::{bit_move::Move, board::{piece::Piece, position::Position}, constants::params::MAX_DEPTH, move_scope::MoveScope, moves::Moves};
+use crate::{bit_move::Move, board::{piece::Piece, position::Position}, constants::{params::MAX_DEPTH, MAX_PLY}, move_scope::MoveScope, moves::Moves};
 
 /// The number of nodes you can actually cut depends on:
 /// 1. How well written your alpha-beta program is
@@ -22,11 +22,15 @@ use crate::{bit_move::Move, board::{piece::Piece, position::Position}, constants
 /// 10. [-] History Moves 
 /// 11. [-] Aspiration Window
 /// 12. [-] Iterative Deepening
+/// 13. [-] PV-Table
 /// This implementation is a fail-soft implementation (meaning we have to keep track of the best score)[XX] 
 /// - fail-hard for now
 pub(crate) struct Search {
     nodes:  usize,
     ply: usize,
+    /// this is used to collect the principal variation of the best moves inside an alpha-beta or principal variation search - like the best score propagated up to the root.
+    /// In an iterative deepening framework (like ours), it is most important to play the principal vairation first during the next iteration.
+    pv_table: [[Move; MAX_PLY]; MAX_PLY] // this is an array of principal variations indexable by ply
 }
 
 
@@ -36,6 +40,16 @@ impl Search {
     }
 
     pub(crate) fn is_repetition(&self, board: &Position) -> bool {
+        unimplemented!()
+    }
+
+    pub(crate) fn get_moves(&self, board: &Position) -> Vec<Move> {
+        let mvs = board.gen_movement();
+        //  now sort those moves and return the sorted moves
+        // TODOS!!
+        // - Principal Variation of the previous iteration
+        // - TRIANGULAR PV-TABLE
+        // PV-nodes and expected Cut-nodes must be searched (give them more priority)
         unimplemented!()
     }
 
