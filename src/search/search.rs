@@ -2,7 +2,7 @@ use crate::{bit_move::Move, board::{piece::Piece, position::Position}, constants
 
 use crate::search::heuristics::pv_table::PVTable;
 
-use super::heuristics::killer_moves::KillerMoves;
+use super::heuristics::{history::HistoryHeuristic, killer_moves::KillerMoves};
 
 /// The number of nodes you can actually cut depends on:
 /// 1. How well written your alpha-beta program is
@@ -34,12 +34,14 @@ pub(crate) struct Search {
     ply: usize,
     pv_table: PVTable,
     killer_moves: KillerMoves,
+    history_table: HistoryHeuristic
 }
 
 
 impl Search {
     pub(crate) fn new() -> Self {
-        Self { nodes: 0, ply: 0, pv_table: PVTable::new(), killer_moves: KillerMoves::new() }
+        Self { nodes: 0, ply: 0, pv_table: PVTable::new(), killer_moves: KillerMoves::new(),
+            history_table: HistoryHeuristic::new() }
     }
 
     pub(crate) fn sort_moves(&self, mvs: &Moves, board: &Position) -> Vec<Move> {
@@ -68,11 +70,11 @@ impl Search {
     /// At the beginning of quiescence, the position's evaluation is used to establish a lower-bound on the score.
     /// If the lower bound from the stand pat(static evaluation) is always greater than or equal to beta, we can return the stand-pat(fail-soft)
     /// or beta(fail-hard) as a lower bound. Otherwise, the search continues
+    /// https://www.chessprogramming.org/Quiescence_Search
     fn quiescence(&mut self, mut alpha: i32, beta: i32, mut position: &mut Position) -> i32 {
         self.nodes+=1;
         
         let stand_pat = position.evaluate();
-
         if self.ply >= MAX_DEPTH { return stand_pat }
         // check if it's a draw
         if self.ply > 0 && (self.is_repetition(&position) || position.fifty.iter().any(|&p| p >= 50)) {
@@ -80,25 +82,25 @@ impl Search {
         }
 
         let king_square = u64::from(position[Piece::king(position.turn)].trailing_zeros());
-        let king_in_check = position.is_square_attacked(king_square, !position.turn);
+        let in_check = position.is_square_attacked(king_square, !position.turn);
         // conditions
             // 1. is king in check
                 //  if the stm is in check, the position is not quiet, and there is a threat that needs to be resolved. In that case, 
                 // all evastions to the check are searched. Stand pat is not allowed if we are in check.
                 // So, if the king of the stm is in check - WE MUST SEARCH EVERY MOVE IN THE POSITION, RATHER THAN ONLY CAPTURES.
                     // - LIMIT THE GENERATION OF CHECKS TO THE FIRST X PLIES OF QUIESCENCE (AND USE "DELTA PRUNNING" TO AVOID LONG FRUITLESS SEARCHES TO GET OUT OF BEEN IN CHECK)
+        
         // beta cutoff
-        if stand_pat >= beta { return beta }
-
-        if stand_pat > alpha { alpha = stand_pat }
+        if !in_check && stand_pat >= beta { return beta }
+        if !in_check && stand_pat > alpha { alpha = stand_pat }
 
         // Probe the Transposition Table here
 
 
         let moves = self.sort_moves(&position.gen_movement(), &position);
-        let captures_only = !king_in_check;
+        let captures_only = !in_check;
 
-        for (i, mv) in moves.into_iter().enumerate() {
+        for mv in moves.into_iter() {
             if captures_only && !mv.get_capture() { continue; }
 
             self.ply += 1;
