@@ -6,4 +6,4 @@ pub(crate) mod scale;
 pub(crate) mod search_entry;
 pub(crate) mod clock;
 pub(crate) mod search;
-pub(crate) mod pv_table;
+pub(crate) mod heuristics;

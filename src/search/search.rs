@@ -1,4 +1,8 @@
-use crate::{bit_move::Move, board::{piece::Piece, position::Position}, constants::{params::MAX_DEPTH, MAX_PLY}, move_scope::MoveScope, moves::Moves};
+use crate::{bit_move::Move, board::{piece::Piece, position::Position}, constants::{params::MAX_DEPTH, MAX_PLY, PLAYERS_COUNT, TOTAL_SQUARES}, move_scope::MoveScope, moves::Moves};
+
+use crate::search::heuristics::pv_table::PVTable;
+
+use super::heuristics::killer_moves::KillerMoves;
 
 /// The number of nodes you can actually cut depends on:
 /// 1. How well written your alpha-beta program is
@@ -18,23 +22,26 @@ use crate::{bit_move::Move, board::{piece::Piece, position::Position}, constants
 ///  6. [-] Transposition Table
 ///  7. [-] Null move forward Prunning
 ///  8. [-] Principal Variation Node
-///  9. [-] Killer Moves
+///  9. [x] Killer Moves
 /// 10. [-] History Moves 
 /// 11. [-] Aspiration Window
 /// 12. [-] Iterative Deepening
-/// 13. [-] PV-Table
+/// 13. [x] PV-Table
 /// This implementation is a fail-soft implementation (meaning we have to keep track of the best score)[XX] 
 /// - fail-hard for now
 pub(crate) struct Search {
     nodes:  usize,
     ply: usize,
-    /// this is used to collect the principal variation of the best moves inside an alpha-beta or principal variation search - like the best score propagated up to the root.
-    /// In an iterative deepening framework (like ours), it is most important to play the principal vairation first during the next iteration.
-    pv_table: [[Move; MAX_PLY]; MAX_PLY] // this is an array of principal variations indexable by ply
+    pv_table: PVTable,
+    killer_moves: KillerMoves,
 }
 
 
 impl Search {
+    pub(crate) fn new() -> Self {
+        Self { nodes: 0, ply: 0, pv_table: PVTable::new(), killer_moves: KillerMoves::new() }
+    }
+
     pub(crate) fn sort_moves(&self, mvs: &Moves, board: &Position) -> Vec<Move> {
         unimplemented!()
     }
@@ -46,10 +53,13 @@ impl Search {
     pub(crate) fn get_moves(&self, board: &Position) -> Vec<Move> {
         let mvs = board.gen_movement();
         //  now sort those moves and return the sorted moves
-        // TODOS!!
-        // - Principal Variation of the previous iteration
-        // - TRIANGULAR PV-TABLE
         // PV-nodes and expected Cut-nodes must be searched (give them more priority)
+        
+
+        // order of moves ordering
+        // 1. (Good) Captures
+        // 3. Killer moves (Should be just below the MVV-LVA captures)
+        // 2. Hash move
         unimplemented!()
     }
 
