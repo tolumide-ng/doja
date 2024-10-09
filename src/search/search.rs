@@ -23,7 +23,7 @@ use super::heuristics::killer_moves::KillerMoves;
 ///  7. [-] Null move forward Prunning
 ///  8. [-] Principal Variation Node
 ///  9. [x] Killer Moves
-/// 10. [-] History Moves 
+/// 10. [x] History Moves 
 /// 11. [-] Aspiration Window
 /// 12. [-] Iterative Deepening
 /// 13. [x] PV-Table
