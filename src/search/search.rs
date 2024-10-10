@@ -27,7 +27,7 @@ use super::heuristics::{history::HistoryHeuristic, killer_moves::KillerMoves};
 /// 11. [-] Aspiration Window
 /// 12. [-] Iterative Deepening
 /// 13. [x] PV-Table
-/// 14. [-] Repetitions https://www.chessprogramming.org/Repetitions
+/// 14. [x] Repetitions https://www.chessprogramming.org/Repetitions
 /// This implementation is a fail-soft implementation (meaning we have to keep track of the best score)[XX] 
 /// - fail-hard for now
 pub(crate) struct Search<'a> {
@@ -50,9 +50,6 @@ impl<'a> Search<'a> {
         unimplemented!()
     }
 
-    pub(crate) fn is_repetition(&self, board: &Position) -> bool {
-        unimplemented!()
-    }
 
     pub(crate) fn get_sorted_moves(&self, board: &Position) -> Vec<Move> {
         let mvs = board.gen_movement();
@@ -67,6 +64,22 @@ impl<'a> Search<'a> {
         unimplemented!()
     }
 
+    fn is_repetition(position: &Position, key: u64) -> bool {
+        let len = position.history_len();
+
+        if len == 0 { return false }
+
+        // subtracting 1 from len because we don't care about the opponent's (the person who played last's) game
+        // stepping by 2 because we don't care about the opponent's key positional history in this case
+        for index in (0..len-1).rev().step_by(2) {
+            if let Some(history) = position.history_at(index) { 
+                if history.hash() == key { return true }
+             } else { continue }
+        } 
+
+        false
+    }
+
 
     // In addition, we a score to return in case there are no captures available to be played. -->> static evaluation
     /// At the beginning of quiescence, the position's evaluation is used to establish a lower-bound on the score.
@@ -79,7 +92,7 @@ impl<'a> Search<'a> {
         let stand_pat = position.evaluate();
         if self.ply >= MAX_DEPTH { return stand_pat }
         // check if it's a draw
-        if self.ply > 0 && (self.is_repetition(&position) || position.fifty.iter().any(|&p| p >= 50)) {
+        if self.ply > 0 && (Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&p| p >= 50)) {
             return 0 // draw
         }
 
@@ -143,7 +156,7 @@ impl<'a> Search<'a> {
     pub(crate) fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
         let mut hash_flag = HashFlag::UpperBound;
 
-        if self.is_repetition(&position) || position.fifty.iter().any(|&s| s >= 50) {
+        if Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&s| s >= 50) {
             return 0; // daw
         }
 

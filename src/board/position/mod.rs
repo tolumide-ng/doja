@@ -26,6 +26,10 @@ impl History {
     pub(crate) fn new(mv: Move, hash: u64, victim: Option<Piece>, piece: Piece) -> Self {
         Self { mv, hash, victim, piece }
     }
+
+    pub(crate) fn hash(&self) -> u64 {
+        return self.hash
+    }
 }
 
 
@@ -50,6 +54,14 @@ impl Position {
     /// https://www.chessprogramming.org/Zugzwang
     pub(crate) fn is_engame() {
         todo!()
+    }
+
+    pub(crate) fn history_at(&self, index: usize) -> Option<&History>  {
+        self.history.get(index)
+    }
+
+    pub(crate) fn history_len(&self) -> usize {
+        self.history.len()
     }
 
     pub(crate) fn nnue_push(&mut self) { self.nnue_state.push(); }
