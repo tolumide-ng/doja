@@ -330,7 +330,7 @@ impl Board {
 
         
             // generates a bitboard(u64) where only this src square is set to 1
-            let sq_bits = 1u64 << src as u64;            
+            let sq_bits = 1u64 << src as u64;
             let (attacks, occupancies) = match piece {
                 Piece::WN | Piece::BN => (PIECE_ATTACKS.knight_attacks[src], !self.occupancies[color]),
                 Piece::WB | Piece::BB => (PIECE_ATTACKS.nnbishop_attacks(sq_bits, self.occupancies[Color::Both]), !self.occupancies[color]),
@@ -343,15 +343,25 @@ impl Board {
                 _ => unreachable!()
             };
 
+
             // let attacks = attack_map[src];
             // we're getting !self.occupancies[color]s because our knight hould be able to make both quiet or capture moves (on the opponent)
             let mut targets = Bitboard::from(attacks & occupancies);
+
+            // if piece == Piece::BB {
+            //     println!("attacks {}", Bitboard::from(attacks));
+            //     println!("black in 0 {}", Bitboard::from(occupancies));
+            //     println!("targets {}", Bitboard::from(targets));
+            //     println!("occupancies of black in 1 {}", Bitboard::from(self.occupancies[1]));
+            //     println!("inverted black occupancies {}", Bitboard::from(!self.occupancies[1]));
+            //     println!("THE BOARD IS >>>>>>>>>>>>>>> {}", self)
+            // }
+
 
             let source = src as u32;
 
             while targets.not_zero() {
                 let target = targets.trailing_zeros() as u64;
-                // let target = targets.trailing_zeros() as u64;
                 // capture move // there is an opponent on the target square
                 let opponent_on_target = Bitboard::from(self.occupancies[!color]).get_bit(target) != 0;
                 let mvt = if opponent_on_target {Capture} else {Quiet};
@@ -361,6 +371,12 @@ impl Board {
             }
         }
 
+
+        // for mvv in &move_list {
+        //     print!("(((({}))))--->>", mvv.to_string());
+        // }
+        // println!("\n");
+        
         move_list
     }
 
@@ -372,8 +388,15 @@ impl Board {
         move_list.add_many(&self.get_pawn_movement(color, true));
         move_list.add_many(&self.get_pawn_movement(color, false));
         move_list.add_many(&self.get_castling(color));
+
         move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::knight(color)));
+        // let clonedd = move_list.clone();
+        // for mvv in clonedd.into_iter() {
+        //     print!("|||||| {} ||||||", mvv.to_string());
+        // }
+        // println!("\n\n\n");
         move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::bishop(color)));
+        // println!("****************************************AFTER CALLING BISHOP********************************************************************************");
         move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::rook(color)));
         move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::queen(color)));
         move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::king(color)));
@@ -447,6 +470,8 @@ impl Board {
 
     pub(crate) fn make_move(&self, bit_move: Move, scope: MoveScope) -> Option<Self> {
         let mut board = self.clone();
+        // println!("RECEIVED {}", board.to_string());
+
         
         match scope {
             MoveScope::AllMoves => {
@@ -457,6 +482,7 @@ impl Board {
                 let turn = self.turn;
                 
                 if *(self[piece]) & (1 << (from as u64)) == 0 || turn != piece.color() {return None}
+
                 
                 // move piece
                 board[piece].pop_bit(from.into());
@@ -503,7 +529,7 @@ impl Board {
                     board.hash_key ^= ZOBRIST.enpassant_keys[enpass as usize];
                 }
                 board.enpassant = None;
-
+                
                 if bit_move.move_type() == MoveType::DoublePush {
                     let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     board.enpassant = Some(enpass_target.into());
@@ -529,10 +555,13 @@ impl Board {
                 board.castling_rights = Castling::from(castle_two);
                 let new_castling = usize::from_str_radix(&board.castling_rights.bits().to_string(), 10).unwrap();
                 board.hash_key ^= ZOBRIST.castle_keys[new_castling];
-
+                
                 board.occupancies[Color::White] = *board[Piece::WP] | *board[Piece::WB] | *board[Piece::WK] | *board[Piece::WN] | *board[Piece::WQ] | *board[Piece::WR];
                 board.occupancies[Color::Black] = *board[Piece::BP] | *board[Piece::BB] | *board[Piece::BK] | *board[Piece::BN] | *board[Piece::BQ] | *board[Piece::BR];
                 board.occupancies[Color::Both] = board.occupancies[Color::White] | board.occupancies[Color::Black];
+
+                // // println!("[[[[[[[[[[[[[[[[[[the move is >>>>>>>>>>>>>>]]]]]]]]]]]]]]]]]] {:?}", bit_move.to_string());
+                // println!("BECAME***** {}", board.to_string());
                 
             
                 // is this an illegal move?

@@ -30,7 +30,7 @@ use std::{num::NonZero, sync::{Arc, Mutex}};
 
 use board::{fen::FEN, position::Position, state::board::Board};
 use constants::TRICKY_POSITION;
-use search::control::Control;
+use search::{control::Control, search::Search};
 use syzygy::probe::TableBase;
 use tt::table::TTable;
 // use zobrist::Zobrist;
@@ -55,7 +55,7 @@ fn main() {
     println!("num of cpus {:?}", std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()));
     // let tt = TTable::default();
     let controller = Arc::new(Mutex::new(Control::default()));
-    let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+    let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     // let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
     let threads = 1;
     let depth = 4;
@@ -77,7 +77,11 @@ fn main() {
 
     let mut bb = board.clone();
     // negamax_thread[0].iterative_deepening(depth, &mut bb, &tb);
-    NegaMax::run(controller, table.get(), depth, &mut bb, 1, &tb);
+    // NegaMax::run(controller, table.get(), depth, &mut bb, 1, &tb);
+
+    let mut search = Search::new(table.get());
+    search.iterative_deepening(4, &mut board);
+    
 
 }
 

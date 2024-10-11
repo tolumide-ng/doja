@@ -76,7 +76,7 @@ impl Position {
     pub(crate) fn make_move(&mut self, mv: Move, scope: MoveScope) -> bool {
         let Some(piece) = self.piece_at(mv.get_src()) else {return false};
         if let Some(new_board) = self.board.make_move(mv, scope) {
-                let mut captured = None;
+            let mut captured = None;
             let tgt = mv.get_target() as u64;
             
             if mv.get_enpassant() {
@@ -94,7 +94,7 @@ impl Position {
             
             return true;
         }
-
+        
         false
     }
 
@@ -120,8 +120,10 @@ impl Position {
         if mv.get_castling() { 
             rook_mvs = self.board.validate_castling_move(&mv); // rook movements
         };
-
-        let Some(piece) = self.board.piece_at(src) else {return false};
+        
+        let Some(piece) = self.board.piece_at(src) else {
+            return false
+        };
         
         if self.make_move(mv, scope) {
             // self.nnue_state.push();
@@ -147,7 +149,7 @@ impl Position {
                 remove.push((rook, rook_src));
                 add.push((rook, rook_tgt));
             }
-    
+            
             if let Some(promoted) =  mv.get_promotion() {
                 remove.push((piece, src));
                 add.push((Piece::from((promoted, turn)), tgt));
@@ -155,13 +157,12 @@ impl Position {
                 remove.push((piece, src));
                 add.push((piece, tgt));
             }
-
-
+            
+            
             self.nnue_state.update(remove, add);
-
+            
             return true;
         }
-
         false
     }
 

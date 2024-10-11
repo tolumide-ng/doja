@@ -1,4 +1,4 @@
-use crate::{bit_move::Move, board::{piece::Piece, position::Position}, constants::{params::MAX_DEPTH, MAX_PLY, PLAYERS_COUNT, TOTAL_SQUARES}, move_scope::MoveScope, moves::Moves, tt::{flag::HashFlag, tpt::TPT}};
+use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, INFINITY, MAX_PLY, MVV_LVA, PLAYERS_COUNT, TOTAL_SQUARES, VAL_WINDOW}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
 
 use crate::search::heuristics::pv_table::PVTable;
 
@@ -34,7 +34,9 @@ pub(crate) struct Search<'a> {
     nodes:  usize,
     ply: usize,
     pv_table: PVTable,
+    /// The Killer Move is a quiet move which caused a beta-cutoff in a sibling Cut-node,
     killer_moves: KillerMoves,
+    /// Previosyly successful moves in a particular positioin that resulted in a beta-cutoff
     history_table: HistoryHeuristic,
     tt: TPT<'a>
 }
@@ -46,22 +48,72 @@ impl<'a> Search<'a> {
             history_table: HistoryHeuristic::new(), tt }
     }
 
-    pub(crate) fn sort_moves(&self, mvs: &Moves, board: &Position) -> Vec<Move> {
-        unimplemented!()
+    pub(crate) fn iterative_deepening(&mut self, limit: u8, position: &mut Position) {
+        let mut alpha = -INFINITY;
+        let mut beta = INFINITY;
+
+        for depth in 1..=limit {
+            println!("RUNNING :::::::::::::::::: {depth}");
+            let score = self.alpha_beta(alpha, beta, depth, position);
+            println!("the score is {score} and nodes {}", self.nodes);
+            if score <= alpha || score >= beta {
+                // We fell outside the window, so try agin with a full-width window (and the same depth)
+                alpha = -INFINITY; beta = INFINITY;
+                continue;
+            }
+
+            alpha = score - VAL_WINDOW;
+            beta = score + VAL_WINDOW;
+
+            println!("MOVES ARE ::::");
+            for i in self.pv_table.get_pv(depth as usize) {
+                print!("-->> {}", Move::from(*i));
+            }
+        }
     }
 
-
-    pub(crate) fn get_sorted_moves(&self, board: &Position) -> Vec<Move> {
+    fn get_sorted_moves(&self, board: &Position) -> Vec<Move> {
         let mvs = board.gen_movement();
+        let mut mvs = (mvs.collect::<Vec<_>>())[0..mvs.count_mvs()].to_vec();
         //  now sort those moves and return the sorted moves
         // PV-nodes and expected Cut-nodes must be searched (give them more priority)
-        
 
-        // order of moves ordering
-        // 1. (Good) Captures
-        // 3. Killer moves (Should be just below the MVV-LVA captures)
-        // 2. Hash move
-        unimplemented!()
+        
+        let mut sorted_mvs = Vec::with_capacity(mvs.len());
+        if let Some(pv_mv) = self.pv_table.get_pv(self.ply).get(0) {
+            if let Some(pos) = mvs.iter().position(|&m| *m == *pv_mv) {
+                sorted_mvs.push(mvs[pos]);
+                mvs.remove(pos);
+                // mvs.swap(0, pos);
+                // start_idx = 1;
+            }
+        }
+        
+        // Sort by MVV-LVA table
+        let [mut captures, mut non_captures] = mvs.iter().fold([Vec::new(), Vec::new()], |mut acc, mv| {
+            if mv.get_capture() { acc[0].push(*mv) } else { acc[1].push(*mv) }
+            [acc[0].clone(), acc[1].clone()]
+        });
+        
+        captures.sort_by_key(|mv| {
+            let src = board.get_piece_at(mv.get_src(), board.turn).unwrap();
+            let tgt = board.get_piece_at(mv.get_target(), !board.turn).unwrap();
+            
+            return MVV_LVA[src][tgt]
+        });
+        
+        sorted_mvs.append(&mut captures);
+
+        non_captures.sort_by_key(|mv| {
+            if self.killer_moves.is_killer(self.ply, mv) {
+                return 1
+            } 
+            0
+        });
+
+        sorted_mvs.append(&mut non_captures);
+
+        return sorted_mvs
     }
 
     fn is_repetition(position: &Position, key: u64) -> bool {
@@ -96,7 +148,7 @@ impl<'a> Search<'a> {
             return 0 // draw
         }
 
-        let in_check = self.stm_in_check(&position);
+        let in_check = Self::in_check(&position, position.turn);
         // conditions
             // 1. is king in check
                 //  if the stm is in check, the position is not quiet, and there is a threat that needs to be resolved. In that case, 
@@ -107,32 +159,45 @@ impl<'a> Search<'a> {
         // beta cutoff
         if !in_check && stand_pat >= beta { return beta }
         if !in_check && stand_pat > alpha { alpha = stand_pat }
-
+        
         // Probe the Transposition Table here
-
-
         let moves = self.get_sorted_moves(&position);
         let captures_only = !in_check;
+        let mut best_score = -INFINITY;
 
         for mv in moves.into_iter() {
             if captures_only && !mv.get_capture() { continue; }
 
-            self.ply += 1;
-            position.make_move_nnue(mv, MoveScope::AllMoves);
-            let score = -self.quiescence(-beta, -alpha, position);
-            position.undo_move(true);
-            self.ply -= 1;
+            if position.make_move_nnue(mv, MoveScope::AllMoves) {
+                self.ply += 1;
+                // if position.make_move_nnue(mv, MoveScope::AllMoves) {}
+                let score = -self.quiescence(-beta, -alpha, position);
+                position.undo_move(true);
 
-            if score >= beta {return beta}
-            if score > alpha { alpha = score; }
+                self.ply -= 1;
+    
+                if score > best_score {
+                    best_score = score;
+                    
+                    if score > alpha { best_score = score; alpha = score; }
+                    if score >= beta {alpha = beta; break}
+                }
+            }
+
+
+        }
+
+
+        if in_check && best_score == -INFINITY {
+            return  - 5000;
         }
         
         alpha
     }
 
-    fn stm_in_check(&self, position: &Position) -> bool {
-        let king_square = u64::from(position[Piece::king(position.turn)].trailing_zeros());
-        position.is_square_attacked(king_square, !position.turn)
+    fn in_check(position: &Position, color: Color) -> bool {
+        let king_square = u64::from(position[Piece::king(color)].trailing_zeros());
+        position.is_square_attacked(king_square, !color)
     }
 
     /// NB: This method is not pure, and would update the provided Move if the conditions are satisified
@@ -175,21 +240,45 @@ impl<'a> Search<'a> {
 
         self.nodes += 1;
 
-        let stm_in_check = self.stm_in_check(position);
+        let stm_in_check = Self::in_check(position, position.turn);
         let depth = if stm_in_check { depth + 1} else { depth };
-        
-        let mut searched_mvs = 0;
+
+        let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves(&position);
 
-        for (count, mv) in mvs.iter().enumerate() {
-            self.ply += 1;
-            // https://www.chessprogramming.org/Repetitions
-            // self.is_repetition(&position);
+        for (_count, mv) in mvs.iter().enumerate() {            
+            // println!("ababababababab");
+            if position.make_move_nnue(*mv, MoveScope::AllMoves) {
+                self.ply += 1;
+                
+                let score = -self.alpha_beta(-beta, -alpha, depth -1, &mut position);
+                
+                position.undo_move(true);
+                let moved_piece = position.piece_at(mv.get_src()).unwrap();
+                
+                if score > best_score {
+                    best_score = score;
+    
+                    if score > alpha {
+                        best_mv = Some(*mv);
+                        hash_flag = HashFlag::Exact;
+                        self.pv_table.store_pv(depth as usize, mv);
+                        alpha = score;
+                        
+                        if score >= beta {
+                            self.tt.record(position.hash_key, depth, beta, INFINITY, self.ply, hash_flag, 0, best_mv); 
+                            if !mv.get_capture() {
+                                self.history_table.update(moved_piece, mv.get_src(), depth);
+                                self.killer_moves.store(depth as usize, mv);
+                            }
+                            return beta;
+                        }
+                    }
+                }
+            }
         }
 
-
-        
-        
-        0
+        self.tt.record(position.hash_key, depth, best_score, INFINITY, depth as usize, hash_flag, 0, best_mv);
+        alpha
     }
 }
