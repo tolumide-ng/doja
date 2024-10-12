@@ -16,16 +16,16 @@ use super::heuristics::{history::HistoryHeuristic, killer_moves::KillerMoves};
 ///         b. [-] Delta Pruning
 ///             i. https://www.chessprogramming.org/Delta_Pruning
 ///             ii. https://www.chessprogramming.org/CPW-Engine_quiescence (check how CPW implements its beta pruning)
-///  3. [-] Late Move Reduction
-///  4. [-] MVV_LVA - (Most Viable Victim -- Least Viable Attacker)
-///  5. [-] Move Ordering
-///  6. [-] Transposition Table
-///  7. [-] Null move forward Prunning
-///  8. [-] Principal Variation Node
+///  3. [x] Late Move Reduction
+///  4. [x] MVV_LVA - (Most Viable Victim -- Least Viable Attacker)
+///  5. [x] Move Ordering
+///  6. [x] Transposition Table
+///  7. [x] Null move forward Prunning
+///  8. [x] Principal Variation Node
 ///  9. [x] Killer Moves
 /// 10. [x] History Moves 
-/// 11. [-] Aspiration Window
-/// 12. [-] Iterative Deepening
+/// 11. [x] Aspiration Window
+/// 12. [x] Iterative Deepening
 /// 13. [x] PV-Table
 /// 14. [x] Repetitions https://www.chessprogramming.org/Repetitions
 /// This implementation is a fail-soft implementation (meaning we have to keep track of the best score)[XX] 
@@ -58,7 +58,7 @@ impl<'a> Search<'a> {
             self.ply = 0;
             let score = self.alpha_beta(alpha, beta, depth, position);
             println!("the score is {score} and nodes {}", self.nodes);
-            if score <= alpha || score >= beta {
+            if score <= alpha || score >= beta { // aspiration window
                 // We fell outside the window, so try agin with a full-width window (and the same depth)
                 alpha = -INFINITY; beta = INFINITY;
                 continue;
@@ -73,18 +73,6 @@ impl<'a> Search<'a> {
             }
             println!("\n")
         }
-
-
-        // println!("MOVES ARE ::::");
-        // for i in self.pv_table.get_pv(5) {
-        //     print!("-->> {}", Move::from(*i));
-        // }
-        // println!("\n")
-
-        // let cool = self.pv_table.pv.iter().filter(|x| x > &&0).collect::<Vec<_>>();
-        // for c in cool {
-        //     println!("the pv--table>>> {:?}", Move::from(*c).to_string());
-        // }
     }
 
     fn get_sorted_moves(&self, board: &Position) -> Vec<Move> {
@@ -341,7 +329,7 @@ impl<'a> Search<'a> {
                                 value = -self.alpha_beta(-beta, -alpha, depth-1, position);
                             }
                         }
-                        
+
                         value
                     }
                 };
