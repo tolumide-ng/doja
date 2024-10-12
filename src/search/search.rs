@@ -1,4 +1,4 @@
-use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, INFINITY, MAX_PLY, MVV_LVA, PLAYERS_COUNT, TOTAL_SQUARES, VAL_WINDOW}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
+use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, INFINITY, MAX_PLY, MVV_LVA, PLAYERS_COUNT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
 
 use crate::search::heuristics::pv_table::PVTable;
 
@@ -243,6 +243,42 @@ impl<'a> Search<'a> {
         None
     }
 
+    /// nmfp: Null Move forward prunning
+    /// https://web.archive.org/web/20040427014629/http://brucemo.com/compchess/programming/nullmove.htm
+    /// "If I do nothing here, can the opponent do anything?"
+    fn make_null_move(&mut self, beta: i32, depth: u8, mut position: &mut Position) -> Option<i32> {
+        self.ply += 1;
+        
+        let old_hashkey = position.hash_key;
+        let old_enpassant = position.enpassant;
+
+        if let Some(enpass_sq) = position.enpassant {
+                // we know that we're going to remove the enpass if it's available (see 4 lines below), so we remove it from the hashkey if it exists here
+            position.set_zobrist(position.hash_key ^ ZOBRIST.enpassant_keys[enpass_sq]);
+        }
+
+        position.set_turn(!position.turn);
+        position.set_enpassant(None);
+        position.set_zobrist(position.hash_key ^ ZOBRIST.side_key); // side about to move
+        position.nnue_push();
+
+        let score = -self.alpha_beta(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut position);
+
+        // reverse all actions, after we're done
+        self.ply -= 1;
+        position.nnue_pop();
+
+        // recent change for undo move in order to avoid cloning the board
+        position.set_turn(!position.turn);
+        position.set_enpassant(old_enpassant);
+        position.set_zobrist(old_hashkey);
+
+        if score > beta {
+            return Some(beta);
+        }
+
+        None
+    }
 
     pub(crate) fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
         // if depth == 0 || depth == 1 {
@@ -265,7 +301,6 @@ impl<'a> Search<'a> {
 
         if depth == 0 { return self.quiescence(alpha, beta, position) }
 
-        // println!("[[[[[[[[depth]]]]]]]], ply is {}   {depth}", self.ply);
         if self.ply > MAX_PLY - 1 { return position.evaluate() }
 
 
@@ -274,46 +309,24 @@ impl<'a> Search<'a> {
         let stm_in_check = Self::in_check(position, position.turn);
         // let depth = if stm_in_check { depth + 1} else { depth };
 
+        let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !stm_in_check && self.ply > 0;
+
+        if null_move_forward_pruning_conditions {
+            if let Some(beta) = self.make_null_move(beta, depth, position) {
+                return beta;
+            }
+        }
+
         let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves(&position);
 
-        // if depth == 2 {
-        //     // println!("the ply is {}", self.ply);
-        //     println!("TURN IS {:?}", position.turn);
-        //     for m in &mvs {
-        //         print!("--->>{}", m.to_string());
-        //     }
-        //     println!("\n");
-        // }
-
-        // println!(":::zobrist {}", position.hash_key);
-
-        for (_count, mv) in mvs.iter().enumerate() {            
-            // println!("ababababababab");
-            // if mv.to_string() == "h3h8x" && depth == 1 {
-            //     println!("the board her4e is {depth} {}", position.to_string());
-            // }
+        for (_count, mv) in mvs.iter().enumerate() {
             if position.make_move_nnue(*mv, MoveScope::AllMoves) {
-                // println!("made the move>>>> {}", mv.to_string());
                 self.ply += 1;
 
                 
                 let score = -self.alpha_beta(-beta, -alpha, depth -1, &mut position);
-                // println!("THE SCORE IS {score}, alpha={alpha}, and beta is {beta}");
-
                 let zobrist_key = position.hash_key;
-
-
-                // if mv.to_string() == "e2a6x" && depth == 1 {
-                //     println!("\n the score is for e2a6x at depth{depth}*********** {score} >> alpha-->>{alpha}, beta{beta}, depth-->>{depth}");
-                //     println!("evaluationLLLLLLL {}", position.evaluate());
-                // }
-
-                // if depth == 2 && mv.to_string() == "h8h3x" {
-                //     println!("the board {}", position.to_string());
-                //     println!("**************XXXXXXXXXXXXXXXXX  {score} alpha={alpha}, beta={beta}");
-                // }
-                
                 position.undo_move(true);
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();

@@ -37,7 +37,7 @@ impl History {
 pub(crate) struct Position {
     pub(crate) board: Board,
     nnue_state: NNUEState<Feature, L1_SIZE>,
-    history: Vec<History>,
+    history: Vec<Option<History>>,
 }
 
 
@@ -57,16 +57,23 @@ impl Position {
     }
 
     pub(crate) fn history_at(&self, index: usize) -> Option<&History>  {
-        self.history.get(index)
+        self.history.get(index).unwrap().as_ref()
     }
 
     pub(crate) fn history_len(&self) -> usize {
         self.history.len()
     }
 
-    pub(crate) fn nnue_push(&mut self) { self.nnue_state.push(); }
+    /// For null moves only
+    pub(crate) fn nnue_push(&mut self) {
+        self.history.push(None); 
+        self.nnue_state.push();
+    }
 
-    pub(crate) fn nnue_pop(&mut self) { self.nnue_state.pop(); }
+    /// For null moves only
+    pub(crate) fn nnue_pop(&mut self) {
+        self.history.pop(); 
+        self.nnue_state.pop(); }
 
     pub(crate) fn with(board: Board) -> Self {
         let nnue_state = NNUEState::from(&board);
@@ -90,7 +97,7 @@ impl Position {
             
             let mv_history = History::new(mv, self.board.hash_key, captured, piece);
             let _ = std::mem::replace(&mut self.board, new_board);
-            self.history.push(mv_history);
+            self.history.push(Some(mv_history));
             
             return true;
         }
@@ -168,9 +175,9 @@ impl Position {
 
     pub(crate) fn undo_move(&mut self, with_nnue: bool) {
         if self.history.len() == 0 { return }
-        if *self.history.last().unwrap().mv == 0 { return }; // this means that the last move was a null-move (used during search)
+        if *self.history.last().unwrap().unwrap().mv == 0 { return }; // this means that the last move was a null-move (used during search)
 
-        let History { mv, hash, victim, piece } = self.history.pop().unwrap();
+        let History { mv, hash, victim, piece } = self.history.pop().unwrap().unwrap();
         let src = mv.get_src() as u64;
         let tgt = mv.get_target() as u64;
         let color = piece.color(); // the side that moved
