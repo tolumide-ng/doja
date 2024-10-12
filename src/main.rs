@@ -80,7 +80,7 @@ fn main() {
     // NegaMax::run(controller, table.get(), depth, &mut bb, 1, &tb);
 
     let mut search = Search::new(table.get());
-    search.iterative_deepening(4, &mut board);
+    search.iterative_deepening(10, &mut board);
     
 
 }

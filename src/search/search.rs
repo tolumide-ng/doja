@@ -53,7 +53,9 @@ impl<'a> Search<'a> {
         let mut beta = INFINITY;
 
         for depth in 1..=limit {
-            println!("RUNNING :::::::::::::::::: {depth}");
+            println!("RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {depth}");
+            println!("{}", position.to_string());
+            self.ply = 0;
             let score = self.alpha_beta(alpha, beta, depth, position);
             println!("the score is {score} and nodes {}", self.nodes);
             if score <= alpha || score >= beta {
@@ -65,11 +67,24 @@ impl<'a> Search<'a> {
             alpha = score - VAL_WINDOW;
             beta = score + VAL_WINDOW;
 
-            println!("MOVES ARE ::::");
-            for i in self.pv_table.get_pv(depth as usize) {
+            println!("MOVES ARE :::: with length of {}", self.pv_table.len(0));
+            for i in self.pv_table.get_pv(0) {
                 print!("-->> {}", Move::from(*i));
             }
+            println!("\n")
         }
+
+
+        // println!("MOVES ARE ::::");
+        // for i in self.pv_table.get_pv(5) {
+        //     print!("-->> {}", Move::from(*i));
+        // }
+        // println!("\n")
+
+        // let cool = self.pv_table.pv.iter().filter(|x| x > &&0).collect::<Vec<_>>();
+        // for c in cool {
+        //     println!("the pv--table>>> {:?}", Move::from(*c).to_string());
+        // }
     }
 
     fn get_sorted_moves(&self, board: &Position) -> Vec<Move> {
@@ -88,6 +103,7 @@ impl<'a> Search<'a> {
                 // start_idx = 1;
             }
         }
+
         
         // Sort by MVV-LVA table
         let [mut captures, mut non_captures] = mvs.iter().fold([Vec::new(), Vec::new()], |mut acc, mv| {
@@ -98,10 +114,18 @@ impl<'a> Search<'a> {
         captures.sort_by_key(|mv| {
             let src = board.get_piece_at(mv.get_src(), board.turn).unwrap();
             let tgt = board.get_piece_at(mv.get_target(), !board.turn).unwrap();
-            
-            return MVV_LVA[src][tgt]
+            return MVV_LVA[src as usize % 6][tgt as usize % 6]
         });
+
+        captures.reverse();
         
+        // if self.ply == 1  && board.turn == Color::Black {
+        //     for mv in &captures {
+        //         println!("sorted by capture:::::::::::::::: {:?}", mv.to_string());
+        //     }
+        // }
+
+
         sorted_mvs.append(&mut captures);
 
         non_captures.sort_by_key(|mv| {
@@ -110,6 +134,8 @@ impl<'a> Search<'a> {
             } 
             0
         });
+
+        non_captures.reverse();
 
         sorted_mvs.append(&mut non_captures);
 
@@ -219,6 +245,9 @@ impl<'a> Search<'a> {
 
 
     pub(crate) fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
+        // if depth == 0 || depth == 1 {
+        //     println!("WITH DEPTH OF {depth}");
+        // }
         let mut hash_flag = HashFlag::UpperBound;
 
         if Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&s| s >= 50) {
@@ -236,37 +265,74 @@ impl<'a> Search<'a> {
 
         if depth == 0 { return self.quiescence(alpha, beta, position) }
 
+        // println!("[[[[[[[[depth]]]]]]]], ply is {}   {depth}", self.ply);
         if self.ply > MAX_PLY - 1 { return position.evaluate() }
+
 
         self.nodes += 1;
 
         let stm_in_check = Self::in_check(position, position.turn);
-        let depth = if stm_in_check { depth + 1} else { depth };
+        // let depth = if stm_in_check { depth + 1} else { depth };
 
         let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves(&position);
 
+        // if depth == 2 {
+        //     // println!("the ply is {}", self.ply);
+        //     println!("TURN IS {:?}", position.turn);
+        //     for m in &mvs {
+        //         print!("--->>{}", m.to_string());
+        //     }
+        //     println!("\n");
+        // }
+
+        // println!(":::zobrist {}", position.hash_key);
+
         for (_count, mv) in mvs.iter().enumerate() {            
             // println!("ababababababab");
+            // if mv.to_string() == "h3h8x" && depth == 1 {
+            //     println!("the board her4e is {depth} {}", position.to_string());
+            // }
             if position.make_move_nnue(*mv, MoveScope::AllMoves) {
+                // println!("made the move>>>> {}", mv.to_string());
                 self.ply += 1;
+
                 
                 let score = -self.alpha_beta(-beta, -alpha, depth -1, &mut position);
+                // println!("THE SCORE IS {score}, alpha={alpha}, and beta is {beta}");
+
+                let zobrist_key = position.hash_key;
+
+
+                // if mv.to_string() == "e2a6x" && depth == 1 {
+                //     println!("\n the score is for e2a6x at depth{depth}*********** {score} >> alpha-->>{alpha}, beta{beta}, depth-->>{depth}");
+                //     println!("evaluationLLLLLLL {}", position.evaluate());
+                // }
+
+                // if depth == 2 && mv.to_string() == "h8h3x" {
+                //     println!("the board {}", position.to_string());
+                //     println!("**************XXXXXXXXXXXXXXXXX  {score} alpha={alpha}, beta={beta}");
+                // }
                 
                 position.undo_move(true);
+                self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
                 
+                // println!("GOOD MOVE>>>>>>>>>>>*********************************************************score={score}******alpha={alpha}*****beta={beta}**********{depth}*** {:?}", mv.to_string());
+                // println!("current best score is {score}");
                 if score > best_score {
                     best_score = score;
     
                     if score > alpha {
+                        best_score = score;
+                        
                         best_mv = Some(*mv);
                         hash_flag = HashFlag::Exact;
-                        self.pv_table.store_pv(depth as usize, mv);
+                        self.pv_table.store_pv(self.ply, mv);
                         alpha = score;
                         
                         if score >= beta {
-                            self.tt.record(position.hash_key, depth, beta, INFINITY, self.ply, hash_flag, 0, best_mv); 
+                            self.tt.record(zobrist_key, depth, beta, INFINITY, self.ply, hash_flag, 0, best_mv); 
                             if !mv.get_capture() {
                                 self.history_table.update(moved_piece, mv.get_src(), depth);
                                 self.killer_moves.store(depth as usize, mv);
@@ -278,7 +344,7 @@ impl<'a> Search<'a> {
             }
         }
 
-        self.tt.record(position.hash_key, depth, best_score, INFINITY, depth as usize, hash_flag, 0, best_mv);
+        self.tt.record(position.hash_key, depth, best_score, INFINITY, self.ply, hash_flag, 0, best_mv);
         alpha
     }
 }
