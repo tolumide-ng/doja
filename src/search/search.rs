@@ -1,4 +1,4 @@
-use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MAX_PLY, MVV_LVA, PLAYERS_COUNT, REDUCTION_LIMIT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
+use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, MAX_PLY, MVV_LVA, PLAYERS_COUNT, REDUCTION_LIMIT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
 
 use crate::search::heuristics::pv_table::PVTable;
 
@@ -59,6 +59,7 @@ impl<'a> Search<'a> {
             let score = self.alpha_beta(alpha, beta, depth, position);
             println!("the score is {score} and nodes {}", self.nodes);
             if score <= alpha || score >= beta { // aspiration window
+                println!("(((((((((((((((((((((((((((should not be here)))))))))))))))))))))))))))");
                 // We fell outside the window, so try agin with a full-width window (and the same depth)
                 alpha = -INFINITY; beta = INFINITY;
                 continue;
@@ -291,6 +292,7 @@ impl<'a> Search<'a> {
 
         let stm_in_check = Self::in_check(position, position.turn);
         // let depth = if stm_in_check { depth + 1} else { depth };
+        let mut mvs_searched = 0;
 
         let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !stm_in_check && self.ply > 0;
 
@@ -303,10 +305,36 @@ impl<'a> Search<'a> {
         let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves(&position);
 
+        // println!("depth {depth} --->>> color:::: {:?}", position.turn);
+        // println!("pv length  for xx {}", self.pv_table.len(2));
+        if depth == 1 && self.pv_table.len(2) == 0 {
+            println!("pppppp {}", position.to_string());
+            for mv in &mvs {
+                print!(">> {}", mv.to_string());
+            }
+        }
+
+
+        if depth == 1 && mvs.contains(&Move::from(7030)) {
+            println!("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL");
+            for mv in &mvs {
+                print!(">> {}", mv.to_string());
+            }
+            println!("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL");
+        }
+
+
         for (moves_searched, mv) in mvs.iter().enumerate() {
+            if depth == 1 && mvs.contains(&Move::from(7030)) {
+                println!("CURRENT MOVE IS {}", mv.to_string());
+            }
+
+
             if position.make_move_nnue(*mv, MoveScope::AllMoves) {
                 self.ply += 1;
+                // moves_searched += 1;
 
+                mvs_searched = moves_searched;
                 
                 // let score = -self.alpha_beta(-beta, -alpha, depth -1, &mut position);
                 let score = match moves_searched {
@@ -317,8 +345,14 @@ impl<'a> Search<'a> {
                         let non_tatcital_mv = !stm_in_check && mv.get_promotion().is_none() && !mv.get_capture();
 
                         let mut value = if (moves_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
+                            if depth == 1 && mvs.contains(&Move::from(7030)) {
+                                print!("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+                            }
                             -self.alpha_beta(-alpha + 1, -alpha, depth-2, position)
                         } else {
+                            if depth == 1 && mvs.contains(&Move::from(7030)) {
+                                print!("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+                            }
                             alpha + 1 // Hack to ensure that full-depth search is done
                         };
 
@@ -326,6 +360,9 @@ impl<'a> Search<'a> {
                             value = -self.alpha_beta(-alpha + 1, -alpha, depth-1, position);
 
                             if (value > alpha) && value < beta {
+                                if depth == 1 && mvs.contains(&Move::from(7030)) {
+                                    print!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+                                }
                                 value = -self.alpha_beta(-beta, -alpha, depth-1, position);
                             }
                         }
@@ -333,15 +370,44 @@ impl<'a> Search<'a> {
                         value
                     }
                 };
+
+                if depth == 1 && mvs.contains(&Move::from(7030)) {
+                    print!("and has a score of {score}, alpha={alpha}, and beta={beta}");
+                }
+    
+
+
+
                 let zobrist_key = position.hash_key;
                 position.undo_move(true);
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
+
+                // if (depth == 3 || depth == 4) && mv.to_string() == "f3f6x" {
+                //     println!("\n");
+                //     println!("[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[<<<<<<<<<<------>>>>>>>>>>]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]] score->{score}, alpha->{alpha}, beta->{beta}");
+                //     // for mv in &mvs {
+                //     //     print!(">> {}", mv.to_string());
+                //     // }
+                // }
                 
                 // println!("GOOD MOVE>>>>>>>>>>>*********************************************************score={score}******alpha={alpha}*****beta={beta}**********{depth}*** {:?}", mv.to_string());
                 // println!("current best score is {score}");
                 if score > best_score {
                     best_score = score;
+
+                if depth == 1 && mvs.contains(&Move::from(7030)) {
+                    println!(":::::::::::::::::::::::::::::::::::::::::::::--------------------- score->{score}, alpha->{alpha}, beta->{beta} mv {}", mv);
+                }
+
+
+                if (depth == 2) {
+                    println!("\n");
+                    println!("mv ===> {} ===<<<<<[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[<<<<<<<<<<------>>>>>>>>>>]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]] score->{score}, alpha->{alpha}, beta->{beta}", mv.to_string());
+                    // for mv in &mvs {
+                    //     print!(">> {}", mv.to_string());
+                    // }
+                }
     
                     if score > alpha {
                         best_score = score;
@@ -362,6 +428,14 @@ impl<'a> Search<'a> {
                     }
                 }
             }
+        }
+
+        if mvs_searched == 0 {
+            if stm_in_check {
+                return -MATE_VALUE + self.ply as i32;
+            }
+            // king is not in check, but there are no legal moves
+            return 0; // stalemate/draw
         }
 
         self.tt.record(position.hash_key, depth, best_score, INFINITY, self.ply, hash_flag, 0, best_mv);
