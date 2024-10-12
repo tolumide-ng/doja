@@ -1,4 +1,4 @@
-use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, INFINITY, MAX_PLY, MVV_LVA, PLAYERS_COUNT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
+use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MAX_PLY, MVV_LVA, PLAYERS_COUNT, REDUCTION_LIMIT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
 
 use crate::search::heuristics::pv_table::PVTable;
 
@@ -281,13 +281,10 @@ impl<'a> Search<'a> {
     }
 
     pub(crate) fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
-        // if depth == 0 || depth == 1 {
-        //     println!("WITH DEPTH OF {depth}");
-        // }
         let mut hash_flag = HashFlag::UpperBound;
 
         if Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&s| s >= 50) {
-            return 0; // daw
+            return 0; // draw
         }
 
         let mut best_mv: Option<Move> = None;
@@ -298,9 +295,7 @@ impl<'a> Search<'a> {
         let explore_more_moves = (beta - alpha) > 1;
 
         if self.ply > 0 && tt_hit.is_some() && !explore_more_moves { return tt_hit.unwrap() }
-
         if depth == 0 { return self.quiescence(alpha, beta, position) }
-
         if self.ply > MAX_PLY - 1 { return position.evaluate() }
 
 
@@ -320,12 +315,36 @@ impl<'a> Search<'a> {
         let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves(&position);
 
-        for (_count, mv) in mvs.iter().enumerate() {
+        for (moves_searched, mv) in mvs.iter().enumerate() {
             if position.make_move_nnue(*mv, MoveScope::AllMoves) {
                 self.ply += 1;
 
                 
-                let score = -self.alpha_beta(-beta, -alpha, depth -1, &mut position);
+                // let score = -self.alpha_beta(-beta, -alpha, depth -1, &mut position);
+                let score = match moves_searched {
+                    0 => -self.alpha_beta(-beta, -alpha, depth -1, &mut position),
+                    _ => {
+                        // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
+                        // condition for Late Move Reduction
+                        let non_tatcital_mv = !stm_in_check && mv.get_promotion().is_none() && !mv.get_capture();
+
+                        let mut value = if (moves_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
+                            -self.alpha_beta(-alpha + 1, -alpha, depth-2, position)
+                        } else {
+                            alpha + 1 // Hack to ensure that full-depth search is done
+                        };
+
+                        if value > alpha {
+                            value = -self.alpha_beta(-alpha + 1, -alpha, depth-1, position);
+
+                            if (value > alpha) && value < beta {
+                                value = -self.alpha_beta(-beta, -alpha, depth-1, position);
+                            }
+                        }
+                        
+                        value
+                    }
+                };
                 let zobrist_key = position.hash_key;
                 position.undo_move(true);
                 self.ply -= 1;
