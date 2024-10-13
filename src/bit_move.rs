@@ -80,7 +80,9 @@ impl Move {
     }
 
     pub(crate) fn get_capture(&self) -> bool {
-        [MoveType::Capture, MoveType::CaptureAndPromoteToBishop, MoveType::CaptureAndPromoteToKnight, MoveType::CaptureAndPromoteToQueen, MoveType::CaptureAndPromoteToRook].contains(&self.move_type())
+        [MoveType::Capture, MoveType::CaptureAndPromoteToBishop, MoveType::CaptureAndPromoteToKnight, MoveType::CaptureAndPromoteToQueen, MoveType::CaptureAndPromoteToRook, 
+            MoveType::Enpassant, // only updated recently (confirm tests) 12/10/24
+        ].contains(&self.move_type())
     }
 
     pub(crate) fn get_double_push(&self) -> bool {

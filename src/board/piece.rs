@@ -235,6 +235,13 @@ impl Piece {
         // return MVV_LVA[index];
         return MVV_LVA[attacker][victim]
     }
+
+    const PIECE_VALUE: [i32; 6] = [161, 446, 464, 705, 1322, 0];
+
+    /// Returns the Piece Value of this piece of SEE (Static Evaluation Exchange)
+    pub(crate) fn piece_value(&self) -> i32 {
+        Self::PIECE_VALUE[(*self as usize) % 6]
+    }
 }
 
 

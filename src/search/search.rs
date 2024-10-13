@@ -76,6 +76,50 @@ impl<'a> Search<'a> {
         }
     }
 
+
+    /// Static Exchange Evaluation
+    pub(crate) fn see(position: &Position, mv: &Move) -> i32 {
+        let mut board = position.board;
+        let sq = mv.get_target();
+
+
+        let mut value = board.get_piece_at(mv.get_target(), !board.turn).unwrap().piece_value();
+        board = board.make_move(*mv, MoveScope::CapturesOnly).unwrap();
+
+        let mut is_player = false;
+
+
+        loop {
+            let mvs = board.gen_movement();
+            let mut attacking_mvs = (mvs.into_iter().collect::<Vec<_>>()[..mvs.count_mvs()]).iter().filter_map(|m|{
+                let mut tgt = m.get_target() as u64;
+                if m.get_enpassant() { tgt = match board.turn {Color::Black => tgt + 8, _ => tgt -  8}; }
+                
+                let can_capture = m.get_capture() && tgt == (sq).into();
+                if can_capture {Some((*m, position.get_piece_at(m.get_src(), board.turn).unwrap()))} else { None }
+            }).collect::<Vec<_>>();
+
+            if attacking_mvs.len() == 0 || board.piece_at(sq).is_none() {
+                break;
+            }
+
+            // Sort attackers by least valueable attacker first (LVA)
+            attacking_mvs.sort_by_key(|(_mv, attacker)| *attacker as usize);
+            
+            let (mv, ..) = attacking_mvs[0];
+
+            // the piece that we would be removing here (piece_just_captured)
+            let piece_to_remove = board.piece_at(sq).unwrap().piece_value();
+            if is_player { value += piece_to_remove } else { value -= piece_to_remove }
+            
+            board = board.make_move(mv, MoveScope::CapturesOnly).unwrap();
+
+            is_player = !is_player;
+        }
+        
+        value
+    }
+
     fn get_sorted_moves(&self, board: &Position) -> Vec<Move> {
         let mvs = board.gen_movement();
         let mut mvs = (mvs.collect::<Vec<_>>())[0..mvs.count_mvs()].to_vec();
@@ -296,38 +340,38 @@ impl<'a> Search<'a> {
 
         let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !stm_in_check && self.ply > 0;
 
-        if null_move_forward_pruning_conditions {
-            if let Some(beta) = self.make_null_move(beta, depth, position) {
-                return beta;
-            }
-        }
+        // if null_move_forward_pruning_conditions {
+        //     if let Some(beta) = self.make_null_move(beta, depth, position) {
+        //         return beta;
+        //     }
+        // }
 
         let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves(&position);
 
         // println!("depth {depth} --->>> color:::: {:?}", position.turn);
-        // println!("pv length  for xx {}", self.pv_table.len(2));
-        if depth == 1 && self.pv_table.len(2) == 0 {
-            println!("pppppp {}", position.to_string());
-            for mv in &mvs {
-                print!(">> {}", mv.to_string());
-            }
-        }
+        // // println!("pv length  for xx {}", self.pv_table.len(2));
+        // if depth == 1 && self.pv_table.len(2) == 0 {
+        //     println!("pppppp {}", position.to_string());
+        //     for mv in &mvs {
+        //         print!(">> {}", mv.to_string());
+        //     }
+        // }
 
 
-        if depth == 1 && mvs.contains(&Move::from(7030)) {
-            println!("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL");
-            for mv in &mvs {
-                print!(">> {}", mv.to_string());
-            }
-            println!("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL");
-        }
+        // if depth == 1 && mvs.contains(&Move::from(7030)) {
+        //     println!("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL");
+        //     for mv in &mvs {
+        //         print!(">> {}", mv.to_string());
+        //     }
+        //     println!("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL");
+        // }
 
 
         for (moves_searched, mv) in mvs.iter().enumerate() {
-            if depth == 1 && mvs.contains(&Move::from(7030)) {
-                println!("CURRENT MOVE IS {}", mv.to_string());
-            }
+            // if depth == 1 && mvs.contains(&Move::from(7030)) {
+            //     println!("CURRENT MOVE IS {}", mv.to_string());
+            // }
 
 
             if position.make_move_nnue(*mv, MoveScope::AllMoves) {
@@ -336,44 +380,44 @@ impl<'a> Search<'a> {
 
                 mvs_searched = moves_searched;
                 
-                // let score = -self.alpha_beta(-beta, -alpha, depth -1, &mut position);
-                let score = match moves_searched {
-                    0 => -self.alpha_beta(-beta, -alpha, depth -1, &mut position),
-                    _ => {
-                        // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
-                        // condition for Late Move Reduction
-                        let non_tatcital_mv = !stm_in_check && mv.get_promotion().is_none() && !mv.get_capture();
+                let score = -self.alpha_beta(-beta, -alpha, depth -1, &mut position);
+                // let score = match moves_searched {
+                //     0 => -self.alpha_beta(-beta, -alpha, depth -1, &mut position),
+                //     _ => {
+                //         // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
+                //         // condition for Late Move Reduction
+                //         let non_tatcital_mv = !stm_in_check && mv.get_promotion().is_none() && !mv.get_capture();
 
-                        let mut value = if (moves_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
-                            if depth == 1 && mvs.contains(&Move::from(7030)) {
-                                print!("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
-                            }
-                            -self.alpha_beta(-alpha + 1, -alpha, depth-2, position)
-                        } else {
-                            if depth == 1 && mvs.contains(&Move::from(7030)) {
-                                print!("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
-                            }
-                            alpha + 1 // Hack to ensure that full-depth search is done
-                        };
+                //         let mut value = if (moves_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
+                //             // if depth == 1 && mvs.contains(&Move::from(7030)) {
+                //             //     print!("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+                //             // }
+                //             -self.alpha_beta(-alpha + 1, -alpha, depth-2, position)
+                //         } else {
+                //             // if depth == 1 && mvs.contains(&Move::from(7030)) {
+                //             //     print!("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+                //             // }
+                //             alpha + 1 // Hack to ensure that full-depth search is done
+                //         };
 
-                        if value > alpha {
-                            value = -self.alpha_beta(-alpha + 1, -alpha, depth-1, position);
+                //         if value > alpha {
+                //             value = -self.alpha_beta(-alpha + 1, -alpha, depth-1, position);
 
-                            if (value > alpha) && value < beta {
-                                if depth == 1 && mvs.contains(&Move::from(7030)) {
-                                    print!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-                                }
-                                value = -self.alpha_beta(-beta, -alpha, depth-1, position);
-                            }
-                        }
+                //             if (value > alpha) && value < beta {
+                //                 // if depth == 1 && mvs.contains(&Move::from(7030)) {
+                //                 //     print!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+                //                 // }
+                //                 value = -self.alpha_beta(-beta, -alpha, depth-1, position);
+                //             }
+                //         }
 
-                        value
-                    }
-                };
+                //         value
+                //     }
+                // };
 
-                if depth == 1 && mvs.contains(&Move::from(7030)) {
-                    print!("and has a score of {score}, alpha={alpha}, and beta={beta}");
-                }
+                // if depth == 1 && mvs.contains(&Move::from(7030)) {
+                //     print!("and has a score of {score}, alpha={alpha}, and beta={beta}");
+                // }
     
 
 
@@ -396,18 +440,18 @@ impl<'a> Search<'a> {
                 if score > best_score {
                     best_score = score;
 
-                if depth == 1 && mvs.contains(&Move::from(7030)) {
-                    println!(":::::::::::::::::::::::::::::::::::::::::::::--------------------- score->{score}, alpha->{alpha}, beta->{beta} mv {}", mv);
-                }
+                // if depth == 1 && mvs.contains(&Move::from(7030)) {
+                //     println!(":::::::::::::::::::::::::::::::::::::::::::::--------------------- score->{score}, alpha->{alpha}, beta->{beta} mv {}", mv);
+                // }
 
 
-                if (depth == 2) {
-                    println!("\n");
-                    println!("mv ===> {} ===<<<<<[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[<<<<<<<<<<------>>>>>>>>>>]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]] score->{score}, alpha->{alpha}, beta->{beta}", mv.to_string());
-                    // for mv in &mvs {
-                    //     print!(">> {}", mv.to_string());
-                    // }
-                }
+                // if (depth == 2) {
+                //     println!("\n");
+                //     println!("mv ===> {} ===<<<<<[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[<<<<<<<<<<------>>>>>>>>>>]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]] score->{score}, alpha->{alpha}, beta->{beta}", mv.to_string());
+                //     // for mv in &mvs {
+                //     //     print!(">> {}", mv.to_string());
+                //     // }
+                // }
     
                     if score > alpha {
                         best_score = score;
