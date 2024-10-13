@@ -81,8 +81,8 @@ fn main() {
     // negamax_thread[0].iterative_deepening(depth, &mut bb, &tb);
     // NegaMax::run(controller, table.get(), depth, &mut bb, 1, &tb);
 
-    use crate::squares::Square::*;
-    use crate::bit_move::MoveType::*;
+    // use crate::squares::Square::*;
+    // use crate::bit_move::MoveType::*;
 
     // println!("before {}", board.evaluate());
 
