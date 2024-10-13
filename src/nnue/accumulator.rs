@@ -176,17 +176,23 @@ impl<const U: usize> Accumulator<Feature, U> {
         output
     }
 
-    pub(crate) unsafe fn sq_crelu16(&self, stm: Color) -> [Align64<[__m256i; U]>; 2] {
+    /// Loads input(16 i16 values), and 
+    ///     1. Ensures that the max of the input is i8(127) (saturates the input)
+    ///     2. And ensures that the min of the input is 0 (i8)
+    /// Then multiplies the input(now 16 i8 values) with the weights(16 i16 values)
+    /// to generates 16 i16 values (the output)
+    pub(crate) unsafe fn sq_crelu16(&self, stm: Color) -> [Align64<[__m256i; U]>; 2] { // U is 1024
         const IN_REGISTER_WIDTH: usize = 256/16; // 16
         const OUT_REGISTER_WIDTH: usize = 256/16; // 16 (output would be in i16, because we would be squaring the clamped values(i8^2) squaredCReLU)
-        let num_out_chunks = U/OUT_REGISTER_WIDTH; // 1024/16 = 6
+        let num_out_chunks = U/OUT_REGISTER_WIDTH; // 1024/16 = 64
 
         
         let input = if stm == Color::White {[self.white, self.black]} else {[self.black, self.white]};
-        let output: [Align64<[__m256i; U]>; 2] = [Align64([_mm256_setzero_si256(); U]); 2];  // [[_; 1024]; 2];
+        let mut output: [Align64<[__m256i; U]>; 2] = [Align64([_mm256_setzero_si256(); U]); 2];  // [[_; 1024]; 2];
         
-        let min = _mm256_setzero_si256();
-        let max = _mm256_set1_epi16(QA);
+        let min = _mm256_set1_epi16(-128);
+        let max = _mm256_set1_epi16(127);
+
         
         // const CONTROL: i32 = 0b11011000; // 3, 1, 2, 0; lane 0 is the rightmost one
         
@@ -194,15 +200,17 @@ impl<const U: usize> Accumulator<Feature, U> {
             for i in 0..num_out_chunks {
                 let curr_input = *(input.as_ptr().add(color as usize)); // color
                 let in0 = _mm256_load_si256(curr_input.as_ptr().add(i * IN_REGISTER_WIDTH)); // loads 16 i16 values from curr_input 
-                let r = _mm256_max_epi16(_mm256_min_epi16(in0, min), max);
-                let result = _mm256_mullo_epi16(r, r);
 
-                let mut output = *(output.as_ptr().add(color as usize));
+                let clamped_min = _mm256_max_epi16(in0, min);
+                // despite being inside (i16 * 16) data structure, these are just (i8 * 16) values
+                // the reason for this, is to still be capable of returning (i16 * 16) values after the squaring (i.e multiplication)
+                let clamped_max = _mm256_min_epi16(clamped_min, max);
+                let result = _mm256_mullo_epi16(clamped_max, clamped_max); // square
 
-                _mm256_store_si256(output.as_mut_ptr().add(i * OUT_REGISTER_WIDTH) as *mut __m256i, result);
+                _mm256_store_si256(output[color as usize].as_mut_ptr().add(i * OUT_REGISTER_WIDTH) as *mut __m256i, result);
             }
         }
-        
+
         output
     }
 }

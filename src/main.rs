@@ -97,13 +97,13 @@ fn main() {
     // println!("xxxxx {mm} {}", board.to_string());
     // board.set_turn(Color::Black);
 
-    let fen: &str = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "; // white
-    let fen: &str = "r3k2r/p1ppqpb1/bn2pQp1/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 0 1"; // black after queen attack
-    let board = Position::from(Board::parse_fen(fen).unwrap());
-    println!("eval now ::::: {}", board.evaluate());
+    // let fen: &str = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "; // white
+    // let fen: &str = "r3k2r/p1ppqpb1/bn2pQp1/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 0 1"; // black after queen attack
+    // let board = Position::from(Board::parse_fen(fen).unwrap());
+    // println!("eval now ::::: {}", board.evaluate());
 
-    // let mut search = Search::new(table.get());
-    // search.iterative_deepening(3, &mut board);
+    let mut search = Search::new(table.get());
+    search.iterative_deepening(5, &mut board);
 
 
     // let xx0 = Search::see(&board, &Move::new(F3 as u8, F6 as u8, Capture));

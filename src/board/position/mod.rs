@@ -266,7 +266,7 @@ impl Position {
 
     pub(crate) fn evaluate(&self) -> i32 {
         let eval = self.nnue_state.evaluate(self.board.turn);
-        // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+        // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>> {eval}");
 
         let total_material = 
             (self.board[WN].count_ones() + self.board[BN].count_ones()) as i32 * PIECE_VALUES[WN] +

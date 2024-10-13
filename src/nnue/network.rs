@@ -155,11 +155,21 @@ impl<const U: usize> NNUEState<Feature, U> {
                 let datahi = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(data, 1));
                 let multiplier_hi = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(weights, 1));
 
+
+                // let r_lo: [i32; 8] = std::mem::transmute(data);
+                // let r_hi: [i32; 8] = std::mem::transmute(datahi);
+
+                // println!("looooo <><>{:?}", r_lo);
+                // println!("hiiiii <><>{:?}", r_hi);
+
                 let result_lo = _mm256_mullo_epi32(datalo, multiplier_lo);
                 let result_hi = _mm256_mullo_epi32(datahi, multiplier_hi);
 
                 let r_lo: [i32; 8] = std::mem::transmute(result_lo);
                 let r_hi: [i32; 8] = std::mem::transmute(result_hi);
+
+                // println!("looooo <><>{:?}", r_lo);
+                // println!("hiiiii <><>{:?}", r_hi);
 
                 output += r_hi.iter().sum::<i32>();
                 output += r_lo.iter().sum::<i32>();
@@ -174,6 +184,8 @@ impl<const U: usize> NNUEState<Feature, U> {
             
             let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
             let output = Self::propagate(clipped_acc);
+
+            // println!("the output [[[[output->{output}]]]]");
             
             return (output/QA as i32 + PARAMS.output_bias as i32) * SCALE / QAB;
         }
