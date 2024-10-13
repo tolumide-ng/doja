@@ -139,7 +139,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
     ///     - In many positions, ther is only a small set of moves creating a threat or defending
     ///       against it(threats). Those that cannot create, or defend against a threat might(should)
     ///       be refuted.
-    pub(crate) fn score_move(&mut self, board: &Board, mv: Move, best_move: Option<Move>) -> u32 {
+    pub(crate) fn score_move(&mut self, board: &Board, mv: Move, best_move: Option<Move>) -> i32 {
         if let Some(b_mv) = best_move { if b_mv == mv { return 50_000 }}
 
         if self.score_pv {
@@ -165,7 +165,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
                 if *mv == self.killer_moves[1][self.ply] { return 8_000 }
 
                 let piece = board.get_piece_at(mv.get_src(), board.turn).unwrap();
-                return self.history_moves[piece][mv.get_target()];
+                return self.history_moves[piece][mv.get_target()] as i32;
             }
         }
         // 0

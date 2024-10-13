@@ -227,7 +227,7 @@ impl Piece {
         return Piece::WK;
     }
 
-    pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> u32 {
+    pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> i32 {
         let attacker = *self as usize;
         let victim = *victim as usize;
 

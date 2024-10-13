@@ -1,4 +1,4 @@
-use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, MAX_PLY, PLAYERS_COUNT, REDUCTION_LIMIT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
+use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, MAX_PLY, MVV_LVA, PLAYERS_COUNT, REDUCTION_LIMIT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
 
 use crate::search::heuristics::pv_table::PVTable;
 
@@ -151,8 +151,21 @@ impl<'a> Search<'a> {
 
         
         // Sort by MVV-LVA table
+        // let [mut captures, mut non_captures] = mvs.iter().fold([Vec::new(), Vec::new()], |mut acc, mv| {
+        //     if mv.get_capture() { acc[0].push((*mv, Self::see(board, mv))) } else { acc[1].push((*mv, 0)) }
+        //     [acc[0].clone(), acc[1].clone()]
+        // }); // use Self::see at this level, and filter out bad moves already
+
+
+
         let [mut captures, mut non_captures] = mvs.iter().fold([Vec::new(), Vec::new()], |mut acc, mv| {
-            if mv.get_capture() { acc[0].push((*mv, Self::see(board, mv))) } else { acc[1].push((*mv, 0)) }
+            if mv.get_capture() {
+                acc[0].push(
+                    (*mv, 
+                        MVV_LVA[(board.piece_at(mv.get_src()).unwrap() as usize) % 6]
+                        [(board.get_move_capture(*mv).unwrap() as usize) % 6])
+                    ) 
+            } else { acc[1].push((*mv, 0)) }
             [acc[0].clone(), acc[1].clone()]
         }); // use Self::see at this level, and filter out bad moves already
 

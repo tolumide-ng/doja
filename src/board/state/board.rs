@@ -638,6 +638,11 @@ impl Board {
             return self.get_piece_at(victim, !self.turn)
         }
         if mv.get_capture() {
+            // println!("the victim's color would be {:?}", !self.turn);
+            // println!(":::the target is {}", mv.get_target());
+
+            // println!("self is {}", Bitboard::from(self.occupancies[Color::Black]));
+            // println!("this pawn on {}", Bitboard::from(self.board[Piece::BP]));
             return self.get_piece_at(mv.get_target(), !self.turn)
         }
         None

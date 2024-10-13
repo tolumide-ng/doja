@@ -470,8 +470,8 @@ pub(crate) const MIRROR_SCORE: [Square; 64] = [
 //     101, 201, 301, 401, 501, 601,   // queen
 //     100, 200, 300, 400, 500, 600,   // king
 // ];
-pub(crate) const MAX: u32 = u32::MAX;
-pub(crate) const MVV_LVA: [[u32; 6]; 6] = [ // [attacker][victim] i.e [src][tgt]
+pub(crate) const MAX: i32 = i32::MAX;
+pub(crate) const MVV_LVA: [[i32; 6]; 6] = [ // [attacker][victim] i.e [src][tgt]
  //            Pawn     Knight  Bishop  Rook    Queen   King
  /*P*/         [105,    205,    305,    405,    505,    MAX],  // Attacker is Pawn
  /*N*/         [104,    204,    304,    404,    504,    MAX],  // Attacker is Knight
