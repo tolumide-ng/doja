@@ -100,8 +100,12 @@ fn main() {
     // let fen: &str = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "; // white
     // let fen: &str = "r3k2r/p1ppqpb1/bn2pQp1/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 0 1"; // black after queen attack
     
-    let fen: &str = "8/8/2k5/8/4B1P1/8/5K2/8 w ---- 0 1";
+    // let fen: &str = "8/8/2k5/8/4B1P1/8/5K2/8 w ---- 0 1";
+
+    let fen = "8/3n4/q3q3/5k2/8/8/3K4/8 b - - 0 1"; // black to win (-64)
+    // let fen = "8/1k3p2/8/8/3P4/2Q2N2/3K4/8 b - - 0 1"; // white would win (3257)
     let board = Position::from(Board::parse_fen(fen).unwrap());
+    println!("board {}", board.to_string());
     println!("eval now ::::: {}", board.evaluate());
 
     // let mut search = Search::new(table.get());
