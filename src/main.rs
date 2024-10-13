@@ -48,7 +48,7 @@ fn main() {
 
     println!("**********************AFTER*****************************");
     
-    let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+    let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     // println!("**********************BEFORE*****************************");
     println!("{}", board.to_string());
     
@@ -56,7 +56,7 @@ fn main() {
     println!("num of cpus {:?}", std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()));
     // let tt = TTable::default();
     let controller = Arc::new(Mutex::new(Control::default()));
-    let board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+    // let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     // let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
     let threads = 1;
     let depth = 4;
@@ -80,15 +80,15 @@ fn main() {
     // negamax_thread[0].iterative_deepening(depth, &mut bb, &tb);
     // NegaMax::run(controller, table.get(), depth, &mut bb, 1, &tb);
 
-    // let mut search = Search::new(table.get());
-    // search.iterative_deepening(7, &mut board);
-    use crate::squares::Square::*;
-    use crate::bit_move::MoveType::*;
+    let mut search = Search::new(table.get());
+    search.iterative_deepening(5, &mut board);
+    // use crate::squares::Square::*;
+    // use crate::bit_move::MoveType::*;
 
     // let xx0 = Search::see(&board, &Move::new(F3 as u8, F6 as u8, Capture));
-    let xx0 = Search::see(&board, &Move::new(D5 as u8, E6 as u8, Capture));
+    // let xx0 = Search::see(&board, &Move::new(D5 as u8, E6 as u8, Capture));
 
-    println!("the xx0 is {}", xx0);
+    // println!("the xx0 is {}", xx0);
     
 
 }

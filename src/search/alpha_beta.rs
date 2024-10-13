@@ -152,7 +152,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         match mv.get_capture() {
             true => {
                 let src = board.get_piece_at(mv.get_src(), board.turn).unwrap();
-                let tgt = board.get_move_capture(mv, !board.turn).unwrap();
+                let tgt = board.get_move_capture(mv).unwrap();
                 let ll = src.get_mvv_lva(&tgt) + 10_000;
                 
                 return ll

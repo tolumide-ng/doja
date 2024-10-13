@@ -471,7 +471,6 @@ impl Board {
     pub(crate) fn make_move(&self, bit_move: Move, scope: MoveScope) -> Option<Self> {
         let mut board = self.clone();
         // println!("RECEIVED {}", board.to_string());
-
         
         match scope {
             MoveScope::AllMoves => {
@@ -565,7 +564,9 @@ impl Board {
                 
             
                 // is this an illegal move?
-                if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !board.turn) {
+                // if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !board.turn) {
+                let attacker = !board.turn;
+                if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), attacker) {
                     return None;
                 }
                 
@@ -630,14 +631,14 @@ impl Board {
     }
 
     /// color: your opponent's/target's color
-    pub(crate) fn get_move_capture(&self, mv: Move, color: Color) -> Option<Piece> {
+    pub(crate) fn get_move_capture(&self, mv: Move) -> Option<Piece> {
         let target = mv.get_target();
         if mv.get_enpassant() {
             let victim = Square::from(match self.turn {Color::Black => target as u64 + 8, _ => target as u64 -  8});
-            return self.get_piece_at(victim, color)
+            return self.get_piece_at(victim, !self.turn)
         }
         if mv.get_capture() {
-            return self.get_piece_at(mv.get_target(), color)
+            return self.get_piece_at(mv.get_target(), !self.turn)
         }
         None
     }

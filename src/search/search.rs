@@ -38,19 +38,22 @@ pub(crate) struct Search<'a> {
     killer_moves: KillerMoves,
     /// Previosyly successful moves in a particular positioin that resulted in a beta-cutoff
     history_table: HistoryHeuristic,
-    tt: TPT<'a>
+    tt: TPT<'a>,
+    limit: u8
 }
 
 
 impl<'a> Search<'a> {
     pub(crate) fn new(tt: TPT<'a>) -> Self {
         Self { nodes: 0, ply: 0, pv_table: PVTable::new(), killer_moves: KillerMoves::new(),
-            history_table: HistoryHeuristic::new(), tt }
+            history_table: HistoryHeuristic::new(), tt, limit: 0 }
     }
 
     pub(crate) fn iterative_deepening(&mut self, limit: u8, position: &mut Position) {
         let mut alpha = -INFINITY;
         let mut beta = INFINITY;
+
+        self.limit = limit;
 
         for depth in 1..=limit {
             println!("RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {depth}");
@@ -79,13 +82,11 @@ impl<'a> Search<'a> {
 
     /// Static Exchange Evaluation
     pub(crate) fn see(position: &Position, mv: &Move) -> i32 {
-        let mut board = position.board;
+        let board = position.board;
         let sq = mv.get_target();
 
-
-        let mut value = board.get_piece_at(mv.get_target(), !board.turn).unwrap().piece_value();
-        board = board.make_move(*mv, MoveScope::CapturesOnly).unwrap();
-
+        let mut value = board.get_move_capture(*mv).unwrap().piece_value();
+        let Some(mut board) = board.make_move(*mv, MoveScope::CapturesOnly) else { return i32::MIN };
         let mut is_player = false;
 
 
@@ -110,12 +111,22 @@ impl<'a> Search<'a> {
 
             // the piece that we would be removing here (piece_just_captured)
             let piece_to_remove = board.piece_at(sq).unwrap().piece_value();
-            if is_player { value += piece_to_remove } else { value -= piece_to_remove }
             
-            board = board.make_move(mv, MoveScope::CapturesOnly).unwrap();
 
-            is_player = !is_player;
+            if let Some(b) = board.make_move(mv, MoveScope::CapturesOnly) {
+                board = b;
+                if is_player { value += piece_to_remove } else { value -= piece_to_remove }
+                is_player = !is_player;
+            } else {
+                // this would only hapen is one of the kings is in-check
+                if is_player { value += 2_000 } else {value = i32::MIN }
+                break; 
+            }
         }
+
+        // if mv.to_string() == "f3f6x" {
+        //     println!("XXXXXXXXXXXXXXXXXXXXXXXXX value is {value}");
+        // }
         
         value
     }
@@ -142,12 +153,14 @@ impl<'a> Search<'a> {
         let [mut captures, mut non_captures] = mvs.iter().fold([Vec::new(), Vec::new()], |mut acc, mv| {
             if mv.get_capture() { acc[0].push(*mv) } else { acc[1].push(*mv) }
             [acc[0].clone(), acc[1].clone()]
-        });
+        }); // use Self::see at this level, and filter out bad moves already
+
+        // if captures.iter().find(|x| x.to_string() == "c3d2x").is_some() {
+        //     println!("the board here is {}", board.to_string());
+        // }
         
         captures.sort_by_key(|mv| {
-            let src = board.get_piece_at(mv.get_src(), board.turn).unwrap();
-            let tgt = board.get_piece_at(mv.get_target(), !board.turn).unwrap();
-            return MVV_LVA[src as usize % 6][tgt as usize % 6]
+            return Self::see(board, mv);
         });
 
         captures.reverse();
@@ -348,6 +361,12 @@ impl<'a> Search<'a> {
 
         let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves(&position);
+
+        // if depth == 1 && self.limit == 5 {
+        //     for mv in &mvs {
+        //         print!("::>> {}", mv.to_string());
+        //     }
+        // }
 
         // println!("depth {depth} --->>> color:::: {:?}", position.turn);
         // // println!("pv length  for xx {}", self.pv_table.len(2));
