@@ -185,7 +185,7 @@ impl<const U: usize> NNUEState<Feature, U> {
             let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
             let output = Self::propagate(clipped_acc);
 
-            // println!("the output [[[[output->{output}]]]]");
+            println!("the output [[[[output->{output}]]]]");
             
             return (output/QA as i32 + PARAMS.output_bias as i32) * SCALE / QAB;
         }
