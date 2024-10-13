@@ -1,4 +1,4 @@
-use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, MAX_PLY, MVV_LVA, PLAYERS_COUNT, REDUCTION_LIMIT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
+use crate::{bit_move::Move, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, MAX_PLY, PLAYERS_COUNT, REDUCTION_LIMIT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
 
 use crate::search::heuristics::pv_table::PVTable;
 
@@ -53,9 +53,9 @@ impl<'a> Search<'a> {
         let mut alpha = -INFINITY;
         let mut beta = INFINITY;
 
-        self.limit = limit;
-
+        
         for depth in 1..=limit {
+            self.limit = depth;
             println!("RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {depth}");
             println!("{}", position.to_string());
             self.ply = 0;
@@ -84,6 +84,7 @@ impl<'a> Search<'a> {
     pub(crate) fn see(position: &Position, mv: &Move) -> i32 {
         let board = position.board;
         let sq = mv.get_target();
+
 
         let mut value = board.get_move_capture(*mv).unwrap().piece_value();
         let Some(mut board) = board.make_move(*mv, MoveScope::CapturesOnly) else { return i32::MIN };
@@ -131,7 +132,7 @@ impl<'a> Search<'a> {
         value
     }
 
-    fn get_sorted_moves(&self, board: &Position) -> Vec<Move> {
+    fn get_sorted_moves(&self, board: &Position) -> Vec<(Move, i32)> {
         let mvs = board.gen_movement();
         let mut mvs = (mvs.collect::<Vec<_>>())[0..mvs.count_mvs()].to_vec();
         //  now sort those moves and return the sorted moves
@@ -141,7 +142,7 @@ impl<'a> Search<'a> {
         let mut sorted_mvs = Vec::with_capacity(mvs.len());
         if let Some(pv_mv) = self.pv_table.get_pv(self.ply).get(0) {
             if let Some(pos) = mvs.iter().position(|&m| *m == *pv_mv) {
-                sorted_mvs.push(mvs[pos]);
+                sorted_mvs.push((mvs[pos], i32::MAX));
                 mvs.remove(pos);
                 // mvs.swap(0, pos);
                 // start_idx = 1;
@@ -151,7 +152,7 @@ impl<'a> Search<'a> {
         
         // Sort by MVV-LVA table
         let [mut captures, mut non_captures] = mvs.iter().fold([Vec::new(), Vec::new()], |mut acc, mv| {
-            if mv.get_capture() { acc[0].push(*mv) } else { acc[1].push(*mv) }
+            if mv.get_capture() { acc[0].push((*mv, Self::see(board, mv))) } else { acc[1].push((*mv, 0)) }
             [acc[0].clone(), acc[1].clone()]
         }); // use Self::see at this level, and filter out bad moves already
 
@@ -159,8 +160,11 @@ impl<'a> Search<'a> {
         //     println!("the board here is {}", board.to_string());
         // }
         
+        // captures.sort_by_key(|mv| {
+        //     return Self::see(board, mv);
+        // });
         captures.sort_by_key(|mv| {
-            return Self::see(board, mv);
+            return mv.1
         });
 
         captures.reverse();
@@ -175,7 +179,7 @@ impl<'a> Search<'a> {
         sorted_mvs.append(&mut captures);
 
         non_captures.sort_by_key(|mv| {
-            if self.killer_moves.is_killer(self.ply, mv) {
+            if self.killer_moves.is_killer(self.ply, &mv.0) {
                 return 1
             } 
             0
@@ -233,7 +237,7 @@ impl<'a> Search<'a> {
         if !in_check && stand_pat > alpha { alpha = stand_pat }
         
         // Probe the Transposition Table here
-        let moves = self.get_sorted_moves(&position);
+        let moves = self.get_sorted_moves(&position).iter().map(|x| x.0).collect::<Vec<_>>();
         let captures_only = !in_check;
         let mut best_score = -INFINITY;
 
@@ -362,31 +366,23 @@ impl<'a> Search<'a> {
         let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves(&position);
 
-        // if depth == 1 && self.limit == 5 {
-        //     for mv in &mvs {
-        //         print!("::>> {}", mv.to_string());
+
+        // if depth == 1 && self.limit == 3 && mvs.iter().map(|x| x.0.to_string()).collect::<Vec<_>>().contains(&"f3f6x".to_string()) {
+        //     println!("the probe os {}", Move::from(self.pv_table.get_pv(depth as usize)[0]).to_string());
+        //     for (mv, score) in &mvs {
+        //         print!("::>> {:?}", (mv.to_string(), score));
         //     }
+
+        //     // println!("\n::::::::::::: {}", position.to_string());
+
+        //     println!("\n\n");
         // }
 
-        // println!("depth {depth} --->>> color:::: {:?}", position.turn);
-        // // println!("pv length  for xx {}", self.pv_table.len(2));
-        // if depth == 1 && self.pv_table.len(2) == 0 {
-        //     println!("pppppp {}", position.to_string());
-        //     for mv in &mvs {
-        //         print!(">> {}", mv.to_string());
-        //     }
-        // }
+        let mvs = mvs.iter().map(|x| x.0).collect::<Vec<_>>();
 
-
-        // if depth == 1 && mvs.contains(&Move::from(7030)) {
-        //     println!("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL");
-        //     for mv in &mvs {
-        //         print!(">> {}", mv.to_string());
-        //     }
-        //     println!("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL");
-        // }
-
-
+        
+        
+        // println!("depth ---->>>>> {depth}");
         for (moves_searched, mv) in mvs.iter().enumerate() {
             // if depth == 1 && mvs.contains(&Move::from(7030)) {
             //     println!("CURRENT MOVE IS {}", mv.to_string());
@@ -436,6 +432,9 @@ impl<'a> Search<'a> {
 
                 // if depth == 1 && mvs.contains(&Move::from(7030)) {
                 //     print!("and has a score of {score}, alpha={alpha}, and beta={beta}");
+
+                // println!("depth = {depth} --->>>> the move is {:?}, and the score is {score}, alpha is {alpha}, and beta={beta}", mv.to_string());
+
                 // }
     
 
@@ -473,6 +472,7 @@ impl<'a> Search<'a> {
                 // }
     
                     if score > alpha {
+                        // println!("previous_best_score==>> {best_score}, depth = {depth} --->>>> the move is {:?}, and the score is {score}, alpha is {alpha}, and beta={beta}", mv.to_string());
                         best_score = score;
                         
                         best_mv = Some(*mv);

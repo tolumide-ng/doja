@@ -30,6 +30,7 @@ use std::{num::NonZero, sync::{Arc, Mutex}};
 
 use bit_move::Move;
 use board::{fen::FEN, position::Position, state::board::Board};
+use color::Color;
 use constants::TRICKY_POSITION;
 use search::{control::Control, search::Search};
 use syzygy::probe::TableBase;
@@ -80,10 +81,30 @@ fn main() {
     // negamax_thread[0].iterative_deepening(depth, &mut bb, &tb);
     // NegaMax::run(controller, table.get(), depth, &mut bb, 1, &tb);
 
-    let mut search = Search::new(table.get());
-    search.iterative_deepening(5, &mut board);
-    // use crate::squares::Square::*;
-    // use crate::bit_move::MoveType::*;
+    use crate::squares::Square::*;
+    use crate::bit_move::MoveType::*;
+
+    // println!("before {}", board.evaluate());
+
+    // let mm = board.make_move_nnue(Move::new(F3 as u8, F6 as u8, Capture), move_scope::MoveScope::AllMoves);
+
+    // println!("{mm} mmmmm is {}", board.evaluate());
+    
+    // println!("{}", board.to_string());
+
+    // let mm = board.make_move_nnue(Move::new(E7 as u8, F6 as u8, Capture), move_scope::MoveScope::AllMoves);
+
+    // println!("xxxxx {mm} {}", board.to_string());
+    // board.set_turn(Color::Black);
+
+    let fen: &str = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "; // white
+    let fen: &str = "r3k2r/p1ppqpb1/bn2pQp1/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 0 1"; // black after queen attack
+    let board = Position::from(Board::parse_fen(fen).unwrap());
+    println!("eval now ::::: {}", board.evaluate());
+
+    // let mut search = Search::new(table.get());
+    // search.iterative_deepening(3, &mut board);
+
 
     // let xx0 = Search::see(&board, &Move::new(F3 as u8, F6 as u8, Capture));
     // let xx0 = Search::see(&board, &Move::new(D5 as u8, E6 as u8, Capture));

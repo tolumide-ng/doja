@@ -285,3 +285,12 @@ impl Deref for Position {
         &self.board
     }
 }
+
+
+
+impl From<Board> for Position {
+    fn from(board: Board) -> Self {
+        let nnue_state = NNUEState::from(&board);
+        Self { board, nnue_state, history: Vec::new() }
+    }
+}
