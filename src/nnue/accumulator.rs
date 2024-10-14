@@ -9,6 +9,7 @@ use crate::board::state::board::Board;
 use crate::color::Color::*;
 use crate::color::Color;
 use crate::constants::PLAYERS_COUNT;
+use crate::nnue::{INPUT, L1_SIZE};
 use crate::squares::Square;
 
 use super::align64::Align64;
@@ -68,14 +69,19 @@ impl<const U: usize> Accumulator<Feature, U> {
         }
 
         // let mut regs: [Feature; num_chunks] = unsafe { [_mm256_setzero_si256(); num_chunks] };
-        let mut regs: Vec<__m256i> = Vec::with_capacity(num_chunks * PLAYERS_COUNT);
+        // let mut regs: Vec<__m256i> = Vec::with_capacity(num_chunks * PLAYERS_COUNT);
+        // let mut regs: Vec<__m256i> = Vec::with_capacity(L1_SIZE * 2);
+        // let mut regs: Vec<__m256i> = vec![];
+        let mut regs: Vec<__m256i> = vec![std::mem::zeroed(); L1_SIZE * 2];
 
         // Load bias into registers
         for color in [White, Black] {
             for i in 0..num_chunks {
                 // If there is a problem here, please confirm that halfa_idx works as it should, compare directly with the one from pytorch-NNUE
-                let color_idx = (color as usize * num_chunks) + i;
-                *regs.as_mut_ptr().add(color_idx) = _mm256_load_si256(PARAMS.input_bias.as_ptr().add(i * Self::REGISTER_WIDTH) as *const __m256i);
+                // let color_idx = (color as usize * num_chunks) + i;
+
+                let idx = (color as usize * L1_SIZE) + (i * Self::REGISTER_WIDTH);
+                *regs.as_mut_ptr().add(idx) = _mm256_load_si256(PARAMS.input_bias.as_ptr().add(idx) as *const __m256i);
                 // _mm256_store_si256(acc[color].as_mut_ptr().add(i) as *mut __m256i, *(MODEL.features_bias.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i));
             }
         }
@@ -88,19 +94,44 @@ impl<const U: usize> Accumulator<Feature, U> {
                 // this specifically updates all the values representing the feature "a" on the board
                 // we can only load 16 i16s at a time, weil 16*16=256 (size of an AVX2 register)
                 let idx =  *a + (i*Self::REGISTER_WIDTH);
-                let reg_idx = (color as usize * num_chunks) + i;
+                // let reg_idx = (color as usize * num_chunks) + i;
+                let reg_idx = (color as usize * INPUT) + (i * Self::REGISTER_WIDTH);
 
+
+                // there are 768's(input_size) per input size
+                let xidx = *a;
+
+                println!("trying out 8************* {} {reg_idx}", xidx);
+                
+                
+                println!("inside params it is ((((({}))))", idx);
+                println!("input weight is::: _---- {}", PARAMS.input_weight.len());
+
+                // let idx = ()
+
+                
                 let weights = *(PARAMS.input_weight.as_ptr().add(idx) as *const __m256i);
+                // println!("the index for now is>>>>>>>>>>>>>>>>>>>>>>>>>>>* {}", reg_idx);
                 // y = Ax + b (where A is the feature, x is the weight, and b is bias)
                 *regs.as_mut_ptr().add(reg_idx) = _mm256_add_epi16(*(regs.as_ptr().add(reg_idx)), weights);
             }
         }
 
+        println!("the index for now is>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", regs.len());
+
+        println!("NUMBER OF CHUNKS IS {num_chunks}");
+
+        // println!("@ position xxxx {:?}", regs[100]);
+        // println!("@ position xxxx {:?}", PARAMS.input_bias[100]);
+
         for i in 0..num_chunks {
+            // println!("expected::::::::::::::::::::::::::::::::::::::::::::www {}", i*Self::REGISTER_WIDTH);
                 let black_idx = num_chunks + i;
             _mm256_store_si256(acc[Color::White].as_mut_ptr().add(i*Self::REGISTER_WIDTH) as *mut __m256i, *regs.as_ptr().add(i));
             _mm256_store_si256(acc[Color::Black].as_mut_ptr().add(i*Self::REGISTER_WIDTH) as *mut __m256i, *regs.as_ptr().add(black_idx));
         }
+
+        println!("acc len {}", acc.white.len());
         
         acc
     }
@@ -190,8 +221,11 @@ impl<const U: usize> Accumulator<Feature, U> {
         let input = if stm == Color::White {[self.white, self.black]} else {[self.black, self.white]};
         let mut output: [Align64<[__m256i; U]>; 2] = [Align64([_mm256_setzero_si256(); U]); 2];  // [[_; 1024]; 2];
         
-        let min = _mm256_set1_epi16(-128);
-        let max = _mm256_set1_epi16(127);
+        // let min = _mm256_set1_epi16(-128);
+        // let max = _mm256_set1_epi16(127);
+
+        let min = _mm256_set1_epi16(0);
+        let max = _mm256_set1_epi16(255);
 
         
         // const CONTROL: i32 = 0b11011000; // 3, 1, 2, 0; lane 0 is the rightmost one

@@ -3,9 +3,10 @@ use std::ops::Deref;
 use crate::bit_move::MoveType;
 use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
-use crate::nnue::accumulator::Feature;
+use crate::nnue::accumulator::{Feature, QA, QAB};
+use crate::nnue::PARAMS;
 use crate::{bit_move::Move, move_scope::MoveScope, squares::Square};
-use crate::nnue::network::NNUEState;
+use crate::nnue::network::{NNUEState, SCALE};
 use crate::color::Color::{self, *};
 use crate::nnue::constants::custom_kp::*;
 use crate::squares::Square::*;
@@ -266,15 +267,14 @@ impl Position {
 
     pub(crate) fn evaluate(&self) -> i32 {
         let eval = self.nnue_state.evaluate(self.board.turn);
-        // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>> {eval}");
-
+  
         let total_material = 
             (self.board[WN].count_ones() + self.board[BN].count_ones()) as i32 * PIECE_VALUES[WN] +
             (self.board[WB].count_ones() + self.board[BB].count_ones()) as i32 * PIECE_VALUES[WB] + 
             (self.board[WR].count_ones() + self.board[BR].count_ones()) as i32 * PIECE_VALUES[WR] + 
             (self.board[WQ].count_ones() + self.board[BQ].count_ones()) as i32 * PIECE_VALUES[WQ];
 
-        (eval * ((700 + total_material)/32)) /1024
+        (eval * (700 + total_material / 32)) / 1024
     }
 }
 
