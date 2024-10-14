@@ -103,93 +103,91 @@ impl<const U: usize> Accumulator<Feature, U> {
         for color in [Color::White, Color::Black] {
             for i in 0..U {
                 let regs_idx = (ACCUMULATOR_SIZE * color as usize) + i;
-                *regs.as_mut_ptr().add(regs_idx) = *(PARAMS.input_bias.as_ptr().add(i) as *const __m256i);
+                *regs.as_mut_ptr().add(regs_idx) = _mm256_load_si256(PARAMS.input_bias.as_ptr().add(i * Self::REGISTER_WIDTH) as *const __m256i);
             }
         }
 
         
 
-        let mut active_features: Vec<(FeatureIdx, Color)> = Vec::with_capacity(board.get_occupancy(Both).count_ones() as usize);
-        let bitmaps = &board.board;
+        // let mut active_features: Vec<(FeatureIdx, Color)> = Vec::with_capacity(board.get_occupancy(Both).count_ones() as usize);
+        // let bitmaps = &board.board;
         
-        // identifies the pieces present on the board, and represents them on the the accumulator
-        for (p, board) in (*bitmaps).into_iter().enumerate() {
-            let mut sqs: u64 = *board;
+        // // identifies the pieces present on the board, and represents them on the the accumulator
+        // for (p, board) in (*bitmaps).into_iter().enumerate() {
+        //     let mut sqs: u64 = *board;
 
-            while sqs != 0 {
-                let sq = Square::from(sqs.trailing_zeros() as u8);
-                let piece = Piece::from(p as u8);
-                
-                let (white, black) = halfka_idx(piece, sq);
-                // let f_idx = halfka_idx00(piece, sq);
-                // println!("in the while loop {}", *f_idx + (1200));
-                sqs &= sqs -1;
-                
-                Self::update_weights::<true, REGS_LEN>(&mut regs, (white, black));
-            }
-        }
+        //     while sqs != 0 {
+        //         let sq = Square::from(sqs.trailing_zeros() as u8);
+        //         let piece = Piece::from(p as u8);
+        //         // we need to update black, and white's perspective
+        //         let (white, black) = halfka_idx(piece, sq);
+
+        //         sqs &= sqs -1;
+        //         Self::update_weights::<true, REGS_LEN>(&mut regs, (white, black));
+        //     }
+        // }
 
 
-        println!("the length of the regs is {}", regs.len()); // 2048 for both accumulators
+        // println!("the length of the regs is {}", regs.len()); // 2048 for both accumulators
 
-        // Load bias into registers
-        for color in [White, Black] {
-            for i in 0..num_chunks {
-                // If there is a problem here, please confirm that halfa_idx works as it should, compare directly with the one from pytorch-NNUE
-                // let color_idx = (color as usize * num_chunks) + i;
+        // // Load bias into registers
+        // for color in [White, Black] {
+        //     for i in 0..num_chunks {
+        //         // If there is a problem here, please confirm that halfa_idx works as it should, compare directly with the one from pytorch-NNUE
+        //         // let color_idx = (color as usize * num_chunks) + i;
 
-                let idx = (color as usize * L1_SIZE) + (i * Self::REGISTER_WIDTH);
-                *regs.as_mut_ptr().add(idx) = _mm256_load_si256(PARAMS.input_bias.as_ptr().add(idx) as *const __m256i);
-                // _mm256_store_si256(acc[color].as_mut_ptr().add(i) as *mut __m256i, *(MODEL.features_bias.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i));
-            }
-        }
-
-
-        for (a, color) in active_features {
-            for i in 0..num_chunks {
-                // the number of weights per feature, is equivalent to the L1_SIZE, in this case 1024figures represent the weight of a feature "a"
-                // for any value of "a", by the end of this loop, we'd have loaded all weights that belong to "a"
-                // this specifically updates all the values representing the feature "a" on the board
-                // we can only load 16 i16s at a time, weil 16*16=256 (size of an AVX2 register)
-                let idx =  *a + (i*Self::REGISTER_WIDTH);
-                // let reg_idx = (color as usize * num_chunks) + i;
-                let reg_idx = (color as usize * INPUT) + (i * Self::REGISTER_WIDTH);
+        //         let idx = (color as usize * L1_SIZE) + (i * Self::REGISTER_WIDTH);
+        //         *regs.as_mut_ptr().add(idx) = _mm256_load_si256(PARAMS.input_bias.as_ptr().add(idx) as *const __m256i);
+        //         // _mm256_store_si256(acc[color].as_mut_ptr().add(i) as *mut __m256i, *(MODEL.features_bias.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i));
+        //     }
+        // }
 
 
-                // there are 768's(input_size) per input size
-                let xidx = *a;
+        // for (a, color) in active_features {
+        //     for i in 0..num_chunks {
+        //         // the number of weights per feature, is equivalent to the L1_SIZE, in this case 1024figures represent the weight of a feature "a"
+        //         // for any value of "a", by the end of this loop, we'd have loaded all weights that belong to "a"
+        //         // this specifically updates all the values representing the feature "a" on the board
+        //         // we can only load 16 i16s at a time, weil 16*16=256 (size of an AVX2 register)
+        //         let idx =  *a + (i*Self::REGISTER_WIDTH);
+        //         // let reg_idx = (color as usize * num_chunks) + i;
+        //         let reg_idx = (color as usize * INPUT) + (i * Self::REGISTER_WIDTH);
 
-                // println!("trying out 8************* {} {reg_idx}", xidx);
+
+        //         // there are 768's(input_size) per input size
+        //         let xidx = *a;
+
+        //         // println!("trying out 8************* {} {reg_idx}", xidx);
                 
                 
-                // println!("inside params it is ((((({}))))", idx);
-                // println!("input weight is::: _---- {}", PARAMS.input_weight.len());
+        //         // println!("inside params it is ((((({}))))", idx);
+        //         // println!("input weight is::: _---- {}", PARAMS.input_weight.len());
 
-                // let idx = ()
+        //         // let idx = ()
 
                 
-                let weights = *(PARAMS.input_weight.as_ptr().add(idx) as *const __m256i);
-                // println!("the index for now is>>>>>>>>>>>>>>>>>>>>>>>>>>>* {}", reg_idx);
-                // y = Ax + b (where A is the feature, x is the weight, and b is bias)
-                *regs.as_mut_ptr().add(reg_idx) = _mm256_add_epi16(*(regs.as_ptr().add(reg_idx)), weights);
-            }
-        }
+        //         let weights = *(PARAMS.input_weight.as_ptr().add(idx) as *const __m256i);
+        //         // println!("the index for now is>>>>>>>>>>>>>>>>>>>>>>>>>>>* {}", reg_idx);
+        //         // y = Ax + b (where A is the feature, x is the weight, and b is bias)
+        //         *regs.as_mut_ptr().add(reg_idx) = _mm256_add_epi16(*(regs.as_ptr().add(reg_idx)), weights);
+        //     }
+        // }
 
-        // println!("the index for now is>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", regs.len());
+        // // println!("the index for now is>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", regs.len());
 
-        // println!("NUMBER OF CHUNKS IS {num_chunks}");
+        // // println!("NUMBER OF CHUNKS IS {num_chunks}");
 
-        // println!("@ position xxxx {:?}", regs[100]);
-        // println!("@ position xxxx {:?}", PARAMS.input_bias[100]);
+        // // println!("@ position xxxx {:?}", regs[100]);
+        // // println!("@ position xxxx {:?}", PARAMS.input_bias[100]);
 
-        for i in 0..num_chunks {
-            // println!("expected::::::::::::::::::::::::::::::::::::::::::::www {}", i*Self::REGISTER_WIDTH);
-                let black_idx = num_chunks + i;
-            _mm256_store_si256(acc[Color::White].as_mut_ptr().add(i*Self::REGISTER_WIDTH) as *mut __m256i, *regs.as_ptr().add(i));
-            _mm256_store_si256(acc[Color::Black].as_mut_ptr().add(i*Self::REGISTER_WIDTH) as *mut __m256i, *regs.as_ptr().add(black_idx));
-        }
+        // for i in 0..num_chunks {
+        //     // println!("expected::::::::::::::::::::::::::::::::::::::::::::www {}", i*Self::REGISTER_WIDTH);
+        //         let black_idx = num_chunks + i;
+        //     _mm256_store_si256(acc[Color::White].as_mut_ptr().add(i*Self::REGISTER_WIDTH) as *mut __m256i, *regs.as_ptr().add(i));
+        //     _mm256_store_si256(acc[Color::Black].as_mut_ptr().add(i*Self::REGISTER_WIDTH) as *mut __m256i, *regs.as_ptr().add(black_idx));
+        // }
 
-        println!("acc len {}", acc.white.len());
+        // println!("acc len {}", acc.white.len());
         
         acc
     }
