@@ -63,6 +63,7 @@ pub(crate) mod half_ka {
 
 pub(crate) mod custom_kp {
     pub(crate) const INPUT: usize = 768;
+    /// the number of neurons on this layer
     pub(crate) const L1_SIZE: usize = 1024;
     // pub(crate) const L2_SIZE: usize = 1024*2;
 }

@@ -5,16 +5,31 @@ use std::ops::{Index, IndexMut};
 
 
 use crate::board::piece::Piece;
+use crate::board::position::ACCUMULATOR_SIZE;
 use crate::board::state::board::Board;
 use crate::color::Color::*;
 use crate::color::Color;
 use crate::constants::PLAYERS_COUNT;
-use crate::nnue::{INPUT, L1_SIZE};
+use crate::nnue::{halfka_idx00, INPUT, L1_SIZE};
 use crate::squares::Square;
 
 use super::align64::Align64;
 use super::feature_idx::FeatureIdx;
 use super::{halfka_idx, PARAMS};
+
+
+//  // the size of bias is always the L1 size
+//  // if U is 64(values), and Feature is _m256i(16 * i16), where mem::sizeof<m256i>() = 32, then that would be (32/2) * 64 = 1024 i.e. ((mem_size/2) * U)
+//  // U = 1024, because Feature is i16, where std::mem::sizof::<i16>() = 2 then  (2/2) * 1024 = 1024
+//  // 
+//  let bias_len = (std::mem::size_of::<__m256i>()/2) * U;
+//  println!("B len is {}", bias_len);
+//  let mut accumulator = Self { white: Align64([_mm256_setzero_si256(); U]), black: Align64([_mm256_setzero_si256(); U]) };     
+//  for color in [Color::White, Color::Black] {
+//      for b in 0..bias_len {
+//          // 
+//      }
+//  }
 
 
 // A single AVX2 register can fit 16 i16 values, and there are 16AVX2 registers (32 since AVX512) (stockfish docs)
@@ -23,8 +38,10 @@ pub(crate) type Feature = __m256i;
 pub(crate) const QA: i16 = 255;
 pub(crate) const QAB: i32 = 255*64;
 
-
-
+/// we're working with accumulator values as i16(16bits)
+/// Where our Accumualtor has a data type of _m256i, each _m256i would contains 16 i16 values (i.e 16 * i16 = 256)
+/// for a layer that should have 1024(L1_SIZE or U) neurons(values), we only need 1024/16 = 64;
+/// so, the length of each side of our accumulator when using _m256i only needs to be 64
 #[derive(Debug, Clone, Copy)]
 #[repr(align(64))]
 pub(crate) struct Accumulator<T, const U: usize> {
@@ -33,6 +50,8 @@ pub(crate) struct Accumulator<T, const U: usize> {
 }
 
 
+
+// In order to ensure that refresh must always be called first, I should remove this soon
 impl<const U: usize> Default for Accumulator<Feature, U> {
     fn default() -> Self {
         unsafe { Self { white: Align64([_mm256_setzero_si256(); U]), black: Align64([_mm256_setzero_si256(); U]) } }
@@ -40,18 +59,60 @@ impl<const U: usize> Default for Accumulator<Feature, U> {
 }
 
 
-
 /// U is the L1 Size (i.e number of first output)
 impl<const U: usize> Accumulator<Feature, U> {
     const REGISTER_WIDTH: usize = 256/16; // 16
 
+    const ACCUMULATOR_LEN: usize = U * 2;
+
+    /// REGS_LEN: is the length of two accumualtors used here
+    unsafe fn update_weights<const ON: bool, const REGS_LEN: usize>(regs: &mut [__m256i; REGS_LEN], idx: (FeatureIdx, FeatureIdx)) {
+        let (white_idx, black_idx) = idx;
+
+        // we can only load 16 i16(16bits) value at a time, so we must perform this operation 1024(size of U)/16(bits) i.e. => 64 times
+        let num_chunks = U / Self::REGISTER_WIDTH;  // 1024/16 = 64, 
+
+        // there are U(in this case 1024) weights per idx
+        // so, we load the 1024 weights(from feature_weights) related to this idx(white, black)
+        // and depending on the value of ON (true or false), we add or remove the weights from the current accumulator
+        for color_idx in [white_idx, black_idx] {
+            for i in 0..num_chunks {
+                // would load weighs @w_idx..w_idx+16 (up until we've read all 1024 of them, which means this would run 64 times)
+                let weights_at_i = *(PARAMS.input_weight.as_ptr().add(*color_idx + i) as *const __m256i);
+                // Get the value on the accumulator at this index
+                let values_at_i = *regs.as_ptr().add(*color_idx + i);
+
+                let result = _mm256_add_epi16(weights_at_i, values_at_i);
+                _mm256_store_si256(regs.as_mut_ptr().add(*color_idx + i), result);
+            }
+        }
+    }
+
     pub(crate) unsafe fn refresh(board: &Board) -> Self {
+        println!("::::: the value of U is --->>>>>>>>> {U}");
         let mut acc = Accumulator::default();
         let num_chunks: usize = U / Self::REGISTER_WIDTH; // 1024/16 = 64 (U would usually be the L1SIZE)
+        
+        // const SIZE: usize = U * 2;
+        // const BOTH: usize = U * 2;
+        // U would normally be equal to ACCUMULATOR_SIZE, since rust doesn't allowing using generics in const operations
+        const REGS_LEN: usize = ACCUMULATOR_SIZE * 2;
+        let mut regs: [__m256i; REGS_LEN] = [std::mem::zeroed(); REGS_LEN];
 
-        let mut active_features = Vec::with_capacity(board.get_occupancy(Both).count_ones() as usize);
+        // Load the bias into the self
+        for color in [Color::White, Color::Black] {
+            for i in 0..U {
+                let regs_idx = (ACCUMULATOR_SIZE * color as usize) + i;
+                *regs.as_mut_ptr().add(regs_idx) = *(PARAMS.input_bias.as_ptr().add(i) as *const __m256i);
+            }
+        }
+
+        
+
+        let mut active_features: Vec<(FeatureIdx, Color)> = Vec::with_capacity(board.get_occupancy(Both).count_ones() as usize);
         let bitmaps = &board.board;
         
+        // identifies the pieces present on the board, and represents them on the the accumulator
         for (p, board) in (*bitmaps).into_iter().enumerate() {
             let mut sqs: u64 = *board;
 
@@ -59,20 +120,17 @@ impl<const U: usize> Accumulator<Feature, U> {
                 let sq = Square::from(sqs.trailing_zeros() as u8);
                 let piece = Piece::from(p as u8);
                 
-                let f_idx = halfka_idx(piece, sq);
+                let (white, black) = halfka_idx(piece, sq);
+                // let f_idx = halfka_idx00(piece, sq);
                 // println!("in the while loop {}", *f_idx + (1200));
-
                 sqs &= sqs -1;
-
-                active_features.push((f_idx, piece.color()));
+                
+                Self::update_weights::<true, REGS_LEN>(&mut regs, (white, black));
             }
         }
 
-        // let mut regs: [Feature; num_chunks] = unsafe { [_mm256_setzero_si256(); num_chunks] };
-        // let mut regs: Vec<__m256i> = Vec::with_capacity(num_chunks * PLAYERS_COUNT);
-        // let mut regs: Vec<__m256i> = Vec::with_capacity(L1_SIZE * 2);
-        // let mut regs: Vec<__m256i> = vec![];
-        let mut regs: Vec<__m256i> = vec![std::mem::zeroed(); L1_SIZE * 2];
+
+        println!("the length of the regs is {}", regs.len()); // 2048 for both accumulators
 
         // Load bias into registers
         for color in [White, Black] {
@@ -101,11 +159,11 @@ impl<const U: usize> Accumulator<Feature, U> {
                 // there are 768's(input_size) per input size
                 let xidx = *a;
 
-                println!("trying out 8************* {} {reg_idx}", xidx);
+                // println!("trying out 8************* {} {reg_idx}", xidx);
                 
                 
-                println!("inside params it is ((((({}))))", idx);
-                println!("input weight is::: _---- {}", PARAMS.input_weight.len());
+                // println!("inside params it is ((((({}))))", idx);
+                // println!("input weight is::: _---- {}", PARAMS.input_weight.len());
 
                 // let idx = ()
 
@@ -117,9 +175,9 @@ impl<const U: usize> Accumulator<Feature, U> {
             }
         }
 
-        println!("the index for now is>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", regs.len());
+        // println!("the index for now is>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", regs.len());
 
-        println!("NUMBER OF CHUNKS IS {num_chunks}");
+        // println!("NUMBER OF CHUNKS IS {num_chunks}");
 
         // println!("@ position xxxx {:?}", regs[100]);
         // println!("@ position xxxx {:?}", PARAMS.input_bias[100]);
@@ -138,6 +196,9 @@ impl<const U: usize> Accumulator<Feature, U> {
 
     pub(crate) unsafe fn update(&self, removed_features: &Vec<(Color, FeatureIdx)>, added_features: &Vec<(Color, FeatureIdx)>) -> Self {
         let num_chunks: usize = U / Self::REGISTER_WIDTH; // 1024/16 = 64 (U would usually be the L1SIZE)
+
+
+        println!("the value of U is {}", U);
 
         let mut acc = Accumulator::default();
         let mut regs: Vec<__m256i> = Vec::with_capacity(num_chunks * PLAYERS_COUNT);

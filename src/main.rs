@@ -32,6 +32,7 @@ use bit_move::Move;
 use board::{fen::FEN, position::Position, state::board::Board};
 use color::Color;
 use constants::TRICKY_POSITION;
+use nnue::halfka_idx;
 use search::{control::Control, search::Search};
 use syzygy::probe::TableBase;
 use tt::table::TTable;
@@ -81,7 +82,8 @@ fn main() {
     // negamax_thread[0].iterative_deepening(depth, &mut bb, &tb);
     // NegaMax::run(controller, table.get(), depth, &mut bb, 1, &tb);
 
-    // use crate::squares::Square::*;
+    use crate::squares::Square::*;
+    use crate::board::piece::Piece::*;
     // use crate::bit_move::MoveType::*;
 
     // println!("before {}", board.evaluate());
@@ -107,6 +109,19 @@ fn main() {
     let board = Position::from(Board::parse_fen(fen).unwrap());
     println!("board {}", board.to_string());
     println!("eval now ::::: {}", board.evaluate());
+
+
+    // println!("H8 is {}", H8 as usize);
+
+    // let bk_63 = halfka_idx(BK, H8);
+    // let wk_63 = halfka_idx(WK, H8);
+    // let bk_56 = halfka_idx(BQ, A8);
+    // let wp_01 = halfka_idx(WP, A1);
+
+    // println!("black king on 63 --->>>> {:?}", *bk_63);
+    // println!("white king on 63 --->>>> {:?}", *wk_63);
+    // println!("black queen on 56 --->>>> {:?}", *bk_56);
+    // println!("white pawn on 01 --->>>> {:?}", *wp_01);
 
     // let mut search = Search::new(table.get());
     // search.iterative_deepening(5, &mut board);

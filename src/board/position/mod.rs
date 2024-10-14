@@ -33,11 +33,15 @@ impl History {
     }
 }
 
+/// If Feature is m256i, then the size = 32, and then that would be (1024/32) * 2 = 64 values
+/// If Feature is i16, then the size = 2, and then that would be (1024/2) * 2 = 1024 values
+pub(crate) const ACCUMULATOR_SIZE: usize = (L1_SIZE / (std::mem::size_of::<Feature>())) * 2;
+
 
 #[derive(Debug, Clone)]
 pub(crate) struct Position {
     pub(crate) board: Board,
-    nnue_state: NNUEState<Feature, L1_SIZE>,
+    nnue_state: NNUEState<Feature, ACCUMULATOR_SIZE>,
     history: Vec<Option<History>>,
 }
 

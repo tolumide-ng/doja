@@ -10,7 +10,7 @@ use crate::squares::Square;
 
 use super::accumulator::{QA, QAB};
 use super::accumulator_ptr::AccumulatorPtr;
-use super::halfka_idx;
+use super::{halfka_idx, halfka_idx00};
 use super::{accumulator::Accumulator, accumulator::Feature, align64::Align64};
 
 pub(crate) const MAX_DEPTH: usize = 127;
@@ -116,8 +116,8 @@ impl<const U: usize> NNUEState<Feature, U> {
     pub(crate) fn update(&mut self, removed: Vec<(Piece, Square)>, added: Vec<(Piece, Square)>) {
         unsafe {
             let acc = *(self.accumulators.add(self.current_acc));
-            let added = added.into_iter().map(|(p, sq)| (p.color(), halfka_idx(p, sq))).collect::<Vec<_>>();
-            let removed = removed.into_iter().map(|(p, sq)| (p.color(), halfka_idx(p, sq))).collect::<Vec<_>>();
+            let added = added.into_iter().map(|(p, sq)| (p.color(), halfka_idx00(p, sq))).collect::<Vec<_>>();
+            let removed = removed.into_iter().map(|(p, sq)| (p.color(), halfka_idx00(p, sq))).collect::<Vec<_>>();
             
             let new_acc = acc.update(&removed, &added);
             self.current_acc += 1;
@@ -217,7 +217,7 @@ impl<const U: usize> NNUEState<Feature, U> {
             let output = Self::propagate(clipped_acc);
 
 
-            println!("OUTPUT::::: {output}");
+            // println!("OUTPUT::::: {output}");
 
             // println!("the output [[[[output->{output}]]]]");
 
