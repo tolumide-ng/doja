@@ -81,14 +81,14 @@ impl<const U: usize> Accumulator<Feature, U> {
                 let weights_idx = *color_idx + (i * Self::REGISTER_WIDTH);
                 // because we know that REGS_LEN is basically U * 2, where the first half is white, and the second half is black
                 let regs_idx = (color  * (REGS_LEN/2)) + i;
-                println!("i is {}, weight idx {} register index is {}", i, *color_idx + i, regs_idx);
+
                 // the interval for weights needs to be a multiple of 16, since weights is actually a bunch of i16 values, i.e 16 * i16 = 256
                 // let weight_idx = i * 
                 let weights_at_i = *(PARAMS.input_weight.as_ptr().add(weights_idx) as *const __m256i);
                 // Get the value on the accumulator at this index
                 let values_at_i = *regs.as_ptr().add(regs_idx);
-
                 let result = _mm256_add_epi16(weights_at_i, values_at_i);
+
                 _mm256_store_si256(regs.as_mut_ptr().add(regs_idx), result);
             }
         }
@@ -97,10 +97,7 @@ impl<const U: usize> Accumulator<Feature, U> {
     pub(crate) unsafe fn refresh(board: &Board) -> Self {
         println!("::::: the value of U is --->>>>>>>>> {U}");
         let mut acc = Accumulator::default();
-        let num_chunks: usize = U / Self::REGISTER_WIDTH; // 1024/16 = 64 (U would usually be the L1SIZE)
         
-        // const SIZE: usize = U * 2;
-        // const BOTH: usize = U * 2;
         // U would normally be equal to ACCUMULATOR_SIZE, since rust doesn't allowing using generics in const operations
         const REGS_LEN: usize = ACCUMULATOR_SIZE * 2;
         let mut regs: [__m256i; REGS_LEN] = [std::mem::zeroed(); REGS_LEN];
@@ -130,68 +127,14 @@ impl<const U: usize> Accumulator<Feature, U> {
             }
         }
 
+        // move the computed data into the accumulator
+        for color in [Color::White, Color::Black].into_iter() {
+            for index in 0..ACCUMULATOR_SIZE {
+                let regs_idx = (color as usize * ACCUMULATOR_SIZE) + index;
 
-        // println!("the length of the regs is {}", regs.len()); // 2048 for both accumulators
-
-        // // Load bias into registers
-        // for color in [White, Black] {
-        //     for i in 0..num_chunks {
-        //         // If there is a problem here, please confirm that halfa_idx works as it should, compare directly with the one from pytorch-NNUE
-        //         // let color_idx = (color as usize * num_chunks) + i;
-
-        //         let idx = (color as usize * L1_SIZE) + (i * Self::REGISTER_WIDTH);
-        //         *regs.as_mut_ptr().add(idx) = _mm256_load_si256(PARAMS.input_bias.as_ptr().add(idx) as *const __m256i);
-        //         // _mm256_store_si256(acc[color].as_mut_ptr().add(i) as *mut __m256i, *(MODEL.features_bias.as_ptr().add(i * REGISTER_WIDTH) as *const __m256i));
-        //     }
-        // }
-
-
-        // for (a, color) in active_features {
-        //     for i in 0..num_chunks {
-        //         // the number of weights per feature, is equivalent to the L1_SIZE, in this case 1024figures represent the weight of a feature "a"
-        //         // for any value of "a", by the end of this loop, we'd have loaded all weights that belong to "a"
-        //         // this specifically updates all the values representing the feature "a" on the board
-        //         // we can only load 16 i16s at a time, weil 16*16=256 (size of an AVX2 register)
-        //         let idx =  *a + (i*Self::REGISTER_WIDTH);
-        //         // let reg_idx = (color as usize * num_chunks) + i;
-        //         let reg_idx = (color as usize * INPUT) + (i * Self::REGISTER_WIDTH);
-
-
-        //         // there are 768's(input_size) per input size
-        //         let xidx = *a;
-
-        //         // println!("trying out 8************* {} {reg_idx}", xidx);
-                
-                
-        //         // println!("inside params it is ((((({}))))", idx);
-        //         // println!("input weight is::: _---- {}", PARAMS.input_weight.len());
-
-        //         // let idx = ()
-
-                
-        //         let weights = *(PARAMS.input_weight.as_ptr().add(idx) as *const __m256i);
-        //         // println!("the index for now is>>>>>>>>>>>>>>>>>>>>>>>>>>>* {}", reg_idx);
-        //         // y = Ax + b (where A is the feature, x is the weight, and b is bias)
-        //         *regs.as_mut_ptr().add(reg_idx) = _mm256_add_epi16(*(regs.as_ptr().add(reg_idx)), weights);
-        //     }
-        // }
-
-        // // println!("the index for now is>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", regs.len());
-
-        // // println!("NUMBER OF CHUNKS IS {num_chunks}");
-
-        // // println!("@ position xxxx {:?}", regs[100]);
-        // // println!("@ position xxxx {:?}", PARAMS.input_bias[100]);
-
-        // for i in 0..num_chunks {
-        //     // println!("expected::::::::::::::::::::::::::::::::::::::::::::www {}", i*Self::REGISTER_WIDTH);
-        //         let black_idx = num_chunks + i;
-        //     _mm256_store_si256(acc[Color::White].as_mut_ptr().add(i*Self::REGISTER_WIDTH) as *mut __m256i, *regs.as_ptr().add(i));
-        //     _mm256_store_si256(acc[Color::Black].as_mut_ptr().add(i*Self::REGISTER_WIDTH) as *mut __m256i, *regs.as_ptr().add(black_idx));
-        // }
-
-        // println!("acc len {}", acc.white.len());
-        
+                *acc[color].as_mut_ptr().add(index) = regs[regs_idx];
+            }
+        }
         acc
     }
 
