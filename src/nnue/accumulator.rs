@@ -70,20 +70,26 @@ impl<const U: usize> Accumulator<Feature, U> {
         let (white_idx, black_idx) = idx;
 
         // we can only load 16 i16(16bits) value at a time, so we must perform this operation 1024(size of U)/16(bits) i.e. => 64 times
-        let num_chunks = U / Self::REGISTER_WIDTH;  // 1024/16 = 64, 
+        // let num_chunks = U / Self::REGISTER_WIDTH;  // 1024/16 = 64, 
 
         // there are U(in this case 1024) weights per idx
         // so, we load the 1024 weights(from feature_weights) related to this idx(white, black)
         // and depending on the value of ON (true or false), we add or remove the weights from the current accumulator
-        for color_idx in [white_idx, black_idx] {
-            for i in 0..num_chunks {
-                // would load weighs @w_idx..w_idx+16 (up until we've read all 1024 of them, which means this would run 64 times)
-                let weights_at_i = *(PARAMS.input_weight.as_ptr().add(*color_idx + i) as *const __m256i);
+        for (color, color_idx) in [white_idx, black_idx].into_iter().enumerate() {
+            for i in 0..U {
+                // would load weighs @w_idx..w_idx+16 (up until we've read all 1024 of them, which means this would run 64 times)                
+                let weights_idx = *color_idx + (i * Self::REGISTER_WIDTH);
+                // because we know that REGS_LEN is basically U * 2, where the first half is white, and the second half is black
+                let regs_idx = (color  * (REGS_LEN/2)) + i;
+                println!("i is {}, weight idx {} register index is {}", i, *color_idx + i, regs_idx);
+                // the interval for weights needs to be a multiple of 16, since weights is actually a bunch of i16 values, i.e 16 * i16 = 256
+                // let weight_idx = i * 
+                let weights_at_i = *(PARAMS.input_weight.as_ptr().add(weights_idx) as *const __m256i);
                 // Get the value on the accumulator at this index
-                let values_at_i = *regs.as_ptr().add(*color_idx + i);
+                let values_at_i = *regs.as_ptr().add(regs_idx);
 
                 let result = _mm256_add_epi16(weights_at_i, values_at_i);
-                _mm256_store_si256(regs.as_mut_ptr().add(*color_idx + i), result);
+                _mm256_store_si256(regs.as_mut_ptr().add(regs_idx), result);
             }
         }
     }
@@ -107,25 +113,22 @@ impl<const U: usize> Accumulator<Feature, U> {
             }
         }
 
+        let bitmaps = &board.board;
         
+        // identifies the pieces present on the board, and represents them on the the accumulator
+        for (p, board) in (*bitmaps).into_iter().enumerate() {
+            let mut sqs: u64 = *board;
 
-        // let mut active_features: Vec<(FeatureIdx, Color)> = Vec::with_capacity(board.get_occupancy(Both).count_ones() as usize);
-        // let bitmaps = &board.board;
-        
-        // // identifies the pieces present on the board, and represents them on the the accumulator
-        // for (p, board) in (*bitmaps).into_iter().enumerate() {
-        //     let mut sqs: u64 = *board;
+            while sqs != 0 {
+                let sq = Square::from(sqs.trailing_zeros() as u8);
+                let piece = Piece::from(p as u8);
+                // we need to update black, and white's perspective
+                let (white, black) = halfka_idx(piece, sq);
 
-        //     while sqs != 0 {
-        //         let sq = Square::from(sqs.trailing_zeros() as u8);
-        //         let piece = Piece::from(p as u8);
-        //         // we need to update black, and white's perspective
-        //         let (white, black) = halfka_idx(piece, sq);
-
-        //         sqs &= sqs -1;
-        //         Self::update_weights::<true, REGS_LEN>(&mut regs, (white, black));
-        //     }
-        // }
+                sqs &= sqs -1;
+                Self::update_weights::<true, REGS_LEN>(&mut regs, (white, black));
+            }
+        }
 
 
         // println!("the length of the regs is {}", regs.len()); // 2048 for both accumulators
