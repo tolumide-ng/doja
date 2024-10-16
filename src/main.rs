@@ -82,9 +82,9 @@ fn main() {
     // negamax_thread[0].iterative_deepening(depth, &mut bb, &tb);
     // NegaMax::run(controller, table.get(), depth, &mut bb, 1, &tb);
 
-    use crate::squares::Square::*;
-    use crate::board::piece::Piece::*;
-    // use crate::bit_move::MoveType::*;
+    // use crate::squares::Square::*;
+    // use crate::board::piece::Piece::*;
+    // // use crate::bit_move::MoveType::*;
 
     // println!("before {}", board.evaluate());
 
@@ -104,35 +104,39 @@ fn main() {
     
     // let fen: &str = "8/8/2k5/8/4B1P1/8/5K2/8 w ---- 0 1";
 
-    // let fen = "8/3n4/q3q3/5k2/8/8/3K4/8 w - - 0 1"; // black to win (-64)
-    let fen = "8/1k3p2/8/8/3P4/2Q2N2/3K4/8 w - - 0 1"; // white would win (3257)
-    let board = Position::from(Board::parse_fen(fen).unwrap());
-    println!("board {}", board.to_string());
-    println!("eval now ::::: {}", board.evaluate());
+    // // let fen = "8/3n4/q3q3/5k2/8/8/3K4/8 w - - 0 1"; // black to win (-64)
+    // let fen = "8/1k3p2/8/8/3P4/2Q2N2/3K4/8 w - - 0 1"; // white would win (3257)
+    // let board = Position::from(Board::parse_fen(fen).unwrap());
+    // println!("board {}", board.to_string());
+    // println!("eval now ::::: {}", board.evaluate());
 
 
-    // println!("H8 is {}", H8 as usize);
+    // // println!("H8 is {}", H8 as usize);
 
-    let bk_63 = halfka_idx(BK, H8);
-    let wk_63 = halfka_idx(WK, H8);
-    let bk_56 = halfka_idx(BQ, A8);
-    let wp_01 = halfka_idx(WP, A1);
+    // let bk_63 = halfka_idx(BK, H8);
+    // let wk_63 = halfka_idx(WK, H8);
+    // let bk_56 = halfka_idx(BQ, A8);
+    // let wp_01 = halfka_idx(WP, A1);
 
-    // println!("black king on 63 --->>>> {:?}", bk_63);
-    // println!("white king on 63 --->>>> {:?}", wk_63);
-    // println!("black queen on 56 --->>>> {:?}", bk_56);
-    // println!("white pawn on 01 --->>>> {:?}", wp_01);
+    // // println!("black king on 63 --->>>> {:?}", bk_63);
+    // // println!("white king on 63 --->>>> {:?}", wk_63);
+    // // println!("black queen on 56 --->>>> {:?}", bk_56);
+    // // println!("white pawn on 01 --->>>> {:?}", wp_01);
 
-    println!("H8 index is {}", H8 as usize);
+    // println!("H8 index is {}", H8 as usize);
 
-    // let mut search = Search::new(table.get());
-    // search.iterative_deepening(5, &mut board);
+    // // let mut search = Search::new(table.get());
+    // // search.iterative_deepening(5, &mut board);
 
 
-    // let xx0 = Search::see(&board, &Move::new(F3 as u8, F6 as u8, Capture));
-    // let xx0 = Search::see(&board, &Move::new(D5 as u8, E6 as u8, Capture));
+    // // let xx0 = Search::see(&board, &Move::new(F3 as u8, F6 as u8, Capture));
+    // // let xx0 = Search::see(&board, &Move::new(D5 as u8, E6 as u8, Capture));
 
     // println!("the xx0 is {}", xx0);
+
+    let mut board = Position::from(Board::parse_fen(TRICKY_POSITION).unwrap());
+    let mut search = Search::new(table.get());
+    search.iterative_deepening(4, &mut board);
     
 
 }
