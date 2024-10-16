@@ -1,5 +1,7 @@
 use std::ops::Deref;
 
+
+#[derive(Debug)]
 pub(crate) struct FeatureIdx(usize);
 
 impl FeatureIdx {

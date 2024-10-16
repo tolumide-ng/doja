@@ -75,12 +75,15 @@ impl<const U: usize> Accumulator<Feature, U> {
         // there are U(in this case 1024) weights per idx
         // so, we load the 1024 weights(from feature_weights) related to this idx(white, black)
         // and depending on the value of ON (true or false), we add or remove the weights from the current accumulator
+        // println!("the value of U is >>>>>>>>>>> {}--> {}, {}", U, 64 * 16, Self::REGISTER_WIDTH);
         for (color, color_idx) in [white_idx, black_idx].into_iter().enumerate() {
             for i in 0..U {
                 // would load weighs @w_idx..w_idx+16 (up until we've read all 1024 of them, which means this would run 64 times)                
                 let weights_idx = *color_idx + (i * Self::REGISTER_WIDTH);
                 // because we know that REGS_LEN is basically U * 2, where the first half is white, and the second half is black
                 let regs_idx = (color  * (REGS_LEN/2)) + i;
+
+                // println!("iregs is -->> {regs_idx}, and (i * register width) is {}", i * Self::REGISTER_WIDTH);
 
                 // the interval for weights needs to be a multiple of 16, since weights is actually a bunch of i16 values, i.e 16 * i16 = 256
                 // let weight_idx = i * 
@@ -91,15 +94,17 @@ impl<const U: usize> Accumulator<Feature, U> {
 
                 _mm256_store_si256(regs.as_mut_ptr().add(regs_idx), result);
             }
+            // println!("XXXXXXXXXXXXXXXX \n\n\n");
         }
     }
 
     pub(crate) unsafe fn refresh(board: &Board) -> Self {
-        println!("::::: the value of U is --->>>>>>>>> {U}");
+        // println!("::::: the value of U is --->>>>>>>>> {U}");
         let mut acc = Accumulator::default();
         
         // U would normally be equal to ACCUMULATOR_SIZE, since rust doesn't allowing using generics in const operations
         const REGS_LEN: usize = ACCUMULATOR_SIZE * 2;
+        // const R_LEN: usize = 2 * U;
         let mut regs: [__m256i; REGS_LEN] = [std::mem::zeroed(); REGS_LEN];
 
         // Load the bias into the self
@@ -132,6 +137,7 @@ impl<const U: usize> Accumulator<Feature, U> {
             for index in 0..ACCUMULATOR_SIZE {
                 let regs_idx = (color as usize * ACCUMULATOR_SIZE) + index;
 
+                // println!("regs_index is {regs_idx}, and index is {index}");
                 *acc[color].as_mut_ptr().add(index) = regs[regs_idx];
             }
         }
@@ -142,7 +148,7 @@ impl<const U: usize> Accumulator<Feature, U> {
         let num_chunks: usize = U / Self::REGISTER_WIDTH; // 1024/16 = 64 (U would usually be the L1SIZE)
 
 
-        println!("the value of U is {}", U);
+        // println!("the value of U is {}", U);
 
         let mut acc = Accumulator::default();
         let mut regs: Vec<__m256i> = Vec::with_capacity(num_chunks * PLAYERS_COUNT);
@@ -234,19 +240,26 @@ impl<const U: usize> Accumulator<Feature, U> {
 
         
         // const CONTROL: i32 = 0b11011000; // 3, 1, 2, 0; lane 0 is the rightmost one
+
+        println!("the number of chunks is {}, and out {}, and U is {U}", input[0].len(), output[0].len());
         
         for color in [Color::White, Color::Black] {
-            for i in 0..num_out_chunks {
-                let curr_input = *(input.as_ptr().add(color as usize)); // color
-                let in0 = _mm256_load_si256(curr_input.as_ptr().add(i * IN_REGISTER_WIDTH)); // loads 16 i16 values from curr_input 
+            for i in 0..U {
+                // let curr_input = *(input.as_ptr().add(color as usize)); // color
+                let in0 = _mm256_load_si256(input[color].as_ptr().add(i)); // loads 16 i16 values from curr_input 
 
                 let clamped_min = _mm256_max_epi16(in0, min);
                 // despite being inside (i16 * 16) data structure, these are just (i8 * 16) values
                 // the reason for this, is to still be capable of returning (i16 * 16) values after the squaring (i.e multiplication)
                 let clamped_max = _mm256_min_epi16(clamped_min, max);
+                // // y = Ax + b
                 let result = _mm256_mullo_epi16(clamped_max, clamped_max); // square
 
-                _mm256_store_si256(output[color as usize].as_mut_ptr().add(i * OUT_REGISTER_WIDTH) as *mut __m256i, result);
+                // let xxx: [i16; 16] = std::mem::transmute(*(output[color as usize].as_ptr().add(i) as *const __m256i));
+                // println!("before >>>> {xxx:?}");
+                _mm256_store_si256(output[color as usize].as_mut_ptr().add(i) as *mut __m256i, result);
+                // let xxx: [i16; 16] = std::mem::transmute(*(output[color as usize].as_ptr().add(i) as *const __m256i));
+                // println!("after >>>> {xxx:?} \n\n");
             }
         }
 

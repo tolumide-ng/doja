@@ -151,8 +151,39 @@ impl Square {
     }
 
     /// flip the square on the board vertically
+    /// Why are we flipping?
     pub(crate) fn flipv(&self) -> Self {
         Self::from((*self as u8 ^ 56 & 63) as u64)
+    }
+
+    /// Flips the squares on the board horixontally
+    /// The numbering of squares(bits) in a chess engine (bitboard based) does not directly match
+    /// how bits are perceived in integers.
+    /// To explain why horizontal flipping is necessary (rather than vertical flipping) for white's perspective
+    /// The bitboard(used in this project) is laid out as follows, starting from black's perspective (from top to bottom):  
+    ///    8  |  56  57  58  59  60  61  62  63
+    ///    7  |  48  49  50  51  52  53  54  55
+    ///    6  |  40  41  42  43  44  45  46  47
+    ///    5  |  32  33  34  35  36  37  38  39
+    ///    4  |  24  25  26  27  28  29  30  31
+    ///    3  |  16  17  18  19  20  21  22  23
+    ///    2  |  08  09  10  11  12  13  14  15
+    ///    1  |  00  01  02  03  04  05  06  07
+    ///          a   b   c   d   e   f   g   h
+    /// This board layout starts from the top-left (a8, bit 56) and ends at the bottom-right (h1, bit 63).
+    /// In bitboards, this layout is natural from black's perspective, as black sees a8 as the first square on their left.
+    /// However, from white's perspective, the board is typically viewed with a1 on the left and h1 on the right, 
+    /// flipping how the squares are viewed horizontally. White sees the first rank at the bottom, so a1 (square 0) should still be in the bottom-left
+    /// If you just flipped the board vertically, you would reverse the ranks (the rows), but that wouldn't reflect white's correct horizontal view where they see a1 to h1 on their side of the board.
+    /// So, you need to flip horizontally to ensure that: 
+    ///     1. White sees rank 1 (00 01 02 03 04 05 06 07) as it should be (left to right: a1 to h1).
+    ///     2. This reflects white's view, where the leftmost bit on rank 1 is a1 (bit 0) and the rightmost bit on rank 1 is h1 (bit 7).
+    /// 
+    /// For example:
+    ///     1. Black sees: a1 as square 0, h1 as square 7.
+    ///     2. White sees: a1 on the left, which corresponds to square 0 as well, but the entire row (rank 1) should appear in white's perspective as it does for them.
+    pub(crate) fn fliph(&self) -> Self {
+        Self::from(63u64 - *self as u64)
     }
 }
 

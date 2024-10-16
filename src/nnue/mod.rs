@@ -56,10 +56,10 @@ pub(crate) fn halfka_idx(p: Piece, sq: Square) -> (FeatureIdx, FeatureIdx) {
     let color_stride = 64 * 6;
     let piece_stride = 64;
     let c = p.color() as usize;
-    let p = (p as usize)/2;
+    let p = (p as usize)%6;
 
-    let w_idx = c * color_stride + p * piece_stride + sq.flipv() as usize;
-    let b_idx = (1 ^ c) * color_stride + p * piece_stride + sq as usize;
+    let w_idx = c * color_stride + p * piece_stride + sq.fliph() as usize;
+    let b_idx = (1 ^ c) * color_stride + p * piece_stride + sq.fliph() as usize;
 
     (FeatureIdx::from(w_idx * HIDDEN), FeatureIdx::from(b_idx * HIDDEN))
 }
