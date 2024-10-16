@@ -65,6 +65,10 @@ impl<'a> Search<'a> {
                 println!("(((((((((((((((((((((((((((should not be here))))))))))))))))))))))))))) score={score}, alpha={alpha}, and beta={beta}");
                 // We fell outside the window, so try agin with a full-width window (and the same depth)
                 alpha = -INFINITY; beta = INFINITY;
+                // for i in self.pv_table.get_pv(0) {
+                //     print!("-->> {}", Move::from(*i));
+                // }
+                // println!("\n");
                 continue;
             }
 
@@ -333,6 +337,9 @@ impl<'a> Search<'a> {
         let mut hash_flag = HashFlag::UpperBound;
 
         if Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&s| s >= 50) {
+            if depth == 2 && self.limit == 2 {
+                println!("<<<<<<<<<<<<<<<<<<<<<<<<<it's a repetition>>>>>>>>>>>>>>>>>>>>>>>>>");
+            }
             return 0; // draw
         }
 
@@ -343,21 +350,32 @@ impl<'a> Search<'a> {
         // The search can continue to explore more moves because the values returned by the evaluated moves could potentially fall within this range, providing room for a better evaluation.
         let explore_more_moves = (beta - alpha) > 1;
 
-        if self.ply > 0 && tt_hit.is_some() && !explore_more_moves { return tt_hit.unwrap() }
+        if self.ply > 0 && tt_hit.is_some() && !explore_more_moves { 
+            if depth == 2 && self.limit == 2 {
+                println!("[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[USING TT TABLE HERE]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]");
+            }
+            return tt_hit.unwrap() }
         if depth == 0 { return self.quiescence(alpha, beta, position) }
-        if self.ply > MAX_PLY - 1 { return position.evaluate() }
+        if self.ply > MAX_PLY - 1 { 
+            if depth == 2 && self.limit == 2 {
+                println!("((((((((((((((((((((((((((((EXCEEDED MAX_PLY))))))))))))))))))))))))))))");
+            }
+            return position.evaluate() }
 
 
         self.nodes += 1;
 
         let stm_in_check = Self::in_check(position, position.turn);
-        let depth = if stm_in_check { depth + 1} else { depth };
+        // let depth = if stm_in_check { depth + 1} else { depth };
         let mut mvs_searched = 0;
 
         let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !stm_in_check && self.ply > 0;
 
         if null_move_forward_pruning_conditions {
             if let Some(beta) = self.make_null_move(beta, depth, position) {
+                if depth == 2 && self.limit == 2 {
+                    println!("-----------------------------------------------------------AFTER NULL-MOVE FP-----------------------------------------------------------");
+                }
                 return beta;
             }
         }
@@ -368,29 +386,44 @@ impl<'a> Search<'a> {
 
         let mvs = mvs.iter().map(|x| x.0).collect::<Vec<_>>();
 
-        for (moves_searched, mv) in mvs.iter().enumerate() {
+
+        if self.limit == 3 && depth == 3 {
+            for mv in &mvs {
+                print!("::: {} ----->>>> ", mv.to_string())
+            }
+        }
+
+
+        
+        for (index, mv) in mvs.iter().enumerate() {
+            // println!("TOTAL MOVES IS {} index is {index} _---and now we're running>>>>>> {} limit->{}, depth-->{} stm is {:?}", mvs.len(), mv.to_string(), self.limit, depth, position.turn);
+            if (mv.to_string() == "e2a6x" || mv.to_string() == "g2h3x") && self.limit == 3 && depth == 3  {
+                println!("\n\n <<BEFORE>><<BEFORE>><<BEFORE>><<BEFORE>>for mv: {}, with score => xxx, alpha={alpha}, and beta={beta}", mv.to_string());
+            }
+
             if position.make_move_nnue(*mv, MoveScope::AllMoves) {
                 self.ply += 1;
-                // moves_searched += 1;
+                // mvs_searched = moves_searched;
+                // if (mv.to_string() == "e2a6x" || mv.to_string() == "g2h3x") && self.limit == 2 && depth == 2  {
+                //     println!("\n\n *******************for mv: {}, with score => xxx, alpha={alpha}, and beta={beta}", mv.to_string());
+                // }
 
-                mvs_searched = moves_searched;
-                
                 // let score = -self.alpha_beta(-beta, -alpha, depth -1, &mut position);
-                let score = match moves_searched {
+                let score = match mvs_searched {
                     0 => -self.alpha_beta(-beta, -alpha, depth -1, &mut position),
                     _ => {
                         // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
                         // condition for Late Move Reduction
                         let non_tatcital_mv = !stm_in_check && mv.get_promotion().is_none() && !mv.get_capture();
 
-                        let mut value = if (moves_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
-                            -self.alpha_beta(-alpha + 1, -alpha, depth-2, position)
+                        let mut value = if (mvs_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
+                            -self.alpha_beta(-(alpha + 1), -alpha, depth-2, position)
                         } else {
                             alpha + 1 // Hack to ensure that full-depth search is done
                         };
 
                         if value > alpha {
-                            value = -self.alpha_beta(-alpha + 1, -alpha, depth-1, position);
+                            value = -self.alpha_beta(-(alpha - 1), -alpha, depth-1, position);
 
                             if (value > alpha) && value < beta {
                                 value = -self.alpha_beta(-beta, -alpha, depth-1, position);
@@ -400,34 +433,47 @@ impl<'a> Search<'a> {
                         value
                     }
                 };
+                
+                mvs_searched += 1;
 
                 let zobrist_key = position.hash_key;
                 position.undo_move(true);
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
 
-                if score > best_score {
+                // if (mv.to_string() == "e2a6x" || mv.to_string() == "g2h3x") && self.limit == 2 && depth == 2  {
+                //     println!("\n\n *******************for mv: {}, with score => {}, alpha={alpha}, and beta={beta}", mv.to_string(), score);
+                // }
+
+
+                if score >= beta {
+                    self.tt.record(zobrist_key, depth, beta, INFINITY, self.ply, hash_flag, 0, best_mv); 
+                    if !mv.get_capture() {
+                        self.killer_moves.store(depth as usize, mv);
+                    }
+                    return beta;
+                }
+
+                // if score > best_score {
+                //     best_score = score;
+                    
+                if depth == 3 && self.limit == 3 {
+                    println!("----------------------------<<<<<<<<<<<<<<ON WHATEVER>>>>>>>>>>>>>>------------for mv: {}, with score => {score}, alpha={alpha}, and beta={beta}", mv.to_string());
+                }
+                if score > alpha {
+                    // println!("previous_best_score==>> {best_score}, depth = {depth} --->>>> the move is {:?}, and the score is {score}, alpha is {alpha}, and beta={beta}", mv.to_string());
                     best_score = score;
                     
-                    if score > alpha {
-                        // println!("previous_best_score==>> {best_score}, depth = {depth} --->>>> the move is {:?}, and the score is {score}, alpha is {alpha}, and beta={beta}", mv.to_string());
-                        best_score = score;
-                        
-                        best_mv = Some(*mv);
-                        hash_flag = HashFlag::Exact;
-                        self.pv_table.store_pv(self.ply, mv);
-                        alpha = score;
-                        
-                        if score >= beta {
-                            self.tt.record(zobrist_key, depth, beta, INFINITY, self.ply, hash_flag, 0, best_mv); 
-                            if !mv.get_capture() {
-                                self.history_table.update(moved_piece, mv.get_src(), depth);
-                                self.killer_moves.store(depth as usize, mv);
-                            }
-                            return beta;
-                        }
+                    best_mv = Some(*mv);
+                    hash_flag = HashFlag::Exact;
+                    self.pv_table.store_pv(self.ply, mv);
+                    alpha = score;
+
+                    if !mv.get_capture() {
+                        self.history_table.update(moved_piece, mv.get_src(), depth);
                     }
                 }
+                // }
             }
         }
 
@@ -442,4 +488,8 @@ impl<'a> Search<'a> {
         self.tt.record(position.hash_key, depth, best_score, INFINITY, self.ply, hash_flag, 0, best_mv);
         alpha
     }
+
+
+
+
 }

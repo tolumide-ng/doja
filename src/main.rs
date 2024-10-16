@@ -137,7 +137,7 @@ fn main() {
 
     let mut board = Position::from(Board::parse_fen(TRICKY_POSITION).unwrap());
     let mut search = Search::new(table.get());
-    search.iterative_deepening(2, &mut board);
+    search.iterative_deepening(3, &mut board);
     
 
 }
