@@ -1,6 +1,10 @@
 use std::ops::Deref;
 
 
+
+
+/// This should be changed eventually to match an index that addresses white and black's perspcetive
+/// something like: FeatureIdx(usize, usize) where 0=> white, and 1=> black
 #[derive(Debug)]
 pub(crate) struct FeatureIdx(usize);
 

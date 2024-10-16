@@ -1,6 +1,6 @@
 // when the king moves, the accumulator is refreshed
 
-use std::arch::x86_64::{__m256i, _mm256_add_epi16, _mm256_load_si256, _mm256_max_epi16, _mm256_max_epi8, _mm256_min_epi16, _mm256_mullo_epi16, _mm256_packs_epi16, _mm256_permute4x64_epi64, _mm256_set1_epi16, _mm256_setzero_si256, _mm256_store_si256, _mm256_sub_epi16};
+use std::arch::x86_64::*;
 use std::ops::{Index, IndexMut};
 
 
@@ -63,19 +63,14 @@ impl<const U: usize> Default for Accumulator<Feature, U> {
 impl<const U: usize> Accumulator<Feature, U> {
     const REGISTER_WIDTH: usize = 256/16; // 16
 
-    const ACCUMULATOR_LEN: usize = U * 2;
-
     /// REGS_LEN: is the length of two accumualtors used here
     unsafe fn update_weights<const ON: bool, const REGS_LEN: usize>(regs: &mut [__m256i; REGS_LEN], idx: (FeatureIdx, FeatureIdx)) {
         let (white_idx, black_idx) = idx;
-
         // we can only load 16 i16(16bits) value at a time, so we must perform this operation 1024(size of U)/16(bits) i.e. => 64 times
-        // let num_chunks = U / Self::REGISTER_WIDTH;  // 1024/16 = 64, 
 
-        // there are U(in this case 1024) weights per idx
+        // There are U(in this case 1024) weights per idx
         // so, we load the 1024 weights(from feature_weights) related to this idx(white, black)
         // and depending on the value of ON (true or false), we add or remove the weights from the current accumulator
-        // println!("the value of U is >>>>>>>>>>> {}--> {}, {}", U, 64 * 16, Self::REGISTER_WIDTH);
         for (color, color_idx) in [white_idx, black_idx].into_iter().enumerate() {
             for i in 0..U {
                 // would load weighs @w_idx..w_idx+16 (up until we've read all 1024 of them, which means this would run 64 times)                
@@ -83,14 +78,15 @@ impl<const U: usize> Accumulator<Feature, U> {
                 // because we know that REGS_LEN is basically U * 2, where the first half is white, and the second half is black
                 let regs_idx = (color  * (REGS_LEN/2)) + i;
 
-                // println!("iregs is -->> {regs_idx}, and (i * register width) is {}", i * Self::REGISTER_WIDTH);
-
                 // the interval for weights needs to be a multiple of 16, since weights is actually a bunch of i16 values, i.e 16 * i16 = 256
-                // let weight_idx = i * 
                 let weights_at_i = *(PARAMS.input_weight.as_ptr().add(weights_idx) as *const __m256i);
                 // Get the value on the accumulator at this index
                 let values_at_i = *regs.as_ptr().add(regs_idx);
-                let result = _mm256_add_epi16(weights_at_i, values_at_i);
+                
+                let result = match ON {
+                    true => _mm256_add_epi16(weights_at_i, values_at_i),
+                    false => _mm256_sub_epi16(values_at_i, weights_at_i),
+                };
 
                 _mm256_store_si256(regs.as_mut_ptr().add(regs_idx), result);
             }
@@ -99,7 +95,6 @@ impl<const U: usize> Accumulator<Feature, U> {
     }
 
     pub(crate) unsafe fn refresh(board: &Board) -> Self {
-        // println!("::::: the value of U is --->>>>>>>>> {U}");
         let mut acc = Accumulator::default();
         
         // U would normally be equal to ACCUMULATOR_SIZE, since rust doesn't allowing using generics in const operations
@@ -144,48 +139,34 @@ impl<const U: usize> Accumulator<Feature, U> {
         acc
     }
 
-    pub(crate) unsafe fn update(&self, removed_features: &Vec<(Color, FeatureIdx)>, added_features: &Vec<(Color, FeatureIdx)>) -> Self {
-        let num_chunks: usize = U / Self::REGISTER_WIDTH; // 1024/16 = 64 (U would usually be the L1SIZE)
+    
+    pub(crate) unsafe fn update(&self, removed_features: Vec<(FeatureIdx, FeatureIdx)>, added_features: Vec<(FeatureIdx, FeatureIdx)>) -> Self {
+        const REGS_LEN: usize = ACCUMULATOR_SIZE * 2;
 
+        let mut regs: [__m256i; REGS_LEN] = [std::mem::zeroed(); REGS_LEN];
 
-        // println!("the value of U is {}", U);
-
-        let mut acc = Accumulator::default();
-        let mut regs: Vec<__m256i> = Vec::with_capacity(num_chunks * PLAYERS_COUNT);
-
-        
-        // Load the previous values to registers and operate on registers only
-        for i in 0..num_chunks {
-            let black_idx = num_chunks + i;
-            *regs.as_mut_ptr().add(i) = _mm256_load_si256(self.white.as_ptr().add(i * Self::REGISTER_WIDTH));
-            *regs.as_mut_ptr().add(black_idx) = _mm256_load_si256(self.black.as_ptr().add(i * Self::REGISTER_WIDTH));
+        for idx in removed_features.into_iter() {
+            Self::update_weights::<false, REGS_LEN>(&mut regs, idx);
         }
 
-        for (color, f_idx) in removed_features.iter() {
-            for i in 0..num_chunks {
-                // let model_idx = (**f_idx * U) + (i * Self::REGISTER_WIDTH);
-                let model_idx = **f_idx + (i * Self::REGISTER_WIDTH);
-                let regs_idx = (*color as usize * num_chunks) + i;
-                
-                let weights = *(PARAMS.input_weight.as_ptr().add(model_idx) as *const __m256i);
-                *regs.as_mut_ptr().add(regs_idx) = _mm256_sub_epi16(*(regs.as_ptr().add(regs_idx)), weights);
+        for idx in added_features {
+            Self::update_weights::<true, REGS_LEN>(&mut regs, idx);
+        }
+
+
+        let mut acc = self.clone();
+        // move the computed data into the accumulator
+        for color in [Color::White, Color::Black].into_iter() {
+            for index in 0..ACCUMULATOR_SIZE {
+                let regs_idx = (color as usize * ACCUMULATOR_SIZE) + index;
+
+                // println!("regs_index is {regs_idx}, and index is {index}");
+                if color == White {
+                    *acc.white.as_mut_ptr().add(index) = regs[regs_idx];
+                } else {
+                    *acc.black.as_mut_ptr().add(index) = regs[regs_idx];
+                }
             }
-        }
-        
-       for (color, f_idx) in added_features.into_iter() {
-            for i in 0..num_chunks {
-                let model_idx = **f_idx+ (i * Self::REGISTER_WIDTH);
-                let regs_idx = (*color as usize * num_chunks) + i;
-
-                let weights = *(PARAMS.input_weight.as_ptr().add(model_idx) as *const __m256i);
-                *regs.as_mut_ptr().add(regs_idx) = _mm256_add_epi16(*(regs.as_ptr().add(regs_idx)), weights);
-            }
-        }
-        
-        for i in 0..num_chunks {
-            let black_idx = num_chunks + i;
-            _mm256_store_si256(acc[Color::White].as_mut_ptr().add(i*Self::REGISTER_WIDTH) as *mut __m256i, *regs.as_ptr().add(i));
-            _mm256_store_si256(acc[Color::Black].as_mut_ptr().add(i*Self::REGISTER_WIDTH) as *mut __m256i, *regs.as_ptr().add(black_idx));
         }
     
         acc

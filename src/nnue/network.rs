@@ -116,10 +116,10 @@ impl<const U: usize> NNUEState<Feature, U> {
     pub(crate) fn update(&mut self, removed: Vec<(Piece, Square)>, added: Vec<(Piece, Square)>) {
         unsafe {
             let acc = *(self.accumulators.add(self.current_acc));
-            let added = added.into_iter().map(|(p, sq)| (p.color(), halfka_idx00(p, sq))).collect::<Vec<_>>();
-            let removed = removed.into_iter().map(|(p, sq)| (p.color(), halfka_idx00(p, sq))).collect::<Vec<_>>();
+            let added = added.into_iter().map(|(p, sq)| halfka_idx(p, sq)).collect::<Vec<_>>();
+            let removed = removed.into_iter().map(|(p, sq)| halfka_idx(p, sq)).collect::<Vec<_>>();
             
-            let new_acc = acc.update(&removed, &added);
+            let new_acc = acc.update(removed, added);
             self.current_acc += 1;
             *self.accumulators.add(self.current_acc) = new_acc;
         }
