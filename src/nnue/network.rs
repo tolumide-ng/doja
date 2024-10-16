@@ -10,7 +10,7 @@ use crate::squares::Square;
 
 use super::accumulator::{QA, QAB};
 use super::accumulator_ptr::AccumulatorPtr;
-use super::{halfka_idx, halfka_idx00};
+use super::halfka_idx;
 use super::{accumulator::Accumulator, accumulator::Feature, align64::Align64};
 
 pub(crate) const MAX_DEPTH: usize = 127;
@@ -177,20 +177,11 @@ impl<const U: usize> NNUEState<Feature, U> {
     pub(crate) fn evaluate(&self, stm: Color) -> i32 {
         unsafe {
             let acc = self.accumulators.add(self.current_acc);
-
-            // println!("VVVVVVVVVVVvvvvvvvvvvvvvvvvvvvvvvv {:?}", self.accumulators)
             
             let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
             let output = Self::propagate(clipped_acc, &stm);
 
-
-            // println!("OUTPUT::::: {output}");
-
-            // println!("the output [[[[output->{output}]]]]");
-
             let abc = (output / (QA as i32) + PARAMS.output_bias as i32) * SCALE / QAB;
-
-            println!("the abc here is {abc}");
             return abc;
         }
     }

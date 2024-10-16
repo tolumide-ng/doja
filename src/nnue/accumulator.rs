@@ -9,8 +9,6 @@ use crate::board::position::ACCUMULATOR_SIZE;
 use crate::board::state::board::Board;
 use crate::color::Color::*;
 use crate::color::Color;
-use crate::constants::PLAYERS_COUNT;
-use crate::nnue::{halfka_idx00, INPUT, L1_SIZE};
 use crate::squares::Square;
 
 use super::align64::Align64;
@@ -90,7 +88,6 @@ impl<const U: usize> Accumulator<Feature, U> {
 
                 _mm256_store_si256(regs.as_mut_ptr().add(regs_idx), result);
             }
-            // println!("XXXXXXXXXXXXXXXX \n\n\n");
         }
     }
 
@@ -205,28 +202,17 @@ impl<const U: usize> Accumulator<Feature, U> {
     /// Then multiplies the input(now 16 i8 values) with the weights(16 i16 values)
     /// to generates 16 i16 values (the output)
     pub(crate) unsafe fn sq_crelu16(&self, stm: Color) -> [Align64<[__m256i; U]>; 2] { // U is 1024
-        const IN_REGISTER_WIDTH: usize = 256/16; // 16
-        const OUT_REGISTER_WIDTH: usize = 256/16; // 16 (output would be in i16, because we would be squaring the clamped values(i8^2) squaredCReLU)
-        let num_out_chunks = U/OUT_REGISTER_WIDTH; // 1024/16 = 64
-
-        
         let input = if stm == Color::White {[self.white, self.black]} else {[self.black, self.white]};
         let mut output: [Align64<[__m256i; U]>; 2] = [Align64([_mm256_setzero_si256(); U]); 2];  // [[_; 1024]; 2];
-        
-        // let min = _mm256_set1_epi16(-128);
-        // let max = _mm256_set1_epi16(127);
 
         let min = _mm256_set1_epi16(0);
         let max = _mm256_set1_epi16(255);
 
         
         // const CONTROL: i32 = 0b11011000; // 3, 1, 2, 0; lane 0 is the rightmost one
-
-        println!("the number of chunks is {}, and out {}, and U is {U}", input[0].len(), output[0].len());
         
         for color in [Color::White, Color::Black] {
             for i in 0..U {
-                // let curr_input = *(input.as_ptr().add(color as usize)); // color
                 let in0 = _mm256_load_si256(input[color].as_ptr().add(i)); // loads 16 i16 values from curr_input 
 
                 let clamped_min = _mm256_max_epi16(in0, min);
@@ -235,12 +221,7 @@ impl<const U: usize> Accumulator<Feature, U> {
                 let clamped_max = _mm256_min_epi16(clamped_min, max);
                 // // y = Ax + b
                 let result = _mm256_mullo_epi16(clamped_max, clamped_max); // square
-
-                // let xxx: [i16; 16] = std::mem::transmute(*(output[color as usize].as_ptr().add(i) as *const __m256i));
-                // println!("before >>>> {xxx:?}");
                 _mm256_store_si256(output[color as usize].as_mut_ptr().add(i) as *mut __m256i, result);
-                // let xxx: [i16; 16] = std::mem::transmute(*(output[color as usize].as_ptr().add(i) as *const __m256i));
-                // println!("after >>>> {xxx:?} \n\n");
             }
         }
 
