@@ -6,7 +6,11 @@ pub struct PieceAttacks {
     pub(crate) bishop_masks: [u64; TOTAL_SQUARES],
     pub(crate) rook_masks: [u64; TOTAL_SQUARES],
     /// this returns the squares that a sq of this color can ATTACK! as pawn (CORRECT) \
-    /// another loose but incomplete definition is where it can be attacked from by other pawns (this is incomplete or partially wrong)
+    /// another definition is that this returns the possible attacks from other pawns that can capture a piece on this square
+    /// pawn_attacks[White][sq] would return all the possible white pawns that can attack "sq"
+    /// OR another way to think of it is: pawn_attacks[White][sq] would returns all the possible squares that a "White pawn" at "sq" can attack
+    /// row     -> is the index(color) of the attacker (usually us)
+    /// column  -> is the index(square) of the opponent we're trying to attack
     pub(crate) pawn_attacks: [[u64; TOTAL_SQUARES]; PLAYERS_COUNT]
 }
 

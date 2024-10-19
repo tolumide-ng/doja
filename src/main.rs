@@ -28,12 +28,13 @@ mod syzygy;
 
 use std::{num::NonZero, sync::{Arc, Mutex}};
 
-use bit_move::Move;
+use bit_move::{Move, MoveType};
 use board::{fen::FEN, position::Position, state::board::Board};
 use color::Color;
 use constants::TRICKY_POSITION;
 use nnue::halfka_idx;
 use search::{control::Control, search::Search};
+use squares::Square;
 use syzygy::probe::TableBase;
 use tt::table::TTable;
 // use zobrist::Zobrist;
@@ -48,11 +49,11 @@ use crate::search::alpha_beta::NegaMax;
 fn main() {
     // let _ = UCI::default().reader();
 
-    println!("**********************AFTER*****************************");
+    // println!("**********************AFTER*****************************");
     
-    let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+    // let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
     // println!("**********************BEFORE*****************************");
-    println!("{}", board.to_string());
+    // println!("{}", board.to_string());
     
 
     println!("num of cpus {:?}", std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()));
@@ -82,9 +83,9 @@ fn main() {
     // negamax_thread[0].iterative_deepening(depth, &mut bb, &tb);
     // NegaMax::run(controller, table.get(), depth, &mut bb, 1, &tb);
 
-    // use crate::squares::Square::*;
-    // use crate::board::piece::Piece::*;
-    // // use crate::bit_move::MoveType::*;
+    use crate::squares::Square::*;
+    use crate::board::piece::Piece::*;
+    // use crate::bit_move::MoveType::*;
 
     // println!("before {}", board.evaluate());
 
@@ -104,11 +105,12 @@ fn main() {
     
     // let fen: &str = "8/8/2k5/8/4B1P1/8/5K2/8 w ---- 0 1";
 
-    // // let fen = "8/3n4/q3q3/5k2/8/8/3K4/8 w - - 0 1"; // black to win (-64)
-    // let fen = "8/1k3p2/8/8/3P4/2Q2N2/3K4/8 w - - 0 1"; // white would win (3257)
-    // let fen = TRICKY_POSITION;
+    // let fen = "8/3n4/q3q3/5k2/8/8/3K4/8 w - - 0 1"; // black to win (-64)
+    // // let fen = "8/1k3p2/8/8/3P4/2Q2N2/3K4/8 w - - 0 1"; // white would win (3257)
+    // // let fen = TRICKY_POSITION;
     // let board = Position::from(Board::parse_fen(fen).unwrap());
     // println!("board {}", board.to_string());
+    // board.get_all_attacks(Square::C3);
     // println!("eval now ::::: {}", board.evaluate());
 
 
@@ -135,9 +137,13 @@ fn main() {
 
     // println!("the xx0 is {}", xx0);
 
+
     let mut board = Position::from(Board::parse_fen(TRICKY_POSITION).unwrap());
+    println!("{}", board.to_string());
     let mut search = Search::new(table.get());
     search.iterative_deepening(3, &mut board);
+    // board.get_all_attacks(Square::A6);
+    // Search::static_exchange_eval(&board, &Move::new(F3 as u8, H3 as u8, MoveType::Capture), 0);
     
 
 }

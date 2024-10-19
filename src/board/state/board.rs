@@ -1,7 +1,7 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
 use crate::{bit_move::{Move, MoveType::{self, *}}, board::piece_map::PieceMap, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, moves::Moves, squares::Square, zobrist::START_POSITION_ZOBRIST};
-
+use crate::board::piece::Piece::*;
 use crate::board::{castling::Castling, fen::FEN, piece::Piece};
 use crate::bitboard::Bitboard;
 use crate::squares::Square::*;
@@ -48,6 +48,9 @@ impl Board {
         self.castling_rights = castling
     }
 
+    /// Looking at this is not the best implementation
+    /// Any changes here should affect the desired color, and the occupancy for both colors
+    /// Avoid using it till the issues listed above fixed, AND WRITE TESTS!
     pub(crate) fn set_occupancy(&mut self, color: Color, occupancy: u64) {
         match color {
             Color::White => self.occupancies[color] |= occupancy, 
@@ -57,18 +60,41 @@ impl Board {
         self.occupancies[Color::Both] |= occupancy;
     }
 
-    pub(crate) fn reset_occupancy_to(&mut self, color: Color, occupancy: u64) {
-        match color {
-            Color::White => self.occupancies[color] = occupancy, 
-            Color::Black => self.occupancies[color] = occupancy,
-            _ => {}
-        }
-        self.occupancies[Color::Both] = occupancy;
+
+    pub(crate) fn remove_piece(&mut self, piece: Piece, sq: Square) {
+        let sq_mask = 1u64 << u64::from(sq);
+        self.occupancies[piece.color()] &= !sq_mask;
+        self.occupancies[Both] &= !sq_mask;
+        *self[piece] &= !sq_mask;
+    }
+
+    pub(crate) fn add_piece(&mut self, piece: Piece, sq: Square) {
+        let sq_mask = 1u64 << u64::from(sq);
+        self.occupancies[piece.color()] |= sq_mask;
+        self.occupancies[Both] |= sq_mask;
+        *self[piece] |= sq_mask;
     }
 
     pub(crate) fn get_occupancy(&self, color: Color) -> u64 {
         self.occupancies[color]
     }
+
+    /// Returns all possible attacks that can capture the provided square (sq)
+    pub(crate) fn get_all_attacks(&self, sq: Square) -> u64 {
+        let sq_mask = 1u64 << u64::from(sq);
+
+        let attacking_pawns = (PIECE_ATTACKS.pawn_attacks[Black][sq] & *self[BP]) | (PIECE_ATTACKS.pawn_attacks[White][sq]  & *self[WP]);
+        let attacking_knights = PIECE_ATTACKS.knight_attacks[sq] & (*self[WN] | *self[BN]);
+        let diagonal_attackers = *self[WQ] | *self[WB] | *self[BQ] | *self[BB];
+        let diagonal_attacks = PIECE_ATTACKS.nnbishop_attacks(sq_mask, self.occupancies[Both]) & diagonal_attackers;
+        let orthogonal_attackers = *self[WQ] | *self[WR] | *self[BQ] | *self[BR];
+        let orthogonal_attacks = PIECE_ATTACKS.nnrook_attacks(sq_mask, self.occupancies[Both]) & orthogonal_attackers;
+        let attacking_kings = PIECE_ATTACKS.king_attacks[sq] & (*self[WK] | *self[BK]);
+
+        attacking_pawns | attacking_knights | attacking_kings | diagonal_attacks | orthogonal_attacks
+    }
+
+
 
     /// Given the current pieces on the board, is this square under attack by the given side (color)
     /// Getting attackable(reachable) spots from this square, it also means this square can be reached from those
@@ -98,6 +124,13 @@ impl Board {
         
         false
     }
+
+
+    // pub(crate) fn get_square_attacks(&self, sq_64: u64, stm: Color) {
+    //     let b = self;
+    //     let mvs = self.gen_movement();
+    //     if b.turn != stm {}
+    // }
 
     
     /// Target for single pawn pushes (black or white)
@@ -343,20 +376,8 @@ impl Board {
                 _ => unreachable!()
             };
 
-
-            // let attacks = attack_map[src];
             // we're getting !self.occupancies[color]s because our knight hould be able to make both quiet or capture moves (on the opponent)
             let mut targets = Bitboard::from(attacks & occupancies);
-
-            // if piece == Piece::BB {
-            //     println!("attacks {}", Bitboard::from(attacks));
-            //     println!("black in 0 {}", Bitboard::from(occupancies));
-            //     println!("targets {}", Bitboard::from(targets));
-            //     println!("occupancies of black in 1 {}", Bitboard::from(self.occupancies[1]));
-            //     println!("inverted black occupancies {}", Bitboard::from(!self.occupancies[1]));
-            //     println!("THE BOARD IS >>>>>>>>>>>>>>> {}", self)
-            // }
-
 
             let source = src as u32;
 
@@ -403,6 +424,12 @@ impl Board {
 
 
         move_list
+    }
+
+    /// turn: The turn of the attacker
+    /// e.g. If white pawn just made an enpassant move, then we know we should deduct the tgt
+    pub(crate) fn enpass_tgt(tgt: Square, turn: Color) -> u64 {
+        match turn {Color::Black => tgt as u64 + 8, _ => tgt as u64 -  8}
     }
 
     /// Returns the rook source and target
@@ -518,7 +545,8 @@ impl Board {
                 
                 
                 if bit_move.get_enpassant() {
-                    let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
+                    // let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
+                    let enpass_target = Self::enpass_tgt(to, board.turn);
                     board[Piece::pawn(!turn)].pop_bit(enpass_target);
                     board.hash_key ^= ZOBRIST.piece_keys[Piece::pawn(!turn)][enpass_target as usize];
                 }
@@ -530,7 +558,8 @@ impl Board {
                 board.enpassant = None;
                 
                 if bit_move.move_type() == MoveType::DoublePush {
-                    let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
+                    // let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
+                    let enpass_target = Self::enpass_tgt(to, board.turn);
                     board.enpassant = Some(enpass_target.into());
                     // double move results in an enpassant, add it to the hash key
                     board.hash_key ^= ZOBRIST.enpassant_keys[enpass_target as usize];
@@ -565,8 +594,8 @@ impl Board {
             
                 // is this an illegal move?
                 // if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), !board.turn) {
-                let attacker = !board.turn;
-                if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), attacker) {
+                let opponent = !board.turn;
+                if board.is_square_attacked(board[Piece::king(turn)].get_lsb1().unwrap(), opponent) {
                     return None;
                 }
                 
