@@ -624,36 +624,39 @@ impl Board {
     }
 
     pub(crate) fn piece_at(&self, sq: Square) -> Option<Piece> {
-        let sq = 1 << sq as u64;
-        let white = (self.occupancies[0] & sq) != 0;
-        let black = (self.occupancies[1] & sq) != 0;
+        let sq_mask = 1 << sq as u64;
+        let white_pieces = self.occupancies[0];
+        // Deduct's the victim's color (The assumption here, is that if the piece is not white, then it must be black)
+        let is_white = (white_pieces & sq_mask) != 0;
 
-        match (white, black) {
-            (true, false) => {
-                for i in 0..=5 {
-                    if (*self.board[i] & sq) != 0 {
-                        return Some(Piece::from(i as u8))
-                    }
-                }
+        if self.enpassant.is_some_and(|pre_enp_sq| pre_enp_sq == sq) {
+            let enp_mask = 1u64 << Self::enpass_tgt(sq, self.turn);
+            if (self.occupancies[!self.turn] & enp_mask) != 0 { return Some(Piece::pawn(!self.turn))}
+        }
+
+        // If the color is not white, then it will be black
+        let range = match is_white { true => 0..6, false => 6..12 };
+
+        for i in range {
+            if (*self.board[i] & sq_mask) != 0 {
+                return Some(Piece::from(i as u8))
             }
-            (false, true) => {
-                for i in 6..=11 {
-                    if (*self.board[i] & sq) != 0 {
-                        return Some(Piece::from(i as u8))
-                    }
-                }
-            }
-            _ => {}
         }
 
         None
     }
     
     pub(crate) fn get_piece_at(&self, sq: Square, color: Color) -> Option<Piece> {
-        let target_pieces = Piece::all_pieces_for(color);
-        for p in target_pieces {
+        let range = match color { White => 0..6, _ => 6..12 };
+
+        if self.enpassant.is_some_and(|pre_enp_sq| pre_enp_sq == sq) {
+            let enp_mask = 1u64 << Self::enpass_tgt(sq, self.turn);
+            if (self.occupancies[!self.turn] & enp_mask) != 0 { return Some(Piece::pawn(!self.turn))}
+        }
+
+        for p in range {
             if self.board[p].get_bit(sq.into()) != 0 {
-                return Some(p);
+                return Some(Piece::from(p as u8));
             }
         }
         None

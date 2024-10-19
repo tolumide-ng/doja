@@ -85,10 +85,8 @@ impl<'a> Search<'a> {
     }
 
 
+    /// Returns the least valuable attacker based on the provided mask (attackers)
     fn get_lva(attackers: u64, board: &Board, stm: Color) -> Option<(Piece, Square)> {
-        println!("::::::::::::::::------------------- {:?}", stm);
-        println!("SIDE TO MOVE {:?}", stm);
-        
         let range = if stm == White {0..6} else {6..12};
         for piece in range {
             let bits = *board[piece] & attackers;
@@ -101,8 +99,7 @@ impl<'a> Search<'a> {
     }
 
     /// https://www.chessprogramming.net/static-exchange-evaluation-in-chess/
-    pub(crate) fn static_exchange_eval(position: &Position, mv: &Move, threshold: i32) -> bool {
-        println!("STATIC EXCHANGE EVAL");
+    pub(crate) fn see(position: &Position, mv: &Move, threshold: i32) -> bool {
         let src = mv.get_src();
         let tgt = mv.get_target();
         let mt = mv.move_type();
@@ -110,155 +107,80 @@ impl<'a> Search<'a> {
         // Castling cannot have a bad SEE, since all squares the king passes through are not under attack
         if mt == MoveType::Castling { return true }
 
-        let piece_at_tgt = position.get_piece_at(tgt, !position.turn).unwrap();
+        // Ony captures are evaluated with SEE
+        let piece_at_tgt = position.piece_at(tgt).unwrap();
+        let piece_at_src = position.piece_at(src).unwrap();
 
-        let mut move_value = match mv.get_capture() {
-            true if mv.get_enpassant() == true => Piece::pawn(Color::White).piece_value(),
-            true => piece_at_tgt.piece_value(),
-            false => 0
-        };
+        let mut move_value = if mv.get_capture() { piece_at_tgt.piece_value() } else { 0};
 
-        // Piece being swapped off is the promoted piece
-        let victim = if let Some(piece) = mv.get_promotion() {
-            let new_piece = Piece::from((piece, position.turn));
-            // We're promoting our piece to new type (hence adding it below), and removing the promoted pawn (both colors have the same value)
-            move_value += new_piece.piece_value() - Piece::pawn(Color::White).piece_value();
-            new_piece
-        } else {
-            position.piece_at(src).unwrap()
-        };
+        // Piece being removed later on is the promoted piece
+        let next_victim = if let Some(piece) = mv.get_promotion() {Piece::from((piece, position.turn))} else { position.piece_at(src).unwrap()};
+        if mv.get_promotion().is_some() { move_value += next_victim.piece_value() - Piece::pawn(White).piece_value() }
 
         // Lose if the balance is already in our opponent's favour, and it's their turn
         let mut balance = move_value - threshold;
         if balance < 0 { return false }
 
-        // Win if the balance is still in our favor even if we lose the capturing piece
-        // This ensures a positive SEE in case of even trades
-        balance -= victim.piece_value();
+        // Assuming we lose the piece that made this capture, if balance is still positive (in our favour), then we can return true immediately
+        balance -= next_victim.piece_value();
         if balance >= 0 { return true }
 
         let diaginal_sliders = *position[WB] | *position[BB] | *position[WQ] | *position[BQ];
         let orthogonal_sliders = *position[WR] | *position[BR] | *position[WQ] | *position[BQ];
         
-        // let mut occs = (position.occupancies[Both] & !(1 << src as u64)) | (1 << tgt as u64);
-        println!("this move is {}", mv.to_string());
-        let mut local_board = position.board.clone();
-        // println!("{}", local_board);
-        // Removes the moving piece from the src and set it at the tgt
-        let piece_at_src = local_board.piece_at(src).unwrap();
-        match mv.get_enpassant() {
-            true => {
-                local_board.remove_piece(piece_at_src, src);
-                local_board.remove_piece(piece_at_tgt, (Board::enpass_tgt(tgt, local_board.turn)).into())
-            },
-            false => {
-                local_board.remove_piece(piece_at_src, src);
-                local_board.remove_piece(piece_at_tgt, tgt);
-            },
-        }
+        let mut see_board = position.board.clone();
+        // let piece_at_src = see_board.piece_at(src).unwrap();
+        // Update the positions on the board: 1. Remove the moved piece, and place it at the target, 2. Remove the captured piece
+        see_board.remove_piece(piece_at_src, src);
+        see_board.remove_piece(piece_at_tgt, if mv.get_enpassant() {Board::enpass_tgt(tgt, see_board.turn).into()} else {tgt});
         // Add the moved piece to the new position
-        local_board.add_piece(victim, tgt);
+        see_board.add_piece(next_victim, tgt);
 
 
-        // Get all pieces covering the exchange square and start exchanging
-        let mut attackers = local_board.get_all_attacks(tgt);
-        // println!("--->>> times {}", position.to_string());
-        let mut stm = !local_board.turn;
-
-        // println!("total attackers for mv {:?} is {}", mv.to_string(), Bitboard::from(attackers));
-        // if tgt == Square::H3 {
-        //     println!("{}", Bitboard(local_board.occupancies[Both]));
-        // }
+        // Get all possible pieces(regardless of the color) that can attack the `tgt` square
+        let mut attackers = see_board.get_all_attacks(tgt);
+        let mut stm = !see_board.turn;
 
         loop {
             // SEE terminates when no recapture is possible
-            let our_attackers = attackers & *local_board[stm];
+            // Pieces of stm that can attack the target square
+            let stm_attack_pieces = attackers & see_board.occupancies[stm];
+            if stm_attack_pieces == 0 { break }
 
-            println!("WE ARE {stm:?} {}", Bitboard::from(our_attackers));
-            if our_attackers == 0 { break }
-
-            println!("stm ---->>>> {:?}", stm);
 
             // Get the least valuable attacker and simulate the recapture
-            let (attacking_piece, attacking_sq) = Self::get_lva(our_attackers, &local_board, stm).unwrap();
-            local_board.remove_piece(attacking_piece, attacking_sq);
+            let (attacker, sq_of_the_attacker) = Self::get_lva(stm_attack_pieces, &see_board, stm).unwrap();
+            see_board.remove_piece(attacker, sq_of_the_attacker);
 
             // Diagonal recaptures uncover bishops/queens
-            if [Piece::pawn(stm), Piece::bishop(stm), Piece::queen(stm)].contains(&attacking_piece) {
-                attackers |= PIECE_ATTACKS.nnbishop_attacks(tgt.into(), local_board.occupancies[Both]) & diaginal_sliders;
+            if [Piece::pawn(stm), Piece::bishop(stm), Piece::queen(stm)].contains(&attacker) {
+                attackers |= PIECE_ATTACKS.nnbishop_attacks(tgt.into(), see_board.occupancies[Both]) & diaginal_sliders;
             }
 
             // Orthognal recpatures uncover rooks/queens
-            if [Piece::rook(stm), Piece::queen(stm)].contains(&attacking_piece) {
-                attackers |= PIECE_ATTACKS.nnrook_attacks(tgt.into(), local_board.occupancies[Both]) & orthogonal_sliders;
+            if [Piece::rook(stm), Piece::queen(stm)].contains(&attacker) {
+                attackers |= PIECE_ATTACKS.nnrook_attacks(tgt.into(), see_board.occupancies[Both]) & orthogonal_sliders;
             }
 
-            attackers &= local_board.occupancies[Both];
+            attackers &= see_board.occupancies[Both];
 
             // Negamax the balance, cutoff if losing out attacker would still win the exchange
             stm = !stm;
-            balance = -balance - 1 - attacking_piece.piece_value();
+            balance = -balance - 1 - attacker.piece_value();
 
             if balance >= 0 {
                 // If the recapturing piece is a king, and the opponent has another attacker,
                 // a positrive balance should not translate to an exchange win.
-                if attacking_piece == Piece::king(!stm) && ((attackers & *local_board[stm]) != 0) {
-                    return local_board.turn == stm
+                if attacker == Piece::king(!stm) && ((attackers & *see_board[stm]) != 0) {
+                    return see_board.turn == stm
                 }
                 break;
             }
         }
         // We win the exchange if we are not the one who should recapture
-        local_board.turn != stm
+        see_board.turn != stm
     }
 
-
-    /// Static Exchange Evaluation
-    pub(crate) fn see(position: &Position, mv: &Move) -> i32 {
-        let board = position.board;
-        let sq = mv.get_target();
-
-
-        let mut value = board.get_move_capture(*mv).unwrap().piece_value();
-        let Some(mut board) = board.make_move(*mv, MoveScope::CapturesOnly) else { return i32::MIN };
-        let mut us = false;
-
-
-        loop {
-            let mvs = board.gen_movement();
-            let mut attacking_mvs = (mvs.into_iter().collect::<Vec<_>>()[..mvs.count_mvs()]).iter().filter_map(|m|{
-                let mut tgt = m.get_target() as u64;
-                if m.get_enpassant() { tgt = match board.turn {Color::Black => tgt + 8, _ => tgt -  8}; }
-                
-                let can_capture = m.get_capture() && tgt == (sq).into();
-                if can_capture {Some((*m, position.get_piece_at(m.get_src(), board.turn).unwrap()))} else { None }
-            }).collect::<Vec<_>>();
-
-            if attacking_mvs.len() == 0 || board.piece_at(sq).is_none() {
-                break;
-            }
-
-            // Sort attackers by least valueable attacker first (LVA)
-            attacking_mvs.sort_by_key(|(_mv, attacker)| *attacker as usize);
-            
-            let (mv, ..) = attacking_mvs[0];
-
-            // the piece that we would be removing here (piece_just_captured)
-            let piece_to_remove = board.piece_at(sq).unwrap().piece_value();
-            
-
-            if let Some(b) = board.make_move(mv, MoveScope::CapturesOnly) {
-                board = b;
-                if us { value += piece_to_remove } else { value -= piece_to_remove }
-                us = !us;
-            } else {
-                // this would only hapen is one of the kings is in-check
-                if us { value += 2_000 } else {value = i32::MIN }
-                break; 
-            }
-        }
-        value
-    }
 
     fn get_sorted_moves(&self, board: &Position) -> Vec<(Move, i32)> {
         let mvs = board.gen_movement();
@@ -278,7 +200,7 @@ impl<'a> Search<'a> {
         
         let [mut captures, mut non_captures] = mvs.iter().fold([Vec::new(), Vec::new()], |mut acc, mv| {
             if mv.get_capture() {
-                let r = if Self::static_exchange_eval(board, mv, 0) {20_000} else{10_000} ;
+                let r = if Self::see(board, mv, 0) {20_000} else{10_000} ;
                 acc[0].push((*mv, r)) 
             } else { acc[1].push((*mv, 0)) }
             [acc[0].clone(), acc[1].clone()]
@@ -505,9 +427,6 @@ impl<'a> Search<'a> {
 
         if null_move_forward_pruning_conditions {
             if let Some(beta) = self.make_null_move(beta, depth, position) {
-                if depth == 2 && self.limit == 2 {
-                    println!("-----------------------------------------------------------AFTER NULL-MOVE FP-----------------------------------------------------------");
-                }
                 return beta;
             }
         }
@@ -519,27 +438,10 @@ impl<'a> Search<'a> {
         let mvs = mvs.iter().map(|x| x.0).collect::<Vec<_>>();
 
 
-        if self.limit == 3 && depth == 3 {
-            for mv in &mvs {
-                print!("::: {} ----->>>> ", mv.to_string())
-            }
-        }
-
-
         
         for (index, mv) in mvs.iter().enumerate() {
-            // println!("TOTAL MOVES IS {} index is {index} _---and now we're running>>>>>> {} limit->{}, depth-->{} stm is {:?}", mvs.len(), mv.to_string(), self.limit, depth, position.turn);
-            if (mv.to_string() == "e2a6x" || mv.to_string() == "g2h3x") && self.limit == 3 && depth == 3  {
-                println!("\n\n <<BEFORE>><<BEFORE>><<BEFORE>><<BEFORE>>for mv: {}, with score => xxx, alpha={alpha}, and beta={beta}", mv.to_string());
-            }
-
             if position.make_move_nnue(*mv, MoveScope::AllMoves) {
                 self.ply += 1;
-                // mvs_searched = moves_searched;
-                // if (mv.to_string() == "e2a6x" || mv.to_string() == "g2h3x") && self.limit == 2 && depth == 2  {
-                //     println!("\n\n *******************for mv: {}, with score => xxx, alpha={alpha}, and beta={beta}", mv.to_string());
-                // }
-
                 // let score = -self.alpha_beta(-beta, -alpha, depth -1, &mut position);
                 let score = match mvs_searched {
                     0 => -self.alpha_beta(-beta, -alpha, depth -1, &mut position),
@@ -573,10 +475,6 @@ impl<'a> Search<'a> {
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
 
-                // if (mv.to_string() == "e2a6x" || mv.to_string() == "g2h3x") && self.limit == 2 && depth == 2  {
-                //     println!("\n\n *******************for mv: {}, with score => {}, alpha={alpha}, and beta={beta}", mv.to_string(), score);
-                // }
-
 
                 if score >= beta {
                     self.tt.record(zobrist_key, depth, beta, INFINITY, self.ply, hash_flag, 0, best_mv); 
@@ -586,12 +484,6 @@ impl<'a> Search<'a> {
                     return beta;
                 }
 
-                // if score > best_score {
-                //     best_score = score;
-                    
-                if depth == 3 && self.limit == 3 {
-                    println!("----------------------------<<<<<<<<<<<<<<ON WHATEVER>>>>>>>>>>>>>>------------for mv: {}, with score => {score}, alpha={alpha}, and beta={beta}", mv.to_string());
-                }
                 if score > alpha {
                     // println!("previous_best_score==>> {best_score}, depth = {depth} --->>>> the move is {:?}, and the score is {score}, alpha is {alpha}, and beta={beta}", mv.to_string());
                     best_score = score;
