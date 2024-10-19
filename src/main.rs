@@ -141,9 +141,9 @@ fn main() {
     let mut board = Position::from(Board::parse_fen(TRICKY_POSITION).unwrap());
     println!("{}", board.to_string());
     let mut search = Search::new(table.get());
-    search.iterative_deepening(3, &mut board);
+    search.iterative_deepening(5, &mut board);
     // board.get_all_attacks(Square::A6);
-    // Search::static_exchange_eval(&board, &Move::new(F3 as u8, H3 as u8, MoveType::Capture), 0);
+    // Search::see(&board, &Move::new(F3 as u8, H3 as u8, MoveType::Capture), 0);
     
 
 }

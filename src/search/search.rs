@@ -1,4 +1,4 @@
-use crate::{bit_move::{Move, MoveType}, bitboard::Bitboard, board::{piece::Piece, position::{self, Position}, state::board::Board}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, MAX_PLY, MVV_LVA, PIECE_ATTACKS, PLAYERS_COUNT, REDUCTION_LIMIT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
+use crate::{bit_move::{Move, MoveType}, bitboard::Bitboard, board::{piece::{Piece, PieceType}, position::{self, Position}, state::board::Board}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, MAX_PLY, MVV_LVA, PIECE_ATTACKS, PLAYERS_COUNT, REDUCTION_LIMIT, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 use crate::search::heuristics::pv_table::PVTable;
@@ -66,10 +66,6 @@ impl<'a> Search<'a> {
                 println!("(((((((((((((((((((((((((((should not be here))))))))))))))))))))))))))) score={score}, alpha={alpha}, and beta={beta}");
                 // We fell outside the window, so try agin with a full-width window (and the same depth)
                 alpha = -INFINITY; beta = INFINITY;
-                // for i in self.pv_table.get_pv(0) {
-                //     print!("-->> {}", Move::from(*i));
-                // }
-                // println!("\n");
                 continue;
             }
 
@@ -100,6 +96,7 @@ impl<'a> Search<'a> {
 
     /// https://www.chessprogramming.net/static-exchange-evaluation-in-chess/
     pub(crate) fn see(position: &Position, mv: &Move, threshold: i32) -> bool {
+        // println!("***************************************************************************************************************************");
         let src = mv.get_src();
         let tgt = mv.get_target();
         let mt = mv.move_type();
@@ -125,8 +122,7 @@ impl<'a> Search<'a> {
         balance -= next_victim.piece_value();
         if balance >= 0 { return true }
 
-        let diaginal_sliders = *position[WB] | *position[BB] | *position[WQ] | *position[BQ];
-        let orthogonal_sliders = *position[WR] | *position[BR] | *position[WQ] | *position[BQ];
+        
         
         let mut see_board = position.board.clone();
         // let piece_at_src = see_board.piece_at(src).unwrap();
@@ -135,11 +131,20 @@ impl<'a> Search<'a> {
         see_board.remove_piece(piece_at_tgt, if mv.get_enpassant() {Board::enpass_tgt(tgt, see_board.turn).into()} else {tgt});
         // Add the moved piece to the new position
         see_board.add_piece(next_victim, tgt);
+        
+        let diaginal_sliders = *see_board[WB] | *see_board[BB] | *see_board[WQ] | *see_board[BQ];
+        let orthogonal_sliders = *see_board[WR] | *see_board[BR] | *see_board[WQ] | *see_board[BQ];
+        // println!("{}", tgt);
+        
 
-
+        // println!("diagonal {}", Bitboard::from(PIECE_ATTACKS.nnbishop_attacks(diaginal_sliders, see_board.occupancies[Both]) & diaginal_sliders));
         // Get all possible pieces(regardless of the color) that can attack the `tgt` square
         let mut attackers = see_board.get_all_attacks(tgt);
+
+        // println!("{}", Bitboard::from(attackers));
         let mut stm = !see_board.turn;
+
+        let tgt_mask = 1u64 << u64::from(tgt);
 
         loop {
             // SEE terminates when no recapture is possible
@@ -152,17 +157,18 @@ impl<'a> Search<'a> {
             let (attacker, sq_of_the_attacker) = Self::get_lva(stm_attack_pieces, &see_board, stm).unwrap();
             see_board.remove_piece(attacker, sq_of_the_attacker);
 
+            // println!("attacker before :: {}", Bitboard::from(attackers));
             // Diagonal recaptures uncover bishops/queens
             if [Piece::pawn(stm), Piece::bishop(stm), Piece::queen(stm)].contains(&attacker) {
-                attackers |= PIECE_ATTACKS.nnbishop_attacks(tgt.into(), see_board.occupancies[Both]) & diaginal_sliders;
+                attackers |= PIECE_ATTACKS.nnbishop_attacks(tgt_mask, see_board.occupancies[Both]) & diaginal_sliders;
             }
-
+            
             // Orthognal recpatures uncover rooks/queens
             if [Piece::rook(stm), Piece::queen(stm)].contains(&attacker) {
-                attackers |= PIECE_ATTACKS.nnrook_attacks(tgt.into(), see_board.occupancies[Both]) & orthogonal_sliders;
+                attackers |= PIECE_ATTACKS.nnrook_attacks(tgt_mask, see_board.occupancies[Both]) & orthogonal_sliders;
             }
 
-            attackers &= see_board.occupancies[Both];
+            // attackers &= see_board.occupancies[Both];
 
             // Negamax the balance, cutoff if losing out attacker would still win the exchange
             stm = !stm;
@@ -182,18 +188,51 @@ impl<'a> Search<'a> {
     }
 
 
-    fn get_sorted_moves(&self, board: &Position) -> Vec<(Move, i32)> {
+    // fn get_sorted_moves(&self, board: &Position) -> Vec<Move> {
+    //     let mvs = board.gen_movement();
+
+    //     // let tt_mv = self.tt.probe(board.hash_key).map(|tt_data| tt_data.mv).flatten();
+    //     let pv_mv = self.pv_table.get_pv(self.ply).get(0);
+
+    //     let mut mvs = (mvs.collect::<Vec<_>>())[0..mvs.count_mvs()].to_vec();
+    //     let mut sorted_mvs = mvs.into_iter().map(|m| {
+    //         if pv_mv.is_some_and(|pv_mv| *pv_mv == *m) { return (m, i32::MAX) }
+    //         // if tt_mv.is_some_and(|tt_mv| *tt_mv == *m) { return (m, 32_000) }
+    //         if m.get_capture() { if Self::see(board, &m, 0) { return (m, 30_000)} else { return (m, 20_000) } }
+    //         // if let Some(promoted_to) = m.get_promotion() {
+    //         //     if promoted_to == PieceType::Q { return (m, 25_000) } else { return (m, 20_000) }
+    //         // }
+    //         if !m.get_capture() && self.killer_moves.is_killer(self.ply, &m) { return (m, 12_000) } else { return (m, 0)}
+    //         return (m, 0)
+    //     }).collect::<Vec<_>>();
+
+    //     // Will be removed later, and moved to MovePicker
+    //     sorted_mvs.sort_by(|a, b| b.1.cmp(&a.1));
+
+    //     let xx0 = sorted_mvs.iter().map(|x| x.1).collect::<Vec<_>>();
+    //     println!("xx 0: {:?}", xx0);        
+    //     return sorted_mvs.iter().map(|mv| mv.0).collect::<Vec<_>>()
+    // }
+
+    fn get_sorted_moves(&self, board: &Position) -> Vec<Move> {
         let mvs = board.gen_movement();
         let mut mvs = (mvs.collect::<Vec<_>>())[0..mvs.count_mvs()].to_vec();
-        //  now sort those moves and return the sorted moves
-        // PV-nodes and expected Cut-nodes must be searched (give them more priority)
 
-        
         let mut sorted_mvs = Vec::with_capacity(mvs.len());
+
         if let Some(pv_mv) = self.pv_table.get_pv(self.ply).get(0) {
             if let Some(pos) = mvs.iter().position(|&m| *m == *pv_mv) {
                 sorted_mvs.push((mvs[pos], i32::MAX));
                 mvs.remove(pos);
+            }
+        }
+
+        if let Some(tt_data) = self.tt.probe(board.hash_key) {
+            if let Some(tt_mv) = tt_data.mv {
+                if let Some(pos) = mvs.iter().position(|&m| *m == *tt_mv) {
+                    sorted_mvs.push((tt_mv, i32::MAX - 10));
+                    mvs.remove(pos);
+                }
             }
         }
 
@@ -206,36 +245,11 @@ impl<'a> Search<'a> {
             [acc[0].clone(), acc[1].clone()]
         }); // use Self::see at this level, and filter out bad moves already
         
-        
-        
-        // Sort by MVV-LVA table
-        // let [mut captures, mut non_captures] = mvs.iter().fold([Vec::new(), Vec::new()], |mut acc, mv| {
-        //     if mv.get_capture() {
-        //         acc[0].push(
-        //             (*mv, 
-        //                 MVV_LVA[(board.piece_at(mv.get_src()).unwrap() as usize) % 6]
-        //                 [(board.get_move_capture(*mv).unwrap() as usize) % 6])
-        //             ) 
-        //     } else { acc[1].push((*mv, 0)) }
-        //     [acc[0].clone(), acc[1].clone()]
-        // }); // use Self::see at this level, and filter out bad moves already
-
-        // if captures.iter().find(|x| x.to_string() == "c3d2x").is_some() {
-        //     println!("the board here is {}", board.to_string());
-        // }
-        
-        // captures.sort_by_key(|mv| {
-        //     return Self::see(board, mv);
-        // });
-        captures.sort_by_key(|mv| {
-            return mv.1
-        });
-
-        captures.reverse();
-
+        captures.sort_by_key(|mv| { return mv.1 }); captures.reverse();
         sorted_mvs.append(&mut captures);
 
         non_captures.sort_by_key(|mv| {
+            if let Some(promoted_to) = mv.0.get_promotion() { if promoted_to == PieceType::Q { return 12_000 } else { return 11_000 }}
             if self.killer_moves.is_killer(self.ply, &mv.0) {
                 return 1
             } 
@@ -246,7 +260,7 @@ impl<'a> Search<'a> {
 
         sorted_mvs.append(&mut non_captures);
         
-        return sorted_mvs
+        return sorted_mvs.iter().map(|mv| mv.0).collect::<Vec<_>>()
     }
 
     fn is_repetition(position: &Position, key: u64) -> bool {
@@ -294,7 +308,8 @@ impl<'a> Search<'a> {
         if !in_check && stand_pat > alpha { alpha = stand_pat }
         
         // Probe the Transposition Table here
-        let moves = self.get_sorted_moves(&position).iter().map(|x| x.0).collect::<Vec<_>>();
+        // let moves = self.get_sorted_moves(&position).iter().map(|x| x.0).collect::<Vec<_>>();
+        let moves = self.get_sorted_moves(&position);
         let captures_only = !in_check;
         let mut best_score = -INFINITY;
 
@@ -434,10 +449,7 @@ impl<'a> Search<'a> {
         let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves(&position);
 
-
-        let mvs = mvs.iter().map(|x| x.0).collect::<Vec<_>>();
-
-
+        // let mvs = mvs.iter().map(|x| x.0).collect::<Vec<_>>();
         
         for (index, mv) in mvs.iter().enumerate() {
             if position.make_move_nnue(*mv, MoveScope::AllMoves) {
