@@ -20,22 +20,11 @@ impl PVTable {
 
     /// Store a move at a specific depth on the PV-Table
     pub(crate) fn store_pv(&mut self, depth: usize, mv: &Move) {
-        // println!("called with {} at depth {depth}", mv.to_string());
-        // println!("called****** with {} at depth {}", mv.to_string(), depth);
-        // Prepends the new move to the PVs at this depth("d")
         let index = Self::index(depth);
         let prev_depth_index = Self::index(depth + 1);
         self.pv[index] = **mv;
 
-        // println!("index is {index}, and the previous is {prev_depth_index}");
         let len = self.lengths[depth + 1];
-        // println!("len at that position is {}", len);
-
-        // if depth == 0 {
-        //     println!("got zero ---")
-        // }
-
-        // let mut children = 
 
         // Copy the PV from depth + 1 into this depth
         for i in 0..len {
