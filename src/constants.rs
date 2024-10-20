@@ -113,7 +113,7 @@ pub const REPETITIONS: &str = "2r3k1/R7/8/1R6/8/8/P4KPP/8 w - - 0 40 ";
 /// [-infinity, -mate_value...-mate_score, ... score ... mate_score ... mate_value, infinity]
 /// -- "MATE" is in this case a constant with a large positive value, larger than any score created by summing material and positional factors could be.
 /// https://web.archive.org/web/20071031100110/http://www.brucemo.com/compchess/programming/matescore.htm
-pub(crate) const MATE_VALUE: i32 = 49_000;
+pub(crate) const MATE_VALUE: i32 = 47_999;
 pub(crate) const MATE_SCORE: i32 = 48_000; // i.e. MATE_VALUE - 1000
 pub(crate) const INFINITY: i32 = 50_000;
 
@@ -190,12 +190,12 @@ pub mod params {
     /// Eval type returned by the network.
     pub type Eval = i32;
 
-    /// Piece static values used in SEE.
-    pub const PIECE_VALUES: [Eval; 6] = [161, 446, 464, 705, 1322, 0];
+    // / Piece static values used in SEE.
+    // pub const PIECE_VALUES: [Eval; 6] = [161, 446, 464, 705, 1322, 0];
 }
 
 // COPIED FROM STOCKFISH
-pub const PIECE_VALUES: [i32; 6] = [ 208, 781, 825, 1276, 2538, 0];
+// pub const PIECE_VALUES: [i32; 6] = [ 208, 781, 825, 1276, 2538, 0];
 
 // 0xFEFE_FEFE_FEFE_FEFE
 

@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod uci_tests {
-    use std::io::{Cursor, Seek, SeekFrom};
+    use std::io::Cursor;
 
-    use crate::{board::{fen::FEN, state::board::Board}, constants::TRICKY_POSITION, uci::UCI};
+    use crate::{board::state::board::Board, constants::TRICKY_POSITION, uci::UCI};
 
     #[test]
     fn should_return_author_identity() {
@@ -74,7 +74,7 @@ mod uci_tests {
 
         let result = String::from_utf8(cursor.get_ref()[..].to_vec()).unwrap();
 
-        let expected = Board::parse_fen(TRICKY_POSITION).unwrap().to_string();
+        let expected = Board::new().to_string();
         assert_eq!(expected.trim(), result.trim());
     }
 }

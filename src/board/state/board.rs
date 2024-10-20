@@ -2,7 +2,7 @@ use std::{fmt::Display, ops::{Deref, DerefMut}};
 
 use crate::{bit_move::{Move, MoveType::{self, *}}, board::piece_map::PieceMap, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, moves::Moves, squares::Square, zobrist::START_POSITION_ZOBRIST};
 use crate::board::piece::Piece::*;
-use crate::board::{castling::Castling, fen::FEN, piece::Piece};
+use crate::board::{castling::Castling, piece::Piece};
 use crate::bitboard::Bitboard;
 use crate::squares::Square::*;
 use crate::color::Color::*;
@@ -411,11 +411,6 @@ impl Board {
         move_list.add_many(&self.get_castling(color));
 
         move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::knight(color)));
-        // let clonedd = move_list.clone();
-        // for mvv in clonedd.into_iter() {
-        //     print!("|||||| {} ||||||", mvv.to_string());
-        // }
-        // println!("\n\n\n");
         move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::bishop(color)));
         // println!("****************************************AFTER CALLING BISHOP********************************************************************************");
         move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::rook(color)));
@@ -670,11 +665,6 @@ impl Board {
             return self.get_piece_at(victim, !self.turn)
         }
         if mv.get_capture() {
-            // println!("the victim's color would be {:?}", !self.turn);
-            // println!(":::the target is {}", mv.get_target());
-
-            // println!("self is {}", Bitboard::from(self.occupancies[Color::Black]));
-            // println!("this pawn on {}", Bitboard::from(self.board[Piece::BP]));
             return self.get_piece_at(mv.get_target(), !self.turn)
         }
         None
@@ -715,9 +705,6 @@ impl Board {
         final_key
     }
 }
-
-
-impl FEN for Board {}
 
 impl Deref for Board {
     type Target = PieceMap;

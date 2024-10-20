@@ -29,7 +29,7 @@ mod syzygy;
 use std::{num::NonZero, sync::{Arc, Mutex}};
 
 use bit_move::{Move, MoveType};
-use board::{fen::FEN, position::Position, state::board::Board};
+use board::{position::Position, state::board::Board};
 use color::Color;
 use constants::TRICKY_POSITION;
 use nnue::halfka_idx;
@@ -51,7 +51,7 @@ fn main() {
 
     // println!("**********************AFTER*****************************");
     
-    // let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+    // let mut board = Position::with(Board::fromunwrap());
     // println!("**********************BEFORE*****************************");
     // println!("{}", board.to_string());
     
@@ -59,7 +59,7 @@ fn main() {
     println!("num of cpus {:?}", std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()));
     // let tt = TTable::default();
     let controller = Arc::new(Mutex::new(Control::default()));
-    // let mut board = Position::with(Board::parse_fen(TRICKY_POSITION).unwrap());
+    // let mut board = Position::with(Board::fromunwrap());
     // let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
     let threads = 1;
     let depth = 4;
@@ -108,7 +108,7 @@ fn main() {
     // let fen = "8/3n4/q3q3/5k2/8/8/3K4/8 w - - 0 1"; // black to win (-64)
     // // let fen = "8/1k3p2/8/8/3P4/2Q2N2/3K4/8 w - - 0 1"; // white would win (3257)
     // // let fen = TRICKY_POSITION;
-    // let board = Position::from(Board::parse_fen(fen).unwrap());
+    // let board = Position::from(Board::fromunwrap());
     // println!("board {}", board.to_string());
     // board.get_all_attacks(Square::C3);
     // println!("eval now ::::: {}", board.evaluate());
@@ -138,7 +138,7 @@ fn main() {
     // println!("the xx0 is {}", xx0);
 
 
-    let mut board = Position::from(Board::parse_fen(TRICKY_POSITION).unwrap());
+    let mut board = Position::from(Board::try_from(TRICKY_POSITION).unwrap());
     println!("{}", board.to_string());
     let mut search = Search::new(table.get());
     search.iterative_deepening(5, &mut board);

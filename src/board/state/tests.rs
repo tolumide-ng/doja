@@ -4,7 +4,6 @@ mod board_tests {
     use crate::board::piece::Piece::*;
     use crate::color::Color::*;
     use crate::bit_move::{Move, MoveType::*};
-    use crate::board::fen::FEN;
     use crate::move_scope::MoveScope::*;
 
 
@@ -39,13 +38,11 @@ mod board_tests {
 
     #[cfg(test)]
     mod is_square_under_attack {
-        use crate::board::fen::FEN;
-
         use super::*;
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_pawns() {
-            let board = Board::parse_fen("r3k3/8/2p5/8/2pP4/2P5/1p1P4/3Q1p1K w KQkq - 0 1").unwrap();
+            let board = Board::try_from("r3k3/8/2p5/8/2pP4/2P5/1p1P4/3Q1p1K w KQkq - 0 1").unwrap();
             
             let result = board.is_square_attacked(Square::D3 as u64, Color::Black);
             assert!(result);
@@ -55,7 +52,7 @@ mod board_tests {
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_knights() {
-            let board = Board::parse_fen("3qk3/8/2N5/8/3p4/8/1p2NPPP/2BQK2R b KQkq - 1 1").unwrap();
+            let board = Board::try_from("3qk3/8/2N5/8/3p4/8/1p2NPPP/2BQK2R b KQkq - 1 1").unwrap();
 
             assert!(board.is_square_attacked(Square::D4 as u64, Color::White));
             assert!(!board.is_square_attacked(Square::E2 as u64, Color::Black));
@@ -75,7 +72,7 @@ mod board_tests {
 
         #[test]
         fn should_test_if_the_square_is_under_attack_by_a_bishop_or_queen() {
-            let board = Board::parse_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
+            let board = Board::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
 
             assert!(board.is_square_attacked(Square::G4 as u64, White));
             assert!(board.is_square_attacked(Square::F1 as u64, White));
@@ -83,7 +80,7 @@ mod board_tests {
             assert!(board.is_square_attacked(Square::E1 as u64,White));
 
 
-            let board = Board::parse_fen("rnkb2nr/p1pp2pp/8/7q/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
+            let board = Board::try_from("rnkb2nr/p1pp2pp/8/7q/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
 
             assert!(board.is_square_attacked(Square::G4 as u64, Color::Black));
             assert!(board.is_square_attacked(Square::F3 as u64, Color::Black));
@@ -722,7 +719,7 @@ mod board_tests {
 
         #[test]
         fn king_move_and_capture() {
-            let board = Board::parse_fen("rnb1kbnr/p1p1p1pp/8/3p1N2/3K4/7q/PP1PPPPP/R2Q1BNR w KQkq - 0 1").unwrap();
+            let board = Board::try_from("rnb1kbnr/p1p1p1pp/8/3p1N2/3K4/7q/PP1PPPPP/R2Q1BNR w KQkq - 0 1").unwrap();
 
             let zobrist = board.hash_key;
             let mv = Move::new(D4 as u8, D5 as u8, Capture);
@@ -744,7 +741,7 @@ mod board_tests {
 
         #[test]
         fn rook_move_and_capture() {
-            let board = Board::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/1NBQKBNR b KQk - 3 3").unwrap();
+            let board = Board::try_from("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/1NBQKBNR b KQk - 3 3").unwrap();
 
             let mv = Move::new(A8 as u8, A4 as u8, Quiet);
 
@@ -768,7 +765,7 @@ mod board_tests {
 
         #[test]
         fn knight_move_and_capture() {
-            let board = Board::parse_fen("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/N1BQKBNR w KQk - 3 3").unwrap();
+            let board = Board::try_from("r2qkbnr/4pppp/8/4P3/2R5/PpP1P3/1P1P2PP/N1BQKBNR w KQk - 3 3").unwrap();
 
             let mv = Move::new(A1 as u8, B3 as u8, Capture);
 
@@ -800,7 +797,7 @@ mod board_tests {
 
         #[test]
         fn pawn_move_and_capture() {
-            let board = Board::parse_fen("r2qkbnr/4pppp/2R5/1p2P3/8/PP2P3/1P1P2PP/N1BQKBNR w KQk - 4 3").unwrap();
+            let board = Board::try_from("r2qkbnr/4pppp/2R5/1p2P3/8/PP2P3/1P1P2PP/N1BQKBNR w KQk - 4 3").unwrap();
             let mv = Move::new(A3 as u8, A4 as u8, Quiet);
 
             assert_eq!((*board.board[WP]).count_ones(), 8);
@@ -821,7 +818,7 @@ mod board_tests {
 
         #[test]
         fn enpassant_move_and_capture() { // double moves must always result in an enpassant
-            let board = Board::parse_fen("r2qkbnr/4pppp/2R5/4P3/1p6/1P2P3/PP1P2PP/N1BQKBNR w KQk - 0 4").unwrap();
+            let board = Board::try_from("r2qkbnr/4pppp/2R5/4P3/1p6/1P2P3/PP1P2PP/N1BQKBNR w KQk - 0 4").unwrap();
             let mv = Move::new(A2 as u8, A4 as u8, DoublePush);
 
             assert_eq!((*board.board[WP]).count_ones(), 8);
@@ -852,7 +849,7 @@ mod board_tests {
 
         #[test]
         fn should_not_move_if_the_source_position_is_not_correct() {
-            let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::try_from("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let src = C6;
             let mv = Move::new(src as u8, C5 as u8, Quiet);
 
@@ -865,7 +862,7 @@ mod board_tests {
 
         #[test]
         fn should_not_change_position_if_the_target_move_is_invalid() {
-            let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::try_from("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let mv = Move::new(H4 as u8, H6 as u8, Quiet);
 
             assert!(board.occupancies[Both] & (1 << H4 as u64) != 0);
@@ -881,7 +878,7 @@ mod board_tests {
 
         #[test]
         fn black_pawns_should_only_move_southwards() {
-            let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::try_from("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let black_moving_north = Move::new(D6 as u8, D7 as u8, Quiet);
 
             assert!(board.occupancies[Both] & (1 << D6 as u64) != 0);
@@ -896,7 +893,7 @@ mod board_tests {
 
         #[test]
         fn white_pawns_should_only_move_northwards() {
-            let board = Board::parse_fen("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::try_from("3qk3/r3p3/3p4/1p3P2/1b1P3n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let white_pawn_moving_south = Move::new(D4 as u8, D3 as u8, Quiet);
 
             assert!(board.occupancies[Both] & (1 << D4 as u64) != 0);
@@ -911,7 +908,7 @@ mod board_tests {
 
         #[test]
         fn pawns_should_not_be_able_to_move_north_north_or_south_south_if_it_is_occupied() {
-            let board = Board::parse_fen("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::try_from("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let white_pawn_moving_south = Move::new(E6 as u8, E7 as u8, Quiet);
 
             assert!(board.occupancies[Both] & (1 << E6 as u64) != 0);
@@ -934,7 +931,7 @@ mod board_tests {
 
         #[test]
         fn  should_return_none_if_it_is_not_the_players_turn() {
-            let board = Board::parse_fen("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
+            let board = Board::try_from("3qk3/r3p3/4P3/1p3P2/1b5n/8/6PP/P3KBNR w KQkq - 0 1").unwrap();
             let black_bishop_move = Move::new(B4 as u8, E1 as u8, Capture);
 
             assert!(board.occupancies[Both] & (1 << B4 as u8) != 0);
@@ -951,7 +948,7 @@ mod board_tests {
         use super::*;
         #[test]
         fn should_promote_a_pawn_move_to_queen() {
-            let board = Board::parse_fen("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
+            let board = Board::try_from("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
     
             let mv = Move::new(F7 as u8, F8 as u8, PromotedToQueen);
             assert_eq!(board[WQ].count_ones(), 1);
@@ -969,7 +966,7 @@ mod board_tests {
     
         #[test]
         fn should_return_none_if_a_promotion_is_invalid() {
-            let board = Board::parse_fen("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
+            let board = Board::try_from("2b5/k4P2/p7/7p/8/8/1P1P4/3QK3 w k - 2 2").unwrap();
             let mv = Move::new(H5 as u8, H1 as u8, PromotedToQueen);
     
             let result = board.make_move(mv, AllMoves);
@@ -978,7 +975,7 @@ mod board_tests {
     
         #[test]
         fn should_make_a_capture_and_promotion_at_the_same_time() {
-            let board = Board::parse_fen("2b5/k4P2/p7/8/8/1K6/1P1Pp3/3Q4 b k - 2 2").unwrap();
+            let board = Board::try_from("2b5/k4P2/p7/8/8/1K6/1P1Pp3/3Q4 b k - 2 2").unwrap();
             let mv = Move::new(E2 as u8, D1 as u8, CaptureAndPromoteToRook);
     
             assert_eq!(board[WQ].count_ones(), 1);
@@ -1007,7 +1004,7 @@ mod board_tests {
 
         #[test]
         fn black_king_can_castle_queenside() {
-            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
+            let board = Board::try_from("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
             let mv = Move::new(E8 as u8, C8 as u8, Castling);
 
             let result = board.make_move(mv, AllMoves).unwrap();
@@ -1018,7 +1015,7 @@ mod board_tests {
 
         #[test]
         fn black_king_can_castle_kingside() {
-            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
+            let board = Board::try_from("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
             let mv = Move::new(E8 as u8, G8 as u8, Castling);
 
             let result = board.make_move(mv, AllMoves).unwrap();
@@ -1031,7 +1028,7 @@ mod board_tests {
 
         #[test]
         fn white_king_can_castle_kingside() {
-            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
+            let board = Board::try_from("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
 
             let mv = Move::new(E1 as u8, G1 as u8, Castling);
             let result = board.make_move(mv, AllMoves).unwrap();
@@ -1048,7 +1045,7 @@ mod board_tests {
 
         #[test]
         fn should_fail_to_castle_whiteking_queenside_if_there_are_pieces_between_the_castling_sides() {
-            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
+            let board = Board::try_from("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w KQkq - 1 2").unwrap();
 
             let mv = Move::new(E1 as u8, C1 as u8, Castling);
             let result = board.make_move(mv, AllMoves);
@@ -1057,7 +1054,7 @@ mod board_tests {
 
         #[test]
         fn should_fail_to_castle_blacking_kingside_if_there_are_pieces_between_the_king_and_the_rook() {
-            let board = Board::parse_fen("r3kq1r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
+            let board = Board::try_from("r3kq1r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R b KQkq - 1 2").unwrap();
             let mv = Move::new(E8 as u8, G8 as u8, Castling);
 
             assert!(board.make_move(mv, AllMoves).is_none());
@@ -1065,7 +1062,7 @@ mod board_tests {
 
         #[test]
         fn should_fail_to_castle_whiteking_kingside_if_there_are_pieces_between_the_king_and_the_rook() {
-            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/4KQ2 w KQkq - 1 2").unwrap();
+            let board = Board::try_from("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/4KQ2 w KQkq - 1 2").unwrap();
             let mv = Move::new(E1 as u8, G1 as u8, Castling);
 
             let result = board.make_move(mv, AllMoves);
@@ -1075,14 +1072,14 @@ mod board_tests {
 
         #[test]
         fn should_fail_to_castle_blackking_queenside_if_there_are_pieces_between_the_king_and_the_rook() {
-            let board = Board::parse_fen("r1q1k2r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R3KQ1R b KQkq - 1 2").unwrap();
+            let board = Board::try_from("r1q1k2r/pb2p2p/1p3p1n/3p3P/2PN2N1/3B4/3P1PPP/R3KQ1R b KQkq - 1 2").unwrap();
             let mv = Move::new(E8 as u8, C8 as u8, Castling);
             assert!(board.make_move(mv, AllMoves).is_none());
         }
 
         #[test]
         fn should_fail_to_castle_if_side_does_not_have_castling_rights_anymore() {
-            let board = Board::parse_fen("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w ---- - 1 2").unwrap();
+            let board = Board::try_from("r3k2r/pb2p2p/1pq2p1n/3p3P/2PN2N1/3B4/3P1PPP/R2QK2R w ---- - 1 2").unwrap();
 
             let mv = Move::new(E1 as u8, G1 as u8, Castling);
             assert!(board.make_move(mv, AllMoves).is_none());
@@ -1094,7 +1091,7 @@ mod board_tests {
 
     #[test]
     fn returns_the_piece_at_a_particular_position() {
-        let board = Board::parse_fen("4rkn1/P5pp/8/7q/4P3/8/5PPP/2R1K1NR w KQkq e3 0 1").unwrap();
+        let board = Board::try_from("4rkn1/P5pp/8/7q/4P3/8/5PPP/2R1K1NR w KQkq e3 0 1").unwrap();
         
         assert_eq!(board.get_piece_at(C1, White).unwrap(), WR);
     }

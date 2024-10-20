@@ -2,7 +2,6 @@ use std::time::Instant;
 
 use crate::constants::TRICKY_POSITION;
 use crate::board::state::board::Board;
-use crate::board::fen::FEN;
 use crate::move_scope::MoveScope;
 
 pub(crate) struct Perft;
@@ -34,7 +33,7 @@ impl Perft {
         println!("STARTED!!");
         let mut nodes = 0;
         let instant = Instant::now();
-        let board = Board::parse_fen(TRICKY_POSITION).unwrap();
+        let board = Board::try_from(TRICKY_POSITION).unwrap();
         println!("{}", board.to_string());
         Self::test(depth, &mut nodes, board);
 
