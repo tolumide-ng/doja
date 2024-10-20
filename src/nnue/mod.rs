@@ -28,13 +28,16 @@ pub(crate) mod accumulator_ptr;
 
 pub(crate) static PARAMS: NNUEParams<{INPUT * L1_SIZE}, L1_SIZE, {L1_SIZE*2}, i16> = unsafe {
     let bytes: &[u8] = include_bytes!("../../bin/net.bin");
+    /// Each of the 1024 neurons (L1_SIZE) in this layer has 768 weights connecting it to the input features
+    /// Henece 768(input) * 1024(l1_size) = 786432 is the total number of connections(weights) between the input and this layer(hidden)
+    const HIDDEN: usize = INPUT * L1_SIZE;
     std::ptr::read_unaligned(bytes.as_ptr() as *const NNUEParams<{INPUT*L1_SIZE}, {L1_SIZE}, {L1_SIZE * 2}, i16>)
 };
 
 /// NNUE model is initialized from binary values
 // pub(crate) static MODEL: NNUEParamz = unsafe { std::mem::transmute(*include_bytes!("../../bin/net.bin")) };
 
-pub(crate) fn halfka_idx(piece: Piece, sq: Square) -> FeatureIdx {
+pub(crate) fn halfka_idx00(piece: Piece, sq: Square) -> FeatureIdx {
     // const COLOR_STRIDE: usize = 64 * 6; // number_of_squares * number of pieces per side
     const PIECE_STRIDE: usize = 64;
     let p = (piece as usize) % 6;
@@ -47,6 +50,18 @@ pub(crate) fn halfka_idx(piece: Piece, sq: Square) -> FeatureIdx {
 
     let idx = (1 - c) * white_idx + c * black_idx; // Choose based on the color
     FeatureIdx::from(idx * HIDDEN)
+}
+
+pub(crate) fn halfka_idx(p: Piece, sq: Square) -> (FeatureIdx, FeatureIdx) {
+    let color_stride = 64 * 6;
+    let piece_stride = 64;
+    let c = p.color() as usize;
+    let p = (p as usize)%6;
+
+    let w_idx = c * color_stride + p * piece_stride + sq.fliph() as usize;
+    let b_idx = (1 ^ c) * color_stride + p * piece_stride + sq.fliph() as usize;
+
+    (FeatureIdx::from(w_idx * HIDDEN), FeatureIdx::from(b_idx * HIDDEN))
 }
 
 

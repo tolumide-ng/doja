@@ -2,7 +2,7 @@ use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread}
 
 use thiserror::Error;
 
-use crate::{bit_move::Move, board::{fen::FEN, position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, syzygy::probe::TableBase, tt::table::TTable};
+use crate::{bit_move::Move, board::{position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, syzygy::probe::TableBase, tt::table::TTable};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -55,7 +55,7 @@ impl UCI {
                 }
             }
             Some("ucinewgame") => {
-                self.update_board_to(Position::with(Board::parse_fen(START_POSITION).unwrap()));
+                self.update_board_to(Position::with(Board::try_from(START_POSITION).unwrap()));
                 write!(writer, "{}", self.position.as_ref().unwrap().to_string())?;
             }
             Some("go") => {
@@ -170,7 +170,7 @@ impl UCI {
             Some("startpos") => {
                 // create a startpos
                 // let mut board = Board::parse_fen(START_POSITION).unwrap();
-                let mut board_state = Position::with(Board::parse_fen(START_POSITION).unwrap());
+                let mut board_state = Position::with(Board::try_from(START_POSITION).unwrap());
                 match input.next() {
                     Some("moves") => {
                         // loop through and apply the moves
@@ -186,7 +186,9 @@ impl UCI {
                 // read the provided fen (all the remaining string after the text 'fen')
                 let remaning_input = input.into_iter().map(|s| format!("{s} ")).collect::<String>();
                 
-                match Board::parse_fen(&remaning_input) {
+
+                // let ax = Board::try_from(&remaning_input).unwrap();
+                match Board::try_from(remaning_input.as_str()) {
                     Ok(board) => {
                         let mut board_state = Position::with(board);
                         // split remaining string at 'moves' and apply the moves to the boardState derived from the parsed fen string

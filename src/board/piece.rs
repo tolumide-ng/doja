@@ -227,12 +227,20 @@ impl Piece {
         return Piece::WK;
     }
 
-    pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> u32 {
+    pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> i32 {
         let attacker = *self as usize;
         let victim = *victim as usize;
 
-        let index = ((attacker % PLAYER_PIECES) * PLAYER_PIECES) + (victim % PLAYER_PIECES);
-        return MVV_LVA[index];
+        // let index = ((attacker % PLAYER_PIECES) * PLAYER_PIECES) + (victim % PLAYER_PIECES);
+        // return MVV_LVA[index];
+        return MVV_LVA[attacker][victim]
+    }
+
+    pub(crate) const PIECE_VALUES: [i32; 6] = [161, 446, 464, 705, 1322, 0];
+
+    /// Returns the Piece Value of this piece of SEE (Static Evaluation Exchange)
+    pub(crate) fn piece_value(&self) -> i32 {
+        Self::PIECE_VALUES[(*self as usize) % 6]
     }
 }
 

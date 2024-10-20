@@ -1,7 +1,6 @@
 use std::ops::Deref;
 
 use crate::bit_move::MoveType;
-use crate::constants::params::PIECE_VALUES;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 use crate::nnue::accumulator::Feature;
 use crate::{bit_move::Move, move_scope::MoveScope, squares::Square};
@@ -26,14 +25,22 @@ impl History {
     pub(crate) fn new(mv: Move, hash: u64, victim: Option<Piece>, piece: Piece) -> Self {
         Self { mv, hash, victim, piece }
     }
+
+    pub(crate) fn hash(&self) -> u64 {
+        return self.hash
+    }
 }
+
+/// If Feature is m256i, then the size = 32, and then that would be (1024/32) * 2 = 64 values
+/// If Feature is i16, then the size = 2, and then that would be (1024/2) * 2 = 1024 values
+pub(crate) const ACCUMULATOR_SIZE: usize = (L1_SIZE / (std::mem::size_of::<Feature>())) * 2;
 
 
 #[derive(Debug, Clone)]
 pub(crate) struct Position {
     pub(crate) board: Board,
-    nnue_state: NNUEState<Feature, L1_SIZE>,
-    history: Vec<History>,
+    nnue_state: NNUEState<Feature, ACCUMULATOR_SIZE>,
+    history: Vec<Option<History>>,
 }
 
 
@@ -44,9 +51,32 @@ impl Position {
         Self { history: Vec::new(), board, nnue_state }
     }
 
-    pub(crate) fn nnue_push(&mut self) { self.nnue_state.push(); }
+    /// NOT YET IMPLEMENTED, PLEASE IMPLEMENT ME!!!
+    /// Read: https://www.chessprogramming.org/Material#InsufficientMaterial
+    /// https://www.chessprogramming.org/Delta_Pruning
+    /// https://www.chessprogramming.org/Zugzwang
+    pub(crate) fn is_engame() {
+        todo!()
+    }
 
-    pub(crate) fn nnue_pop(&mut self) { self.nnue_state.pop(); }
+    pub(crate) fn history_at(&self, index: usize) -> Option<&History>  {
+        self.history.get(index).unwrap().as_ref()
+    }
+
+    pub(crate) fn history_len(&self) -> usize {
+        self.history.len()
+    }
+
+    /// For null moves only
+    pub(crate) fn nnue_push(&mut self) {
+        self.history.push(None); 
+        self.nnue_state.push();
+    }
+
+    /// For null moves only
+    pub(crate) fn nnue_pop(&mut self) {
+        self.history.pop(); 
+        self.nnue_state.pop(); }
 
     pub(crate) fn with(board: Board) -> Self {
         let nnue_state = NNUEState::from(&board);
@@ -56,7 +86,7 @@ impl Position {
     pub(crate) fn make_move(&mut self, mv: Move, scope: MoveScope) -> bool {
         let Some(piece) = self.piece_at(mv.get_src()) else {return false};
         if let Some(new_board) = self.board.make_move(mv, scope) {
-                let mut captured = None;
+            let mut captured = None;
             let tgt = mv.get_target() as u64;
             
             if mv.get_enpassant() {
@@ -70,11 +100,11 @@ impl Position {
             
             let mv_history = History::new(mv, self.board.hash_key, captured, piece);
             let _ = std::mem::replace(&mut self.board, new_board);
-            self.history.push(mv_history);
+            self.history.push(Some(mv_history));
             
             return true;
         }
-
+        
         false
     }
 
@@ -100,8 +130,10 @@ impl Position {
         if mv.get_castling() { 
             rook_mvs = self.board.validate_castling_move(&mv); // rook movements
         };
-
-        let Some(piece) = self.board.piece_at(src) else {return false};
+        
+        let Some(piece) = self.board.piece_at(src) else {
+            return false
+        };
         
         if self.make_move(mv, scope) {
             // self.nnue_state.push();
@@ -127,7 +159,7 @@ impl Position {
                 remove.push((rook, rook_src));
                 add.push((rook, rook_tgt));
             }
-    
+            
             if let Some(promoted) =  mv.get_promotion() {
                 remove.push((piece, src));
                 add.push((Piece::from((promoted, turn)), tgt));
@@ -135,21 +167,20 @@ impl Position {
                 remove.push((piece, src));
                 add.push((piece, tgt));
             }
-
-
+            
+            
             self.nnue_state.update(remove, add);
-
+            
             return true;
         }
-
         false
     }
 
     pub(crate) fn undo_move(&mut self, with_nnue: bool) {
         if self.history.len() == 0 { return }
-        if *self.history.last().unwrap().mv == 0 { return }; // this means that the last move was a null-move (used during search)
+        if *self.history.last().unwrap().unwrap().mv == 0 { return }; // this means that the last move was a null-move (used during search)
 
-        let History { mv, hash, victim, piece } = self.history.pop().unwrap();
+        let History { mv, hash, victim, piece } = self.history.pop().unwrap().unwrap();
         let src = mv.get_src() as u64;
         let tgt = mv.get_target() as u64;
         let color = piece.color(); // the side that moved
@@ -238,15 +269,14 @@ impl Position {
 
     pub(crate) fn evaluate(&self) -> i32 {
         let eval = self.nnue_state.evaluate(self.board.turn);
-        // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-
+  
         let total_material = 
-            (self.board[WN].count_ones() + self.board[BN].count_ones()) as i32 * PIECE_VALUES[WN] +
-            (self.board[WB].count_ones() + self.board[BB].count_ones()) as i32 * PIECE_VALUES[WB] + 
-            (self.board[WR].count_ones() + self.board[BR].count_ones()) as i32 * PIECE_VALUES[WR] + 
-            (self.board[WQ].count_ones() + self.board[BQ].count_ones()) as i32 * PIECE_VALUES[WQ];
+            (self.board[WN].count_ones() + self.board[BN].count_ones()) as i32 * Piece::PIECE_VALUES[WN] +
+            (self.board[WB].count_ones() + self.board[BB].count_ones()) as i32 * Piece::PIECE_VALUES[WB] + 
+            (self.board[WR].count_ones() + self.board[BR].count_ones()) as i32 * Piece::PIECE_VALUES[WR] + 
+            (self.board[WQ].count_ones() + self.board[BQ].count_ones()) as i32 * Piece::PIECE_VALUES[WQ];
 
-        (eval * ((700 + total_material)/32)) /1024
+        (eval * (700 + total_material / 32)) / 1024
     }
 }
 
@@ -255,5 +285,14 @@ impl Deref for Position {
 
     fn deref(&self) -> &Self::Target {
         &self.board
+    }
+}
+
+
+
+impl From<Board> for Position {
+    fn from(board: Board) -> Self {
+        let nnue_state = NNUEState::from(&board);
+        Self { board, nnue_state, history: Vec::new() }
     }
 }

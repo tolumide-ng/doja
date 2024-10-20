@@ -12,17 +12,19 @@ pub enum FENError {
     MalformedFiles {rank: u8, file: u8},
     #[error("At least 4 blocks expected, found only {blocks}")]
     NotEnoughBlocks {blocks: u8},
-    #[error("Incomplete Enpassant")]
-    IncompletedEnpassant,
-    #[error("Enpassant Invalid")]
-    EnpassantInvalid,
+    // #[error("Incomplete Enpassant")]
+    // IncompletedEnpassant,
+    // #[error("Enpassant Invalid")]
+    // EnpassantInvalid,
 }
 
-pub trait FEN {
-    fn parse_fen(fen: &str) -> Result<Board, FENError> {
+impl TryFrom<&str> for Board {
+    type Error = FENError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         let mut board = Board::new();
 
-        let fen_blocks = fen.split_whitespace().collect::<Vec<_>>();
+        let fen_blocks = value.split_whitespace().collect::<Vec<_>>();
         if fen_blocks.len() < 4 {
             return Err(FENError::NotEnoughBlocks { blocks: fen_blocks.len() as u8 })
         }
@@ -129,12 +131,7 @@ pub trait FEN {
 #[cfg(test)]
 mod fen_tests {
     use crate::{board::{state::board::Board, castling::Castling, fen::FENError}, color::Color};
-
-    use super::FEN;
-
-            // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-    struct TestStruct;
-    impl FEN for TestStruct {}
+    // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
 
     #[cfg(test)]
     mod should_fail_if {
@@ -144,7 +141,7 @@ mod fen_tests {
         fn the_files_are_not_complete() {
             let fen= "rnbqkbnr/ppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-            let result = TestStruct::parse_fen(fen);
+            let result = Board::try_from(fen);
             assert_eq!(result.unwrap_err(), FENError::MalformedFiles { rank: 1, file: 7 });
         }
 
@@ -152,7 +149,7 @@ mod fen_tests {
         fn the_ranks_are_incomplete() {
             let fen = "rnbqkbnr/pppppppp/8/8/8/8/RNBQKBNR w KQkq - 0 1";
 
-            let result = TestStruct::parse_fen(fen);
+            let result = Board::try_from(fen);
             assert_eq!(result.unwrap_err(), FENError::MalformedRanks { rank: 7 });
         }
 
@@ -160,7 +157,7 @@ mod fen_tests {
         fn the_fen_blocks_are_incomplete() {
             let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
-            let result: Result<Board, FENError> = TestStruct::parse_fen(fen);
+            let result = Board::try_from(fen);
             assert_eq!(result.unwrap_err(), FENError::NotEnoughBlocks { blocks: 1 });
         }
 
@@ -169,27 +166,27 @@ mod fen_tests {
         fn it_contains_invalid_castling_str() {
             let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w 0 1";
 
-            let _ = TestStruct::parse_fen(fen).unwrap();
+            let _ = Board::try_from(fen).unwrap();
         }
 
         #[test]
         #[should_panic(expected = "Invalid Piece character provide x")]
         fn the_fen_contains_an_invalid_piece_char() {
             let fen = "rnbqkbnr/pppppxpp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-            TestStruct::parse_fen(fen).unwrap();
+            Board::try_from(fen).unwrap();
         }
 
         #[test]
         fn the_ranks_exceeds_8() {
             let fen = "rnbqkbnr/ppppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-            let result = TestStruct::parse_fen(fen);
+            let result = Board::try_from(fen);
             assert_eq!(result.unwrap_err(), FENError::MalformedFiles { rank: 7, file: 1 });
         }
 
         #[test]
         fn the_files_exceed_8() {
             let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR/pppppppp w KQkq - 0 1";
-            let result = TestStruct::parse_fen(fen);
+            let result = Board::try_from(fen);
             assert_eq!(result.unwrap_err(), FENError::MalformedRanks { rank: 9 });
         }
     }
@@ -198,7 +195,7 @@ mod fen_tests {
     #[test]
     fn should_return_a_valid_board() {
         let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        let board = Board::parse_fen(fen).unwrap();
+        let board = Board::try_from(fen).unwrap();
         assert_eq!(board.castling_rights, Castling::from("KQkq"));
         assert_eq!(board.turn, Color::White);
         assert_eq!(board.enpassant, None);

@@ -113,9 +113,11 @@ pub const REPETITIONS: &str = "2r3k1/R7/8/1R6/8/8/P4KPP/8 w - - 0 40 ";
 /// [-infinity, -mate_value...-mate_score, ... score ... mate_score ... mate_value, infinity]
 /// -- "MATE" is in this case a constant with a large positive value, larger than any score created by summing material and positional factors could be.
 /// https://web.archive.org/web/20071031100110/http://www.brucemo.com/compchess/programming/matescore.htm
-pub(crate) const MATE_VALUE: i32 = 49_000;
+pub(crate) const MATE_VALUE: i32 = 47_999;
 pub(crate) const MATE_SCORE: i32 = 48_000; // i.e. MATE_VALUE - 1000
 pub(crate) const INFINITY: i32 = 50_000;
+
+pub(crate) const NO_HASH_ENTRY: i32 = 100000;
 
 pub(crate) const ALPHA: i32 = -INFINITY;
 pub(crate) const BETA: i32 = INFINITY;
@@ -188,9 +190,12 @@ pub mod params {
     /// Eval type returned by the network.
     pub type Eval = i32;
 
-    /// Piece static values used in SEE.
-    pub const PIECE_VALUES: [Eval; 6] = [161, 446, 464, 705, 1322, 0];
+    // / Piece static values used in SEE.
+    // pub const PIECE_VALUES: [Eval; 6] = [161, 446, 464, 705, 1322, 0];
 }
+
+// COPIED FROM STOCKFISH
+// pub const PIECE_VALUES: [i32; 6] = [ 208, 781, 825, 1276, 2538, 0];
 
 // 0xFEFE_FEFE_FEFE_FEFE
 
@@ -435,14 +440,14 @@ pub(crate) const MIRROR_SCORE: [Square; 64] = [
 
 
 /// Most Valuable victim & Less valuable attacker
-/// (Victims)    Pawn    Knight  Bishop  Rook  Queen  King
+/// (Victims ->)    Pawn    Knight  Bishop  Rook  Queen  King
 /// (Attackers)  
-///     Pawn      105     205    305     405    505    605
-///   Knight      104     204    304     404    504    604
-///   Bishop      103     203    303     403    503    603
-///     Rook      102     202    302     402    502    602
-///    Queen      101     201    301     401    501    601
-///     King      100     200    300     400    500    600
+///     Pawn  -->>  105     205    305     405    505    605
+///   Knight  -->>  104     204    304     404    504    604
+///   Bishop  -->>  103     203    303     403    503    603
+///     Rook  -->>  102     202    302     402    502    602
+///    Queen  -->>  101     201    301     401    501    601
+///     King  -->>  100     200    300     400    500    600
 ///
 /// In order to get this claculation
 /// simply do this:
@@ -457,13 +462,23 @@ pub(crate) const MIRROR_SCORE: [Square; 64] = [
 /// hence, (a_val * 6) + v_val
 /// in this example we would have ((3%6)*6) + (8%6) = 20
 /// so all we need to do is look at index 20 mvv_lvv[20] = 302
-pub(crate) const MVV_LVA:  [u32; 36] = [
-    105, 205, 305, 405, 505, 605,   // pawn
-    104, 204, 304, 404, 504, 604,   // knight
-    103, 203, 303, 403, 503, 603,   // bishop
-    102, 202, 302, 402, 502, 602,   // rook
-    101, 201, 301, 401, 501, 601,   // queen
-    100, 200, 300, 400, 500, 600,   // king
+// pub(crate) const MVV_LVA:  [u32; 36] = [
+//     105, 205, 305, 405, 505, 605,   // pawn
+//     104, 204, 304, 404, 504, 604,   // knight
+//     103, 203, 303, 403, 503, 603,   // bishop
+//     102, 202, 302, 402, 502, 602,   // rook
+//     101, 201, 301, 401, 501, 601,   // queen
+//     100, 200, 300, 400, 500, 600,   // king
+// ];
+pub(crate) const MAX: i32 = i32::MAX;
+pub(crate) const MVV_LVA: [[i32; 6]; 6] = [ // [attacker][victim] i.e [src][tgt]
+ //            Pawn     Knight  Bishop  Rook    Queen   King
+ /*P*/         [105,    205,    305,    405,    505,    MAX],  // Attacker is Pawn
+ /*N*/         [104,    204,    304,    404,    504,    MAX],  // Attacker is Knight
+ /*B*/         [103,    203,    303,    403,    503,    MAX],  // Attacker is Bishop
+ /*R*/         [102,    202,    302,    402,    502,    MAX],  // Attacker is Rook
+ /*Q*/         [101,    201,    301,    401,    501,    MAX],  // Attacker is Queen
+ /*K*/         [MAX,    MAX,    MAX,    MAX,    MAX,    MAX]   // Attacker is King
 ];
 
 

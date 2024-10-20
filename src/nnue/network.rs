@@ -4,7 +4,7 @@ use std::{ptr, usize};
 
 
 use crate::board::{piece::Piece, state::board::Board};
-use crate::color::Color;
+use crate::color::{Color, Color::*};
 use crate::nnue::PARAMS;
 use crate::squares::Square;
 
@@ -89,6 +89,7 @@ impl<const U: usize> From<&Board> for NNUEState<Feature, U> {
         unsafe {
             let acc = Accumulator::refresh(&board);
             let target = state.accumulators.add(0);
+
             ptr::write(target, acc);
         }
         state.current_acc = 0;
@@ -115,38 +116,43 @@ impl<const U: usize> NNUEState<Feature, U> {
     pub(crate) fn update(&mut self, removed: Vec<(Piece, Square)>, added: Vec<(Piece, Square)>) {
         unsafe {
             let acc = *(self.accumulators.add(self.current_acc));
-            let added = added.into_iter().map(|(p, sq)| (p.color(), halfka_idx(p, sq))).collect::<Vec<_>>();
-            let removed = removed.into_iter().map(|(p, sq)| (p.color(), halfka_idx(p, sq))).collect::<Vec<_>>();
+            let added = added.into_iter().map(|(p, sq)| halfka_idx(p, sq)).collect::<Vec<_>>();
+            let removed = removed.into_iter().map(|(p, sq)| halfka_idx(p, sq)).collect::<Vec<_>>();
             
-            let new_acc = acc.update(&removed, &added);
+            let new_acc = acc.update(removed, added);
             self.current_acc += 1;
             *self.accumulators.add(self.current_acc) = new_acc;
         }
     }
 
-    pub(crate) fn refresh<T>(&mut self, board: &Board) {
+    pub(crate) fn refresh(&mut self, board: &Board) {
         unsafe {
             let acc = Accumulator::refresh(board);
             self.current_acc = 0;
             *self.accumulators.add(self.current_acc) = acc;
         }
-    } 
+    }
+
+    /// Register size for AVX2
+    pub(crate) const REGISTER_WIDTH: usize = 256/16; 
     
     /// The input here are 16 *i16s per m156i 
-    pub(crate) unsafe fn propagate(inputs: [Align64<[Feature; U]>; 2]) -> i32 {
-        assert!(U%16 == 0, "We're ecpecting i16 values");
-        // where U is 1024, this would be 64, the assumption here is that we are using i16
-        // 16 * i16 values would be in a single _m256i, so we can only load 16 values at once
-        // hence, the result is the number of times we have to loop
-        let num_chunks: usize = U/16;
-        const INPUT_REGISTER_WIDTH: usize = 256/16; // 16
-        
+    pub(crate) unsafe fn propagate(inputs: [Align64<[Feature; U]>; 2], stm: &Color) -> i32 {
+        assert!(U%16 == 0, "We're ecpecting i16 values");        
         let mut output: i32 = 0;
 
-        for color in 0..2 {
-            for i in 0..num_chunks {
-                let data = _mm256_load_si256(inputs[color].as_ptr().add(i * INPUT_REGISTER_WIDTH) as *const __m256i);
-                let w_idx = (color * U) + (i * INPUT_REGISTER_WIDTH);
+        let colors = match stm {
+            White => [White, Black],
+            Black => [Black, White],
+            _ => unreachable!("Unrecognized player")
+        };
+
+
+        for color in colors {
+            for i in 0..U {
+                let w_idx = ((color as usize) * (PARAMS.output_weights.len()/2)) + (i * Self::REGISTER_WIDTH);
+
+                let data = _mm256_load_si256(inputs[color].as_ptr().add(i) as *const __m256i);
                 let weights = _mm256_load_si256(PARAMS.output_weights.as_ptr().add(w_idx) as *const __m256i);
 
                 let datalo = _mm256_cvtepi16_epi32(_mm256_castsi256_si128(data));
@@ -154,10 +160,10 @@ impl<const U: usize> NNUEState<Feature, U> {
 
                 let datahi = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(data, 1));
                 let multiplier_hi = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(weights, 1));
-
+             
                 let result_lo = _mm256_mullo_epi32(datalo, multiplier_lo);
                 let result_hi = _mm256_mullo_epi32(datahi, multiplier_hi);
-
+                
                 let r_lo: [i32; 8] = std::mem::transmute(result_lo);
                 let r_hi: [i32; 8] = std::mem::transmute(result_hi);
 
@@ -173,9 +179,10 @@ impl<const U: usize> NNUEState<Feature, U> {
             let acc = self.accumulators.add(self.current_acc);
             
             let clipped_acc = (*acc).sq_crelu16(stm); // [i16; 16]
-            let output = Self::propagate(clipped_acc);
-            
-            return (output/QA as i32 + PARAMS.output_bias as i32) * SCALE / QAB;
+            let output = Self::propagate(clipped_acc, &stm);
+
+            let abc = (output / (QA as i32) + PARAMS.output_bias as i32) * SCALE / QAB;
+            return abc;
         }
     }
 }

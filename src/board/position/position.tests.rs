@@ -9,14 +9,13 @@ mod do_and_undo_a_move {
     use crate::board::state::board::Board;
     use crate::color::Color::*;
     use crate::bit_move::{Move, MoveType::*};
-    use crate::board::fen::FEN;
     use crate::move_scope::MoveScope::*;
     use crate::squares::Square::*;
 
 
     #[test]
     fn should_update_self_after_move() {
-        let board = Board::parse_fen("4kb2/3p1n2/1r2p3/3b1p1p/PpN5/8/BP1P3P/R2QK3 b -Q-- - 0 2").unwrap();
+        let board = Board::try_from("4kb2/3p1n2/1r2p3/3b1p1p/PpN5/8/BP1P3P/R2QK3 b -Q-- - 0 2").unwrap();
         let mv = Move::new(D5 as u8, C4 as u8, Capture);
         let mut position = Position::with(board);
 
@@ -45,7 +44,7 @@ mod do_and_undo_a_move {
 
     #[test]
     fn should_be_able_to_undo_a_regular_capture() {
-        let board = Board::parse_fen("4kb2/3p1n2/1r2p3/3b1p1p/PpN5/8/BP1P3P/R2QK3 b -Q-- - 0 2").unwrap();
+        let board = Board::try_from("4kb2/3p1n2/1r2p3/3b1p1p/PpN5/8/BP1P3P/R2QK3 b -Q-- - 0 2").unwrap();
         let mv = Move::new(D5 as u8, C4 as u8, Capture);
 
         let mut position = Position::with(board);
@@ -86,7 +85,7 @@ mod do_and_undo_a_move {
 
     #[test]
     fn should_undo_an_enpassant_move() {
-        let board = Board::parse_fen("rnbqk1nr/p2p3p/4p3/8/Pp1P1B2/6Pp/1PP2P1P/R2QKB1R b KQkq a3 0 1").unwrap();
+        let board = Board::try_from("rnbqk1nr/p2p3p/4p3/8/Pp1P1B2/6Pp/1PP2P1P/R2QKB1R b KQkq a3 0 1").unwrap();
         let zobrist_before_move = board.hash_key;
 
         let mv = Move::new(B4 as u8, A3 as u8, Enpassant);
@@ -134,7 +133,7 @@ mod do_and_undo_a_move {
 
     #[test]
     fn should_be_able_to_undo_multiple_captures() {
-        let board = Board::parse_fen("r3k1n1/4p1pp/8/1p1p1Q2/P2p1N2/4P3/5P1P/R3KBNR w KQkq - 0 1").unwrap();
+        let board = Board::try_from("r3k1n1/4p1pp/8/1p1p1Q2/P2p1N2/4P3/5P1P/R3KBNR w KQkq - 0 1").unwrap();
         let mut position = Position::with(board);
         let white_knight_captures_pawn = Move::new(F4 as u8, D5 as u8, Capture);
 
