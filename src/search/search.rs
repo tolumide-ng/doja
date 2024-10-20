@@ -58,7 +58,7 @@ impl<'a> Search<'a> {
         let mut alpha = -INFINITY;
         let mut beta = INFINITY;
         let mut delta = VAL_WINDOW;
-        let mut depth = limit;
+        let mut depth = 1;
 
         const BIG_DELTA: usize = 975;
 
@@ -75,11 +75,11 @@ impl<'a> Search<'a> {
             if score <= alpha {
                 beta = (alpha + beta) / 2;
                 alpha = (-INFINITY).max(alpha - beta);
-                depth = limit;
+                // depth = limit;
             } else if score >= beta {
                 beta = (INFINITY).min(beta + delta);
             } else {
-                break
+                // break
             }
             delta += delta/2;
             if delta >= BIG_DELTA as i32 { alpha = -INFINITY; beta = INFINITY } 
@@ -87,6 +87,7 @@ impl<'a> Search<'a> {
         }
 
             println!("MOVES ARE :::: with length of {}", self.pv_table.len(0));
+            // for
             for i in self.pv_table.get_pv(0) {
                 print!("-->> {}", Move::from(*i));
             }

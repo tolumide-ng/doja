@@ -25,10 +25,6 @@ impl PVTable {
         // Prepends the new move to the PVs at this depth("d")
         let index = Self::index(depth);
         let prev_depth_index = Self::index(depth + 1);
-
-
-        // println!("(((((((((((((({index})))))))))))))) {} {}", self.pv[index..index+MAX_DEPTH].iter().filter(|x| **x != 0 ).collect::<Vec<_>>().len(), Move::from(self.pv[index]).to_string());
-        // println!(">>>>>>>>>>>>>>>>{prev_depth_index}<<<<<<<<<<<<< {}-->>{}", self.pv[prev_depth_index..prev_depth_index+MAX_DEPTH].iter().filter(|x| **x != 0 ).collect::<Vec<_>>().len(), Move::from(self.pv[prev_depth_index]).to_string());
         self.pv[index] = **mv;
 
         // println!("index is {index}, and the previous is {prev_depth_index}");
@@ -45,28 +41,6 @@ impl PVTable {
         for i in 0..len {
             self.pv[index + i + 1] = self.pv[prev_depth_index + i];
         }
-
-        // let curr = self.pv[index..index+MAX_DEPTH].iter().filter(|x| **x != 0 ).collect::<Vec<_>>().len();
-        // let prev = self.pv[prev_depth_index..prev_depth_index+MAX_DEPTH].iter().filter(|x| **x != 0 ).collect::<Vec<_>>().len();
-
-        // for i in 0..curr {
-        //     print!("curr:: {}-->>", Move::from(self.pv[index + i]).to_string())
-        // }
-        // println!("total current is {curr}");
-        // println!("\n");
-        
-
-        // for i in 0..prev {
-        //     println!("prev** {}->", Move::from(self.pv[prev_depth_index + i]).to_string());
-        // }
-        // println!("the previous count was {prev}");
-        // println!("\n\n\n");
-
-
-
-        // println!("::::::::::::::::::::{index} <<<< {} {}", self.pv[index..index+MAX_DEPTH].iter().filter(|x| **x != 0 ).collect::<Vec<_>>().len(), Move::from(self.pv[index]).to_string());
-        // println!("[[[[[[[[[[[[[[++++++++{prev_depth_index}+++++++]]]]]]]]]]]]]] {}-->>{}", self.pv[prev_depth_index..prev_depth_index+MAX_DEPTH].iter().filter(|x| **x != 0 ).collect::<Vec<_>>().len(), Move::from(self.pv[prev_depth_index]).to_string());
-
         self.lengths[depth] = len + 1;
     }
 
