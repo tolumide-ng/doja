@@ -87,9 +87,9 @@ impl<'a> Search<'a> {
         }
 
             println!("MOVES ARE :::: with length of {}", self.pv_table.len(0));
-            // for
-            for i in self.pv_table.get_pv(0) {
-                print!("-->> {}", Move::from(*i));
+            let mvs = self.pv_table.get_pv(0);
+            for i in 0..depth {
+                print!("-->> {}", Move::from(mvs[i as usize]));
             }
             println!("\n");
     }
@@ -222,12 +222,14 @@ impl<'a> Search<'a> {
         captures.sort_by_key(|mv| { return mv.1 }); captures.reverse();
         sorted_mvs.append(&mut captures);
 
-        non_captures.sort_by_key(|mv| {
-            if let Some(promoted_to) = mv.0.get_promotion() { if promoted_to == PieceType::Q { return 12_000 } else { return 11_000 }}
-            if self.killer_moves.is_killer(self.ply, &mv.0) {
-                return 1
-            } 
-            0
+        non_captures.sort_by_key(|(mv, score)| {
+            if let Some(promoted_to) = mv.get_promotion() { if promoted_to == PieceType::Q { return 12_000 } else { return 11_000 }}
+            let killers = self.killer_moves.get_killers(self.ply);
+            if killers[0] == **mv { return 9_000 }
+            if killers[1] == **mv { return 8_000 }
+
+            let piece = board.piece_at(mv.get_src()).unwrap();
+            return self.history_table.get(piece, mv.get_target());
         });
 
         non_captures.reverse();

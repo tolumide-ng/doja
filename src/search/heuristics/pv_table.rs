@@ -26,22 +26,18 @@ impl PVTable {
         let index = Self::index(depth);
         let prev_depth_index = Self::index(depth + 1);
         self.pv[index] = **mv;
-
-        // println!("index is {index}, and the previous is {prev_depth_index}");
+        
         let len = self.lengths[depth + 1];
-        // println!("len at that position is {}", len);
 
-        // if depth == 0 {
-        //     println!("got zero ---")
-        // }
-
-        // let mut children = 
-
+        let prev = depth + 1;
+        let prev_len = self.lengths[prev];
         // Copy the PV from depth + 1 into this depth
         for i in 0..len {
             self.pv[index + i + 1] = self.pv[prev_depth_index + i];
         }
         self.lengths[depth] = len + 1;
+        let xx = self.lengths[depth];
+
     }
 
     pub(crate) fn get_pv(&self, depth: usize) -> &[u16] {

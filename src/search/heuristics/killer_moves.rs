@@ -22,4 +22,8 @@ impl KillerMoves {
     pub(crate) fn is_killer(&self, depth: usize, mv: &Move) -> bool {
         self.0[depth][0] == **mv || self.0[depth][1] == **mv
     }
+
+    pub(crate) fn get_killers(&self, depth: usize) -> [u16; 2] {
+        self.0[depth]
+    } 
 }
