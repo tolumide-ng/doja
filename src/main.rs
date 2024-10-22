@@ -138,12 +138,28 @@ fn main() {
     // println!("the xx0 is {}", xx0);
 
 
-    let mut board = Position::from(Board::try_from(TRICKY_POSITION).unwrap());
+    let mut board = Position::from(Board::try_from("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1 ").unwrap());
     println!("{}", board.to_string());
     let mut search = Search::new(table.get());
-    search.iterative_deepening(6, &mut board);
+    search.iterative_deepening(2, &mut board);
     // board.get_all_attacks(Square::A6);
     // Search::see(&board, &Move::new(F3 as u8, H3 as u8, MoveType::Capture), 0);
+
+    // println!("----------------------->>>>>>>>>         {}", board.evaluate());
+
+
+    // let s0 = Position::from(Board::try_from("r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1 ").unwrap()).evaluate();
+    // println!("white bishop captures black bishop>>>>> {s0}",);
+
+    // let board = Position::from(Board::try_from("r3k2r/p1ppqpb1/Bn21np1/3pN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1 ").unwrap());
+    // println!("{}", board.to_string());
+    // let s01 = board.evaluate();
+    // println!("white bishop captures black bishop>>>>> {s01}",);
+
+    // let board = Position::from(Board::try_from("r3k2r/p1ppqpb1/Bn2pnp1/3PN3/4P3/2p2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1 ").unwrap());
+    // println!("{}", board.to_string());
+    // let s02 = board.evaluate();
+    // println!("white bishop captures black bishop>>>>> {s02}",);
     
 
 }

@@ -68,7 +68,7 @@ impl<'a> Search<'a> {
             println!("RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {depth}");
             println!("{}", position.to_string());
             self.ply = 0;
-            let score = self.alpha_beta(alpha, beta, depth, position);
+            let score = self.negamax(alpha, beta, depth, position);
             println!("the score is {score} and nodes {}", self.nodes);
             depth += 1;
 
@@ -88,7 +88,7 @@ impl<'a> Search<'a> {
 
             println!("MOVES ARE :::: with length of {}", self.pv_table.len(0));
             let mvs = self.pv_table.get_pv(0);
-            for i in 0..depth {
+            for i in 0..limit {
                 print!("-->> {}", Move::from(mvs[i as usize]));
             }
             println!("\n");
@@ -235,6 +235,15 @@ impl<'a> Search<'a> {
         non_captures.reverse();
 
         sorted_mvs.append(&mut non_captures);
+
+
+        // if board.turn == Color::Black {
+        //     for (mv, score) in &sorted_mvs {
+        //         print!("-->> {} {}-->>", mv.to_string(), score);
+        //     }
+        // }
+
+        // println!("\n\n");
         
         return sorted_mvs.iter().map(|mv| mv.0).collect::<Vec<_>>()
     }
@@ -283,7 +292,8 @@ impl<'a> Search<'a> {
         let in_check = Self::in_check(&position, position.turn);
         // beta cutoff
         if !in_check && stand_pat >= beta { 
-            
+            // println!("{}", position.to_string());
+            // println!("RETURNING BETA************************************* stand_pat={stand_pat} alpha==>>{alpha}, and beta is {beta}",);
             return beta }
         if !in_check && stand_pat > alpha { alpha = stand_pat }
 
@@ -303,7 +313,10 @@ impl<'a> Search<'a> {
                 
                 self.ply -= 1;
                 
-                // println!(":::::::::::::::::::::::::::::::::::::::::::: mm-->>{} alpha={alpha}, beta={beta}, score={score}", mv.to_string());
+
+                // if position.turn == Color::Black {
+                //     println!(":::::::::::::::::::::::::::::::::::::::::::: mm-->>{} alpha={alpha}, beta={beta}, score={score} ply==>>{} eval-->>{}", mv.to_string(), self.ply, position.evaluate());
+                // }
                 if score > best_score {
                     best_score = score;
                     
@@ -365,7 +378,7 @@ impl<'a> Search<'a> {
         position.set_zobrist(position.hash_key ^ ZOBRIST.side_key); // side about to move
         position.nnue_push();
 
-        let score = -self.alpha_beta(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut position);
+        let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut position);
 
         // reverse all actions, after we're done
         self.ply -= 1;
@@ -383,7 +396,7 @@ impl<'a> Search<'a> {
         None
     }
 
-    pub(crate) fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
+    pub(crate) fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
         if Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&s| s >= 50) {
             return 0; // draw
         }
@@ -391,9 +404,8 @@ impl<'a> Search<'a> {
         let stm_in_check = Self::in_check(position, position.turn);
         let depth = if stm_in_check && depth < MAX_DEPTH as u8 { depth + 1 } else { depth };
         
-        if depth == 0 || self.ply >= MAX_DEPTH { 
-            let q = self.quiescence(alpha, beta, position);
-            return q
+        if depth == 0 || self.ply >= MAX_DEPTH {
+            return self.quiescence(alpha, beta, position);
         }
 
         let (tt_score, tt_mv) = self.probe_tt(position.hash_key, Some(depth), alpha, beta);
@@ -419,28 +431,29 @@ impl<'a> Search<'a> {
 
         let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves(&position);
-        for mv in mvs {
+        for (i, mv) in mvs.iter().enumerate() {
+            let mv = *mv;
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
 
                 let score = match mvs_searched {
-                    0 => -self.alpha_beta(-beta, -alpha, depth -1, &mut position),
+                    0 => -self.negamax(-beta, -alpha, depth -1, &mut position),
                     _ => {
                         // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
                         // condition for Late Move Reduction
                         let non_tatcital_mv = !stm_in_check && mv.get_promotion().is_none() && !mv.get_capture();
 
                         let mut value = if (mvs_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
-                            -self.alpha_beta(-(alpha + 1), -alpha, depth-2, position)
+                            -self.negamax(-(alpha + 1), -alpha, depth-2, position)
                         } else {
                             alpha + 1 // Hack to ensure that full-depth search is done
                         };
 
                         if value > alpha {
-                            value = -self.alpha_beta(-(alpha - 1), -alpha, depth-1, position);
+                            value = -self.negamax(-(alpha - 1), -alpha, depth-1, position);
 
                             if (value > alpha) && value < beta {
-                                value = -self.alpha_beta(-beta, -alpha, depth-1, position);
+                                value = -self.negamax(-beta, -alpha, depth-1, position);
                             }
                         }
 
@@ -454,6 +467,10 @@ impl<'a> Search<'a> {
                 position.undo_move(true);
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
+
+                // if position.turn == Color::Black && i < 4 {
+                //     println!("THE MOVE: {} at depth -->> {depth} ----- the score {score}, the alpha==>> {alpha}, and the beta==>>{beta} \n\n\n", mv.to_string());
+                // }
 
                 if score >= beta {
                     self.tt.record(zobrist_key, depth, beta, INFINITY, self.ply, HashFlag::LowerBound, 0, best_mv); 
