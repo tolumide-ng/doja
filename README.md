@@ -1,5 +1,8 @@
 ## "The devil is in the details"
 
+> [!NOTE]
+> This chess engine is currently named 'dojá' but there are chances that this might change in the nearest future
+
 
 ### Some Optimizations:
 - [x]  AlphaBeta Search 
@@ -25,6 +28,10 @@
 1. Todo!
 
 
+
+
+> 'dojá' derives inspiration from a lot of engines, blog posts, libraries, published articles, and videos.
+This list may not include every reference, but I'm grateful to everyone who has contributed in their way to fostering the Open-source community
 ### Credits and Acknowledgments
 1. [Viridithias](https://github.com/cosmobobak/viridithas)
 2. [Carp](https://github.com/dede1751/carp)
