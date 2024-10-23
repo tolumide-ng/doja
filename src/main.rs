@@ -10,6 +10,7 @@ mod nnue;
 mod shift;
 mod board;
 mod command;
+mod move_logic;
 #[allow(dead_code)]
 mod constants;
 mod moves;
