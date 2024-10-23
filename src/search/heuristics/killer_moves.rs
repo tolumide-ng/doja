@@ -1,4 +1,4 @@
-use crate::{bit_move::Move, constants::TOTAL_SQUARES};
+use crate::move_logic::bitmove::Move;
 
 
 const NUM_KILLER_MOVES: usize = 2;

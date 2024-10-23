@@ -16,7 +16,6 @@ mod constants;
 mod moves;
 // mod random_magic;
 mod piece_attacks;
-mod bit_move;
 mod move_scope;
 mod perft;
 mod kogge_stone;
@@ -29,7 +28,7 @@ mod syzygy;
 
 use std::{num::NonZero, sync::{Arc, Mutex}};
 
-use bit_move::{Move, MoveType};
+use move_logic::bitmove::{Move, MoveType};
 use board::{position::Position, state::board::Board};
 use color::Color;
 use constants::TRICKY_POSITION;
@@ -86,7 +85,7 @@ fn main() {
 
     use crate::squares::Square::*;
     use crate::board::piece::Piece::*;
-    // use crate::bit_move::MoveType::*;
+    // use crate::move_logic::bitmoveMoveType::*;
 
     // println!("before {}", board.evaluate());
 

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{bit_move::Move, board::piece::Piece};
+use crate::{move_logic::bitmove::Move, board::piece::Piece};
 
 
 

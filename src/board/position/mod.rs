@@ -1,9 +1,9 @@
 use std::ops::Deref;
 
-use crate::bit_move::MoveType;
+use crate::move_logic::bitmove::MoveType;
 use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 use crate::nnue::accumulator::Feature;
-use crate::{bit_move::Move, move_scope::MoveScope, squares::Square};
+use crate::{move_logic::bitmove::Move, move_scope::MoveScope, squares::Square};
 use crate::nnue::network::NNUEState;
 use crate::color::Color::{self, *};
 use crate::nnue::constants::custom_kp::*;

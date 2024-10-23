@@ -1,4 +1,4 @@
-use crate::{bit_move::Move, constants::params::MAX_DEPTH};
+use crate::{move_logic::bitmove::Move, constants::params::MAX_DEPTH};
 
 pub(crate) struct PVTable {
     /// Triangular PV-Table

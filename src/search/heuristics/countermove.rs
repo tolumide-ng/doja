@@ -2,7 +2,7 @@
 // https://talkchess.com/viewtopic.php?t=76255
 // I should probably read: https://www.researchgate.net/publication/306413279_The_Countermove_Heuristic
 
-// use crate::{bit_move::Move, constants::TOTAL_SQUARES, squares::Square};
+// use crate::{move_logic::bitmove::Move, constants::TOTAL_SQUARES, squares::Square};
 
 // /// CounterMove Heuristic
 // /// https://www.chessprogramming.org/Countermove_Heuristic

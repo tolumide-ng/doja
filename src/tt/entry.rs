@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 
-use crate::{bit_move::Move, constants::MATE_SCORE, tt::flag::HashFlag};
+use crate::{move_logic::bitmove::Move, constants::MATE_SCORE, tt::flag::HashFlag};
 
 const FLAG_MASK: u64 = 0x3;
 const DEPTH_MASK: u64 = 0x1FC;

@@ -2,7 +2,7 @@ use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread}
 
 use thiserror::Error;
 
-use crate::{bit_move::Move, board::{position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, syzygy::probe::TableBase, tt::table::TTable};
+use crate::{move_logic::bitmove::Move, board::{position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, syzygy::probe::TableBase, tt::table::TTable};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]

@@ -3,12 +3,12 @@ mod do_and_undo_a_move {
     use crate::board::position::Position;
     // use crate::color::Color::*;
     // use crate::squares::Square::*;
-    // use crate::bit_move::Move;
+    // use crate::move_logic::bitmove::Move;
     // use crate::board::piece::Piece::*;
     
     use crate::board::state::board::Board;
     use crate::color::Color::*;
-    use crate::bit_move::{Move, MoveType::*};
+    use crate::move_logic::bitmove::{Move, MoveType::*};
     use crate::move_scope::MoveScope::*;
     use crate::squares::Square::*;
 

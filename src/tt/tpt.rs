@@ -1,6 +1,6 @@
 use std::sync::atomic::Ordering;
 
-use crate::{bit_move::Move, constants::{MATE_SCORE, NO_HASH_ENTRY}};
+use crate::{move_logic::bitmove::Move, constants::{MATE_SCORE, NO_HASH_ENTRY}};
 
 use super::{entry::{SMPData, TTEntry}, flag::HashFlag, table::TOTAL_SIZE};
 

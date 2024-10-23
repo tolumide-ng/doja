@@ -3,7 +3,7 @@ use std::ptr;
 
 use crate::constants::MATE_VALUE;
 use crate::squares::Square;
-use crate::{bit_move::Move, board::position::Position};
+use crate::{move_logic::bitmove::Move, board::position::Position};
 use crate::board::piece::{Piece::*, PieceType};
 use crate::color::Color::{self, *};
 

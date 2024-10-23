@@ -3,7 +3,7 @@ mod board_tests {
     use crate::board::piece::Piece;
     use crate::board::piece::Piece::*;
     use crate::color::Color::*;
-    use crate::bit_move::{Move, MoveType::*};
+    use crate::move_logic::bitmove::{Move, MoveType::*};
     use crate::move_scope::MoveScope::*;
 
 
@@ -634,7 +634,7 @@ mod board_tests {
         #[cfg(test)]
         mod capturing_moves_and_regular_moves {
 
-        use crate::bit_move::Move;
+        use crate::move_logic::bitmove::Move;
 
         use super::*;
 

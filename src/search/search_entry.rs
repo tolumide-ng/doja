@@ -1,4 +1,4 @@
-use crate::{bit_move::Move, board::piece::Piece};
+use crate::{move_logic::bitmove::Move, board::piece::Piece};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct SearchE {
