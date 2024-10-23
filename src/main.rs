@@ -13,7 +13,6 @@ mod command;
 mod move_logic;
 #[allow(dead_code)]
 mod constants;
-mod moves;
 // mod random_magic;
 mod piece_attacks;
 mod move_scope;

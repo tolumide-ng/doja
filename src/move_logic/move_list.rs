@@ -6,7 +6,7 @@ use crate::{move_logic::bitmove::Move, board::piece::Piece};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Moves {
-    pub(crate) list: [Move; 256],
+    pub(crate) list: [Move; Self::SIZE],
     count: usize,
     /// Only used internally for the implementation of the iterator
     at: usize
@@ -19,6 +19,8 @@ impl Default for Moves {
 }
 
 impl Moves {
+    pub(crate) const SIZE: usize = 256;
+
     /// Creates a new move list with 256 items all intiialized as 0(zero)
     pub(crate) fn new() -> Self {
         Self::default()

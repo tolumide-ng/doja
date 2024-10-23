@@ -1,7 +1,8 @@
 use std::{fmt::Display, ops::{Deref, DerefMut}};
 
-use crate::{move_logic::bitmove::{Move, MoveType::{self, *}}, board::piece_map::PieceMap, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, moves::Moves, squares::Square, zobrist::START_POSITION_ZOBRIST};
+use crate::{move_logic::bitmove::{Move, MoveType::{self, *}}, board::piece_map::PieceMap, color::Color, constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, CASTLING_TABLE, OCCUPANCIES, PIECE_ATTACKS, RANK_4, RANK_5, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK, ZOBRIST}, squares::Square, zobrist::START_POSITION_ZOBRIST};
 use crate::board::piece::Piece::*;
+use crate::move_logic::move_list::Moves;
 use crate::board::{castling::Castling, piece::Piece};
 use crate::bitboard::Bitboard;
 use crate::squares::Square::*;
@@ -391,12 +392,6 @@ impl Board {
                 targets.pop_bit(target);
             }
         }
-
-
-        // for mvv in &move_list {
-        //     print!("(((({}))))--->>", mvv.to_string());
-        // }
-        // println!("\n");
         
         move_list
     }
@@ -419,6 +414,22 @@ impl Board {
 
 
         move_list
+    }
+
+    pub(crate) fn get_mvs(&self, scope: MoveScope) -> Moves {
+        let color = self.turn;
+        let mut move_list = Moves::new();
+
+        match scope {
+            MoveScope::CapturesOnly => {
+                move_list.add_many(&self.get_pawn_attacks(color));
+
+            }
+            MoveScope::QuietOnly => {}
+            MoveScope::AllMoves => {}
+        }
+
+        0
     }
 
     /// turn: The turn of the attacker
@@ -615,6 +626,7 @@ impl Board {
                     return None;
                 }
             }
+            _ => None,
         }
     }
 

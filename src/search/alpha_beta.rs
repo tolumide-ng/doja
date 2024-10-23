@@ -1,8 +1,9 @@
 use std::{sync::{Arc, Mutex}, time::Instant};
 
-use crate::{move_logic::bitmove::Move, board::{piece::Piece, position::Position, state::board::Board}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, moves::Moves, squares::Square, syzygy::probe::TableBase, tt::{flag::HashFlag, tpt::TPT}};
-use super::{evaluation::Evaluation, search_entry::SearchE, time_control::TimeControl};
+use crate::{move_logic::bitmove::Move, board::{piece::Piece, position::Position, state::board::Board}, constants::{DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, MATE_SCORE, MATE_VALUE, MAX_PLY, REDUCTION_LIMIT, TOTAL_PIECES, TOTAL_SQUARES, VAL_WINDOW, ZOBRIST}, move_scope::MoveScope, syzygy::probe::TableBase, tt::{flag::HashFlag, tpt::TPT}};
+use super::time_control::TimeControl;
 use crate::constants::INFINITY;
+use crate::move_logic::move_list::Moves;
 
 
 /// Sometimes you can figure out what kind of node you are dealing with early on. If the first move you search fails high (returns a score greater than or equal to beta).

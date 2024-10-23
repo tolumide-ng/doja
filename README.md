@@ -2,9 +2,13 @@
 
 > [!NOTE]
 > This chess engine is currently named 'dojá' but there are chances that this might change in the nearest future
+> The current NNUE implementation currently supports only AVX2
+
+> [!Warning]
+> This project is still a work in progress
 
 
-### Some Optimizations:
+### Some Optimizations + Features:
 - [x]  AlphaBeta Search 
 - [ ] Quiescence Search
     - [ ] Delta Prunning
@@ -22,6 +26,7 @@
 - [x] PV-Table (Principal Variation Table)
 - [x] Repetitions https://www.chessprogramming.org/Repetitions
 - [-] Singular extensions
+- [-] Full WASM support
 
 
 
