@@ -213,7 +213,7 @@ impl<'a> Search<'a> {
         
         let [mut captures, mut non_captures] = mvs.iter().fold([Vec::new(), Vec::new()], |mut acc, mv| {
             if mv.get_capture() {
-                let r = if Self::see(board, mv, 0) {20_000} else{10_000} ;
+                let r = if Self::see(board, mv, 0) {20_000} else{7_000} ;
                 acc[0].push((*mv, r)) 
             } else { acc[1].push((*mv, 0)) }
             [acc[0].clone(), acc[1].clone()]
