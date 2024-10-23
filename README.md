@@ -21,6 +21,7 @@
 - [x] Iterative Deepening
 - [x] PV-Table (Principal Variation Table)
 - [x] Repetitions https://www.chessprogramming.org/Repetitions
+- [-] Singular extensions
 
 
 

@@ -245,7 +245,7 @@ impl Move {
         assert_eq!(enpassant.get_src(), Square::from(20u8));
         assert_eq!(enpassant.get_target(), Square::from(12u8));
         assert_eq!(enpassant.get_promotion(), None);
-        assert_eq!(enpassant.get_capture(), false);
+        assert_eq!(enpassant.get_capture(), true);
         assert_eq!(enpassant.get_enpassant(), true);
         assert_eq!(enpassant.get_castling(), false);
         assert_eq!(enpassant.move_type(), MoveType::Enpassant);

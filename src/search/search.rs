@@ -29,6 +29,7 @@ use super::heuristics::{history::HistoryHeuristic, killer_moves::KillerMoves};
 /// 12. [x] Iterative Deepening
 /// 13. [x] PV-Table
 /// 14. [x] Repetitions https://www.chessprogramming.org/Repetitions
+/// 15. [-] Singular extensions
 /// This implementation is a fail-soft implementation (meaning we have to keep track of the best score)[XX] 
 /// - fail-hard for now
 pub(crate) struct Search<'a> {

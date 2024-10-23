@@ -74,7 +74,8 @@ mod uci_tests {
 
         let result = String::from_utf8(cursor.get_ref()[..].to_vec()).unwrap();
 
-        let expected = Board::new().to_string();
+        let expected = Board::try_from(TRICKY_POSITION).unwrap().to_string();
+
         assert_eq!(expected.trim(), result.trim());
     }
 }
