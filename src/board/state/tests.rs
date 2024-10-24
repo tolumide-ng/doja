@@ -4,7 +4,7 @@ mod board_tests {
     use crate::board::piece::Piece::*;
     use crate::color::Color::*;
     use crate::move_logic::bitmove::{Move, MoveType::*};
-    use crate::move_scope::MoveScope::*;
+    use crate::move_scope::MoveScope::{*, self};
 
 
     use crate::squares::Square::*;
@@ -531,7 +531,7 @@ mod board_tests {
             board.board[WN] = Bitboard::from(white_knight);
             board.board[WR] = Bitboard::from(white_rook);
 
-            let received = board.get_sliding_and_leaper_moves(WN);
+            let received = board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(WN);
             let targets = [(B2, Capture, Some(BP)), (B4, Capture, Some(BQ)), (C1, Quiet, None), (C5, Quiet, None), (F2, Quiet, None), (E1, Quiet, None), (E5, Quiet, None)];
 
             assert_eq!(received.len(), targets.len());
@@ -562,7 +562,7 @@ mod board_tests {
             board.board[WB] = Bitboard::from(white_bishop);
             board.board[WR] = Bitboard::from(white_rook);
 
-            let received = board.get_sliding_and_leaper_moves(WB);
+            let received = board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(WB);
             let targets = [(D4, Quiet), (C3, Quiet), (B2, Capture), (D6, Capture), (F6, Quiet), (G7, Quiet), (H8, Capture)];
 
             assert_eq!(received.len(), targets.len());
@@ -586,7 +586,7 @@ mod board_tests {
             board.board[WN] = Bitboard::from(white_knights);
             board.board[BR] = Bitboard::from(black_rooks);
 
-            let received = board.get_sliding_and_leaper_moves(BR);
+            let received = board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(BR);
             let targets = [(D2, D1, Quiet), (D2, D3, Quiet), (D2, D4, Quiet), (D2, D5, Quiet), (D2, D6, Capture), (D2, C2, Quiet), (D2, B2, Capture), (D2, E2, Quiet), (D2, F2, Quiet), (D2, G2, Capture),
             (C1, A1, Quiet), (C1, B1, Quiet), (C1, D1, Quiet), (C1, E1, Quiet), (C1, F1, Capture), (C1, C2, Quiet), (C1, C3, Quiet), (C1, C4, Quiet), (C1, C5, Quiet), (C1, C6, Quiet), (C1, C7, Quiet), (C1, C8, Quiet)];
 
@@ -613,7 +613,7 @@ mod board_tests {
             board.board[WN] = Bitboard::from(white_knights);
             board.board[BQ] = Bitboard::from(black_queen);
 
-            let received = board.get_sliding_and_leaper_moves(BQ);
+            let received = board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(BQ);
             let targets = [(D2, D1, Quiet), (D2, D3, Quiet), (D2, D4, Quiet), (D2, D5, Quiet), (D2, D6, Capture), (D2, C2, Quiet), (D2, B2, Capture), (D2, E2, Quiet), (D2, F2, Quiet), (D2, G2, Capture),
             (D2, E1, Quiet), (D2, C1, Quiet), (D2, C3, Quiet), (D2, B4, Quiet), (D2, A5, Quiet), (D2, E3, Quiet), (D2, F4, Quiet), (D2, G5, Quiet), (D2, H6, Quiet)];
 

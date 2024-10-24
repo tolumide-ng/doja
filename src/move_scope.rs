@@ -5,6 +5,13 @@ pub enum MoveScope {
     AllMoves,
 }
 
+
+impl MoveScope {
+    pub(crate) const QUIETS: u8 = 0;
+    pub(crate) const CAPTURES: u8 = 1;
+    pub(crate) const ALL: u8 = 2;
+}
+
 impl From<MoveScope> for u8 {
     fn from(value: MoveScope) -> Self {
         match value {

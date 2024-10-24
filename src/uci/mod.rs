@@ -153,7 +153,7 @@ impl UCI {
     }
 
     fn parse_move(board: &Position, mv: &str) -> Option<Move> {
-        let board_moves = board.gen_movement();
+        let board_moves = board.gen_movement::<{ MoveScope::ALL }>();
 
         for bmove in board_moves {
             if bmove.to_string().trim() == mv.trim() {

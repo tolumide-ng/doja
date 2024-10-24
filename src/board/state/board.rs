@@ -350,7 +350,7 @@ impl Board {
     }
 
 
-    pub(crate) fn get_sliding_and_leaper_moves(&self, piece: Piece) -> Vec<Move> {
+    pub(crate) fn get_sliding_and_leaper_moves<const T: u8>(&self, piece: Piece) -> Vec<Move> {
         let mut move_list: Vec<Move> = vec![];
         
         let color = piece.color();
@@ -366,7 +366,7 @@ impl Board {
             // generates a bitboard(u64) where only this src square is set to 1
             let sq_bits = 1u64 << src as u64;
             let (attacks, occupancies) = match piece {
-                Piece::WN | Piece::BN => (PIECE_ATTACKS.knight_attacks[src], !self.occupancies[color]),
+                Piece::WN | Piece::BN => (PIECE_ATTACKS.knight_attacks[src], !self.occupancies[color]), // leapers
                 Piece::WB | Piece::BB => (PIECE_ATTACKS.nnbishop_attacks(sq_bits, self.occupancies[Color::Both]), !self.occupancies[color]),
                 Piece::WR | Piece::BR  => (PIECE_ATTACKS.nnrook_attacks(sq_bits, self.occupancies[Color::Both]), !self.occupancies[color]),
                 Piece::WQ | Piece::BQ => {
@@ -387,16 +387,21 @@ impl Board {
                 // capture move // there is an opponent on the target square
                 let opponent_on_target = Bitboard::from(self.occupancies[!color]).get_bit(target) != 0;
                 let mvt = if opponent_on_target {Capture} else {Quiet};
+                
+                targets.pop_bit(target);
+
+                if (mvt == Capture && T == MoveScope::QUIETS) || (mvt == Quiet && T == MoveScope::CAPTURES) { continue }
                 move_list.push(Move::new(source as u8, target as u8, mvt));
 
-                targets.pop_bit(target);
             }
         }
         
         move_list
     }
 
-    pub(crate) fn gen_movement(&self) -> Moves {
+
+    /// T denotes whether you want to generate Quiet(= 0), Captures(= 1), or All(= 2) moves
+    pub(crate) fn gen_movement<const T: u8>(&self) -> Moves {
         let color = self.turn;
         let mut move_list = Moves::new();
 
@@ -405,32 +410,32 @@ impl Board {
         move_list.add_many(&self.get_pawn_movement(color, false));
         move_list.add_many(&self.get_castling(color));
 
-        move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::knight(color)));
-        move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::bishop(color)));
+        move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::knight(color)));
+        move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::bishop(color)));
         // println!("****************************************AFTER CALLING BISHOP********************************************************************************");
-        move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::rook(color)));
-        move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::queen(color)));
-        move_list.add_many(&self.get_sliding_and_leaper_moves(Piece::king(color)));
+        move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::rook(color)));
+        move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::queen(color)));
+        move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::king(color)));
 
 
         move_list
     }
 
-    pub(crate) fn get_mvs(&self, scope: MoveScope) -> Moves {
-        let color = self.turn;
-        let mut move_list = Moves::new();
+    // pub(crate) fn get_mvs(&self, scope: MoveScope) -> Moves {
+    //     let color = self.turn;
+    //     let mut move_list = Moves::new();
 
-        match scope {
-            MoveScope::CapturesOnly => {
-                move_list.add_many(&self.get_pawn_attacks(color));
+    //     match scope {
+    //         MoveScope::CapturesOnly => {
+    //             move_list.add_many(&self.get_pawn_attacks(color));
 
-            }
-            MoveScope::QuietOnly => {}
-            MoveScope::AllMoves => {}
-        }
+    //         }
+    //         MoveScope::QuietOnly => {}
+    //         MoveScope::AllMoves => {}
+    //     }
 
-        0
-    }
+    //     0
+    // }
 
     /// turn: The turn of the attacker
     /// e.g. If white pawn just made an enpassant move, then we know we should deduct the tgt

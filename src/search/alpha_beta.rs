@@ -302,7 +302,8 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         // let mut best_score = stand_pat;
         // let mut moves_made = 0;
 
-        let sorted_moves = self.sort_moves(board, board.gen_movement().into_iter(), None, 0);
+
+        let sorted_moves = self.sort_moves(board, board.gen_movement::<{ MoveScope::ALL }>().into_iter(), None, 0);
         // if let Some(mk) = xm {
         //     println!("HERE--HERE_----------------------------------- {}", mk);
         //     if mk.to_string() == String::from("e6d5x") {println!("HERE--HERE")}}
@@ -544,7 +545,7 @@ impl<'a, T> NegaMax<'a, T> where T: TimeControl {
         }
 
         
-        let moves = board.gen_movement().into_iter();
+        let moves = board.gen_movement::<{ MoveScope::ALL }>().into_iter();
         if self.follow_pv {
             self.enable_pv_scoring(&moves);
         }

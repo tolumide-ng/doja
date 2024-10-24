@@ -2,6 +2,7 @@ use std::ffi::CString;
 use std::ptr;
 
 use crate::constants::MATE_VALUE;
+use crate::move_scope::MoveScope;
 use crate::squares::Square;
 use crate::{move_logic::bitmove::Move, board::position::Position};
 use crate::board::piece::{Piece::*, PieceType};
@@ -140,7 +141,7 @@ impl<'a> TryFrom<(SyZyGyBoard<'a>, u32)> for TBResult {
             _ => None
         };
 
-        let moves = board.gen_movement();
+        let moves = board.gen_movement::<{MoveScope::ALL}>();
         let dtz = (result & TB_RESULT_DTZ_MASK) >> TB_RESULT_DTZ_SHIFT;
 
         moves.into_iter().find(|m| m.get_src() == from && m.get_target() == to && 

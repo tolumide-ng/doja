@@ -189,8 +189,8 @@ impl<'a> Search<'a> {
     }
 
 
-    fn get_sorted_moves(&self, board: &Position) -> Vec<Move> {
-        let mvs = board.gen_movement();
+    fn get_sorted_moves<const T: u8>(&self, board: &Position) -> Vec<Move> {
+        let mvs = board.gen_movement::<T>();
         let mut mvs = (mvs.collect::<Vec<_>>())[0..mvs.count_mvs()].to_vec();
 
         let mut sorted_mvs = Vec::with_capacity(mvs.len());
@@ -300,12 +300,12 @@ impl<'a> Search<'a> {
 
         let mut best_move: Option<Move> = None;
     
-        let moves = self.get_sorted_moves(&position);
-        let captures_only = !in_check;
+        // let captures_only = !in_check;
+        let moves = self.get_sorted_moves::<{MoveScope::CAPTURES}>(&position);
         let mut best_score = -INFINITY;
 
         for mv in moves.into_iter() {
-            if captures_only && !mv.get_capture() { continue; }
+            // if captures_only && !mv.get_capture() { continue; }
 
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
@@ -431,7 +431,7 @@ impl<'a> Search<'a> {
         }
 
         let mut best_score = -INFINITY;
-        let mvs = self.get_sorted_moves(&position);
+        let mvs = self.get_sorted_moves::<{ MoveScope::ALL }>(&position);
         for (i, mv) in mvs.iter().enumerate() {
             let mv = *mv;
             if position.make_move_nnue(mv, MoveScope::AllMoves) {

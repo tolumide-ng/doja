@@ -14,7 +14,7 @@ impl Perft {
             return;
         }
 
-        let move_list =board.gen_movement();
+        let move_list =board.gen_movement::<{ MoveScope::ALL }>();
 
         for index in 0..move_list.count_mvs() {
             let bmove = move_list.list[index];
@@ -48,7 +48,7 @@ impl Perft {
     }
 
     pub(crate) fn test(depth: usize, nodes: &mut usize, board: Board) {
-        let move_list = board.gen_movement();
+        let move_list = board.gen_movement::<{ MoveScope::ALL }>();
 
         for index in 0..move_list.count_mvs() {
             let bmove = move_list.list[index];
