@@ -5,6 +5,7 @@ mod board_tests {
     use crate::color::Color::*;
     use crate::move_logic::bitmove::{Move, MoveType::*};
     use crate::move_scope::MoveScope::{*, self};
+    use crate::move_logic::move_list::Moves;
 
 
     use crate::squares::Square::*;
@@ -254,6 +255,8 @@ mod board_tests {
 
     #[cfg(test)]
     mod pawn_movement {
+        use crate::move_logic::move_list::Moves;
+
         use super::*;
 
         #[test]
@@ -266,7 +269,9 @@ mod board_tests {
             board.board[Piece::BP] = Bitboard::from(enemy);
             board.set_occupancy(Color::Black, enemy);
 
-            let result = board.get_pawn_movement(Color::White, true);
+            let mut mvs = Moves::default();
+            board.get_pawn_movement(Color::White, true, &mut mvs);
+            let result = mvs.to_vec();
             let targets = [(Square::F2, Square::F4)];
             assert_eq!(result.len(), targets.len());
 
@@ -286,7 +291,9 @@ mod board_tests {
             board.board[Piece::WP] = Bitboard::from(enemy);
             board.set_occupancy(Color::White, enemy);
 
-            let result = board.get_pawn_movement(Color::Black, false);
+            let mut mvs: Moves = Moves::default();
+            board.get_pawn_movement(Color::Black, false, &mut mvs);
+            let result = mvs.to_vec();
             let targets = [(Square::E7, Square::E6), (Square::F7, Square::F6), (Square::C5, Square::C4)];
 
             assert_eq!(result.len(), targets.len());
@@ -303,7 +310,9 @@ mod board_tests {
             board.board[Piece::BP] = Bitboard::from(bp);
             board.set_occupancy(Color::Black, bp);
 
-            let result = board.get_pawn_movement(Color::Black, false);
+            let mut mvs = Moves::default();
+            board.get_pawn_movement(Color::Black, false, &mut mvs);
+            let result = mvs.to_vec();
             let targets = [(Square::C2, Square::C1, PromotedToQueen), (Square::C2, Square::C1, PromotedToBishop), (Square::C2, Square::C1, PromotedToRook), (Square::C2, Square::C1, PromotedToKnight), (Square::F2, Square::F1, PromotedToQueen), (Square::F2, Square::F1, PromotedToBishop), (Square::F2, Square::F1, PromotedToRook), (Square::F2, Square::F1, PromotedToKnight), (Square::D3, Square::D2, Quiet)];
 
             assert_eq!(result.len(), targets.len());
@@ -317,6 +326,8 @@ mod board_tests {
 
     #[cfg(test)]
     mod pawn_attacks {
+        use crate::move_logic::move_list::Moves;
+
         use super::*;
 
 
@@ -332,7 +343,10 @@ mod board_tests {
             board.set_occupancy(Color::White, white_pawns | white_bishop);
             board.set_occupancy(Color::Black, black_pawns);
 
-            let result = board.get_pawn_attacks(Color::Black);
+            
+            let mut mvs = Moves::default();
+            board.get_pawn_attacks(Color::Black, &mut mvs);
+            let result = mvs.to_vec();
             let targets = [(Square::B4, Square::C3, Capture), (Square::F2, Square::G1, CaptureAndPromoteToBishop), (Square::F2, Square::G1, CaptureAndPromoteToQueen), (Square::F2, Square::G1, CaptureAndPromoteToKnight), (Square::F2, Square::G1, CaptureAndPromoteToQueen)];
         
             assert_eq!(result.len(), targets.len());
@@ -356,7 +370,9 @@ mod board_tests {
             board.set_occupancy(Color::Black, black_pawns);
             board.enpassant = Some(Square::B3);
 
-            let result = board.get_pawn_attacks(Color::Black);
+            let mut mvs = Moves::default();
+            board.get_pawn_attacks(Color::Black, &mut mvs);
+            let result = mvs.to_vec();
             let targets = [(Square::C4, Square::B3)];
 
             assert_eq!(result.len(), targets.len());
@@ -389,8 +405,12 @@ mod board_tests {
             board.board[Piece::BR] = Bitboard::from(black_rooks);
             board.board[Piece::BN] = Bitboard::from(black_knight);
     
+
+
             let expected = [(Square::E8, Square::C8, Piece::BK)];
-            let received = board.get_castling(Color::Black);
+            let mut received = Moves::new();
+            board.get_castling(Color::Black, &mut received);
+            let received = received.to_vec();
     
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
@@ -417,8 +437,11 @@ mod board_tests {
             board.board[Piece::BR] = Bitboard::from(black_rooks);
             board.board[Piece::BN] = Bitboard::from(black_knight);
     
+
+            let mut received = Moves::new();
             let expected = [(Square::E8, Square::G8, Piece::BK)];
-            let received = board.get_castling(Color::Black);
+            board.get_castling(Color::Black, &mut received);
+            let received = received.to_vec();
     
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
@@ -447,7 +470,10 @@ mod board_tests {
             board.board[Piece::BR] = Bitboard::from(black_rooks);
     
             let expected = [(Square::E1, Square::G1, Piece::WK)];
-            let received = board.get_castling(Color::White);
+
+            let mut received = Moves::new();
+            board.get_castling(Color::White, &mut received);
+            let received = received.to_vec();
     
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
@@ -474,9 +500,11 @@ mod board_tests {
             board.board[Piece::WR] = Bitboard::from(white_rooks);
             board.board[Piece::WN] = Bitboard::from(white_knight);
             board.board[Piece::BR] = Bitboard::from(black_rooks);
-    
+
+            let mut received = Moves::new();
             let expected = [(Square::E1, Square::C1, Piece::WK)];
-        let received = board.get_castling(Color::White);
+            board.get_castling(Color::White, &mut received);
+            let received = received.to_vec();
  
             assert_eq!(expected.len(), received.len());
             for (src, target, piece) in expected {
@@ -502,8 +530,11 @@ mod board_tests {
             board.board[Piece::WR] = Bitboard::from(white_rooks);
             board.board[Piece::BP] = Bitboard::from(black_pawn);
             board.board[Piece::BR] = Bitboard::from(black_rooks);
-    
-            let received = board.get_castling(Color::White);
+
+
+            let mut received = Moves::new();
+            board.get_castling(Color::White, &mut received);
+            let received = received.to_vec();
     
             assert_eq!(received.len(), 0);
         }
@@ -512,6 +543,7 @@ mod board_tests {
 
     #[cfg(test)]
     mod sliding_moves {
+
         use super::*;
 
 
@@ -531,7 +563,10 @@ mod board_tests {
             board.board[WN] = Bitboard::from(white_knight);
             board.board[WR] = Bitboard::from(white_rook);
 
-            let received = board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(WN);
+            let mut mvs = Moves::default();
+            board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(WN, &mut mvs);
+            let received = mvs.to_vec();
+
             let targets = [(B2, Capture, Some(BP)), (B4, Capture, Some(BQ)), (C1, Quiet, None), (C5, Quiet, None), (F2, Quiet, None), (E1, Quiet, None), (E5, Quiet, None)];
 
             assert_eq!(received.len(), targets.len());
@@ -561,8 +596,10 @@ mod board_tests {
             board.board[BQ] = Bitboard::from(black_queen);
             board.board[WB] = Bitboard::from(white_bishop);
             board.board[WR] = Bitboard::from(white_rook);
-
-            let received = board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(WB);
+            
+            let mut mvs = Moves::default();
+            board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(WB, &mut mvs);
+            let received = mvs.to_vec();
             let targets = [(D4, Quiet), (C3, Quiet), (B2, Capture), (D6, Capture), (F6, Quiet), (G7, Quiet), (H8, Capture)];
 
             assert_eq!(received.len(), targets.len());
@@ -586,7 +623,10 @@ mod board_tests {
             board.board[WN] = Bitboard::from(white_knights);
             board.board[BR] = Bitboard::from(black_rooks);
 
-            let received = board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(BR);
+            let mut mvs = Moves::default();
+            board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(BR, &mut mvs);
+            let received = mvs.to_vec();
+
             let targets = [(D2, D1, Quiet), (D2, D3, Quiet), (D2, D4, Quiet), (D2, D5, Quiet), (D2, D6, Capture), (D2, C2, Quiet), (D2, B2, Capture), (D2, E2, Quiet), (D2, F2, Quiet), (D2, G2, Capture),
             (C1, A1, Quiet), (C1, B1, Quiet), (C1, D1, Quiet), (C1, E1, Quiet), (C1, F1, Capture), (C1, C2, Quiet), (C1, C3, Quiet), (C1, C4, Quiet), (C1, C5, Quiet), (C1, C6, Quiet), (C1, C7, Quiet), (C1, C8, Quiet)];
 
@@ -613,7 +653,9 @@ mod board_tests {
             board.board[WN] = Bitboard::from(white_knights);
             board.board[BQ] = Bitboard::from(black_queen);
 
-            let received = board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(BQ);
+            let mut mvs = Moves::default();
+            board.get_sliding_and_leaper_moves::<{MoveScope::ALL}>(BQ, &mut mvs);
+            let received = mvs.to_vec();
             let targets = [(D2, D1, Quiet), (D2, D3, Quiet), (D2, D4, Quiet), (D2, D5, Quiet), (D2, D6, Capture), (D2, C2, Quiet), (D2, B2, Capture), (D2, E2, Quiet), (D2, F2, Quiet), (D2, G2, Capture),
             (D2, E1, Quiet), (D2, C1, Quiet), (D2, C3, Quiet), (D2, B4, Quiet), (D2, A5, Quiet), (D2, E3, Quiet), (D2, F4, Quiet), (D2, G5, Quiet), (D2, H6, Quiet)];
 

@@ -170,16 +170,14 @@ impl Board {
 
     /// Returns all possible movements for pawns of a specific color.
     /// If the double argument is true, then only double pawns moves are returned in the result
-    pub(crate) fn get_pawn_movement(&self, color: Color, double: bool) -> Vec<Move> {
+    pub(crate) fn get_pawn_movement(&self, color: Color, double: bool, mv_list: &mut Moves) {
         match double {
             true => {
                 let mut src2 = self.pawns_able_to_double_push(color);
                 let mut target2 = self.double_push_targets(color);
                 
-                let length = target2.count_ones() as usize; // because doubles cannot be promoted
-                let mut move_list: Vec<Move> = Vec::with_capacity(length);
+                // let length = target2.count_ones() as usize; // because doubles cannot be promoted
 
-                
                 while src2 !=0 {
                     let src = src2.trailing_zeros() as u8;
                     let target = target2.trailing_zeros() as u8;
@@ -187,16 +185,14 @@ impl Board {
                     
                     // let piece = Piece::pawn(color);
                     let xx = Move::new(src, target, DoublePush);
-                    move_list.push(xx);
+                    mv_list.add(xx);
 
                     src2 &= src2 -1;
                     target2 &= target2 -1;
                 }
-                move_list
             }
             false => {
                 let mut single_push_targets = self.single_push_targets(color);
-                let mut move_list: Vec<Move>  = Vec::with_capacity(single_push_targets.count_ones() as usize);
 
                 while single_push_targets != 0 {
                     let target_sq = single_push_targets & (!single_push_targets + 1);
@@ -212,27 +208,24 @@ impl Board {
 
 
                     if move_promotes {
-                        move_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToBishop));
-                        move_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToQueen));
-                        move_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToKnight));
-                        move_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToRook));
+                        mv_list.add(Move::new(s_sq as u8, t_sq as u8, PromotedToBishop));
+                        mv_list.add(Move::new(s_sq as u8, t_sq as u8, PromotedToQueen));
+                        mv_list.add(Move::new(s_sq as u8, t_sq as u8, PromotedToKnight));
+                        mv_list.add(Move::new(s_sq as u8, t_sq as u8, PromotedToRook));
                     } else {
-                        move_list.push(Move::new(s_sq as u8, t_sq as u8, Quiet));
+                        mv_list.add(Move::new(s_sq as u8, t_sq as u8, Quiet));
                     }
 
                     single_push_targets &= single_push_targets - 1;
                 }
-
-                move_list
             }
         }
     }
 
 
     /// shows what squares this color's pawns (including the src square) can attack
-    pub(crate) fn get_pawn_attacks(&self, color: Color) -> Vec<Move> {
+    pub(crate) fn get_pawn_attacks(&self, color: Color, mv_list: &mut Moves) {
         let piece = Piece::pawn(color);
-        let mut mv_list: Vec<Move> = vec![];
         let mut color_pawns = *self[piece]; // pawns belonging to this color
         
         while color_pawns != 0 {
@@ -249,13 +242,13 @@ impl Board {
                 };
 
                 if can_promote {
-                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToBishop));
-                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToRook));
-                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToKnight));
-                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToQueen));
+                    mv_list.add(Move::new(src as u8, target as u8, CaptureAndPromoteToBishop));
+                    mv_list.add(Move::new(src as u8, target as u8, CaptureAndPromoteToRook));
+                    mv_list.add(Move::new(src as u8, target as u8, CaptureAndPromoteToKnight));
+                    mv_list.add(Move::new(src as u8, target as u8, CaptureAndPromoteToQueen));
 
                 } else {
-                    mv_list.push(Move::new(src as u8, target as u8, Capture));
+                    mv_list.add(Move::new(src as u8, target as u8, Capture));
 
                 }
                 captures &= captures-1;
@@ -285,24 +278,22 @@ impl Board {
                 if (enpass_right_attack & *self[piece]) != 0 {
                     let source = enpass_right_attack.trailing_zeros();
                     let bmove = Move::new(source as u8, enpass as u8, Enpassant);
-                    mv_list.push(bmove);
+                    mv_list.add(bmove);
                 }
             }
             if enpass_left_attack != 0 {
                 if (enpass_left_attack & *self[piece]) != 0 {
                     let source = enpass_left_attack.trailing_zeros();    
                     let bmove = Move::new(source as u8, enpass as u8, Enpassant);
-                    mv_list.push(bmove);
+                    mv_list.add(bmove);
                 }
             }
         }
-
-        mv_list
     }
 
 
-    pub(crate) fn get_castling(&self, color: Color) -> Vec<Move> {
-        let mut move_list = Vec::with_capacity(2);
+    pub(crate) fn get_castling(&self, color: Color, mv_list: &mut Moves) {
+        // let mut move_list = Vec::with_capacity(2);
 
         match color {
             Color::White => {
@@ -311,7 +302,7 @@ impl Board {
                     let e1f1g1_attacked = self.is_square_attacked(u64::from(Square::E1), !color) || self.is_square_attacked(u64::from(Square::F1), !color) || self.is_square_attacked(u64::from(Square::G1), !color);
                     
                     if f1g1_empty && !e1f1g1_attacked {
-                        move_list.push(Move::new(Square::E1 as u8, Square::G1 as u8, Castling));
+                        mv_list.add(Move::new(Square::E1 as u8, Square::G1 as u8, Castling));
                     }
                 }
 
@@ -320,7 +311,7 @@ impl Board {
                     let e1c1d1_attacked = self.is_square_attacked(u64::from(Square::E1), !color) || self.is_square_attacked(u64::from(Square::C1), !color)  || self.is_square_attacked(u64::from(Square::D1), !color);
 
                     if b1c1d1_empty && !e1c1d1_attacked {
-                        move_list.push(Move::new(Square::E1 as u8, Square::C1 as u8, Castling));
+                        mv_list.add(Move::new(Square::E1 as u8, Square::C1 as u8, Castling));
                     }
                 }
             }
@@ -330,7 +321,7 @@ impl Board {
                     let e8f8g8_attacked = self.is_square_attacked(u64::from(Square::E8), !color) || self.is_square_attacked(u64::from(Square::F8), !color) || self.is_square_attacked(u64::from(Square::G8), !color);
 
                     if f8g8_empty && !e8f8g8_attacked {
-                        move_list.push(Move::new(Square::E8 as u8, Square::G8 as u8, Castling));
+                        mv_list.add(Move::new(Square::E8 as u8, Square::G8 as u8, Castling));
                     }
                 }
 
@@ -339,19 +330,17 @@ impl Board {
                     let e8d8c8_attacked = self.is_square_attacked(u64::from(Square::E8), !color) || self.is_square_attacked(u64::from(Square::D8), !color) || self.is_square_attacked(u64::from(Square::C8), !color);
 
                     if b8c8d8_empty && !e8d8c8_attacked {
-                        move_list.push(Move::new(Square::E8 as u8, Square::C8 as u8, Castling));
+                        mv_list.add(Move::new(Square::E8 as u8, Square::C8 as u8, Castling));
                     }
                 }
             }
             _ => {}
         }
-
-        move_list
     }
 
 
-    pub(crate) fn get_sliding_and_leaper_moves<const T: u8>(&self, piece: Piece) -> Vec<Move> {
-        let mut move_list: Vec<Move> = vec![];
+    pub(crate) fn get_sliding_and_leaper_moves<const T: u8>(&self, piece: Piece, mv_list: &mut Moves) {
+        // let mut move_list: Vec<Move> = vec![];
         
         let color = piece.color();
         let mut pieces_on_board = self[piece];
@@ -391,12 +380,10 @@ impl Board {
                 targets.pop_bit(target);
 
                 if (mvt == Capture && T == MoveScope::QUIETS) || (mvt == Quiet && T == MoveScope::CAPTURES) { continue }
-                move_list.push(Move::new(source as u8, target as u8, mvt));
+                mv_list.add(Move::new(source as u8, target as u8, mvt));
 
             }
         }
-        
-        move_list
     }
 
 
@@ -405,17 +392,28 @@ impl Board {
         let color = self.turn;
         let mut move_list = Moves::new();
 
-        move_list.add_many(&self.get_pawn_attacks(color));
-        move_list.add_many(&self.get_pawn_movement(color, true));
-        move_list.add_many(&self.get_pawn_movement(color, false));
-        move_list.add_many(&self.get_castling(color));
-
-        move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::knight(color)));
-        move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::bishop(color)));
+        self.get_pawn_attacks(color, &mut move_list);
+        self.get_pawn_movement(color, true, &mut move_list);
+        self.get_pawn_movement(color, false, &mut move_list);
+        self.get_castling(color, &mut move_list);
+        
+        self.get_sliding_and_leaper_moves::<T>(Piece::knight(color), &mut move_list);
+        self.get_sliding_and_leaper_moves::<T>(Piece::bishop(color), &mut move_list);
+        self.get_sliding_and_leaper_moves::<T>(Piece::rook(color), &mut move_list);
+        self.get_sliding_and_leaper_moves::<T>(Piece::queen(color), &mut move_list);
+        self.get_sliding_and_leaper_moves::<T>(Piece::king(color), &mut move_list);
+        
+        
+        // move_list.add_many(&self.get_pawn_attacks(color));
+        // move_list.add_many(&self.get_pawn_movement(color, true));
+        // move_list.add_many(&self.get_pawn_movement(color, false));
+        // move_list.add_many(&self.get_castling(color));
         // println!("****************************************AFTER CALLING BISHOP********************************************************************************");
-        move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::rook(color)));
-        move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::queen(color)));
-        move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::king(color)));
+        // move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::knight(color)));
+        // move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::bishop(color)));
+        // move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::rook(color)));
+        // move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::queen(color)));
+        // move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::king(color)));
 
 
         move_list

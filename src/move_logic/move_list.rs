@@ -14,9 +14,11 @@ pub struct Moves {
 
 impl Default for Moves {
     fn default() -> Self {
-        Self { list: [Move::default(); 256], count: 0, at: 0 }
+        Self { list: [Move::default(); Self::SIZE], count: 0, at: 0 }
     }
 }
+
+// pub(crate) const MOVE_SIZE: usize = 256;
 
 impl Moves {
     pub(crate) const SIZE: usize = 256;
@@ -41,6 +43,10 @@ impl Moves {
             std::ptr::copy_nonoverlapping(src_ptr, dest_ptr, m.len())
         };
         self.count += m.len();
+    }
+
+    pub(crate) fn to_vec(self) -> Vec<Move> {
+        self.list.into_iter().collect::<Vec<_>>()[..self.count].to_vec()
     }
 }
 

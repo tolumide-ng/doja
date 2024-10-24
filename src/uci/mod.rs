@@ -2,7 +2,7 @@ use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread}
 
 use thiserror::Error;
 
-use crate::{move_logic::bitmove::Move, board::{position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_scope::MoveScope, search::{alpha_beta::NegaMax, control::Control}, syzygy::probe::TableBase, tt::table::TTable};
+use crate::{move_logic::bitmove::Move, board::{position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_scope::MoveScope, search::control::Control, syzygy::probe::TableBase, tt::table::TTable};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -79,9 +79,9 @@ impl UCI {
                                 // });
                                 
                                 let result = thread::spawn(move || {
-                            let mut negamax = (0..1).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
-                            let depth = controller.lock().unwrap().depth();
-                            negamax[0].iterative_deepening(depth, &mut board, &tb);
+                            // let mut negamax = (0..1).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
+                            // let depth = controller.lock().unwrap().depth();
+                            // negamax[0].iterative_deepening(depth, &mut board, &tb);
                             // println!("done done >>>>");
                             // write!(writer, "{}", board.to_string()).unwrap();
                             board
