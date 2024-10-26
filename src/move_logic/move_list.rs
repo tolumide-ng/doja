@@ -1,8 +1,10 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::Deref};
 
 use crate::{move_logic::bitmove::Move, board::piece::Piece};
 
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct ScoredMove {mv: u16, score: u32}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Moves {
@@ -29,26 +31,17 @@ impl Moves {
     }
 
     /// Addsa  Move to the move list
-    pub(crate) fn add(&mut self, m: Move) {
+    pub(crate) fn push(&mut self, m: Move) {
         self.list[self.count] = m;
         self.count+=1;
     }
 
     pub(crate) fn count_mvs(&self) -> usize {self.count}
 
-    pub(crate) fn add_many(&mut self, m: &[Move]) {
-        unsafe {
-            let src_ptr = m.as_ptr();
-            let dest_ptr = self.list.as_mut_ptr().add(self.count);
-            std::ptr::copy_nonoverlapping(src_ptr, dest_ptr, m.len())
-        };
-        self.count += m.len();
-    }
-
     pub(crate) fn to_vec(self) -> Vec<Move> {
         self.list.into_iter().collect::<Vec<_>>()[..self.count].to_vec()
     }
-}
+    }
 
 
 impl Iterator for Moves {

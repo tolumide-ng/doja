@@ -185,7 +185,7 @@ impl Board {
                     
                     // let piece = Piece::pawn(color);
                     let xx = Move::new(src, target, DoublePush);
-                    mv_list.add(xx);
+                    mv_list.push(xx);
 
                     src2 &= src2 -1;
                     target2 &= target2 -1;
@@ -208,12 +208,12 @@ impl Board {
 
 
                     if move_promotes {
-                        mv_list.add(Move::new(s_sq as u8, t_sq as u8, PromotedToBishop));
-                        mv_list.add(Move::new(s_sq as u8, t_sq as u8, PromotedToQueen));
-                        mv_list.add(Move::new(s_sq as u8, t_sq as u8, PromotedToKnight));
-                        mv_list.add(Move::new(s_sq as u8, t_sq as u8, PromotedToRook));
+                        mv_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToBishop));
+                        mv_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToQueen));
+                        mv_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToKnight));
+                        mv_list.push(Move::new(s_sq as u8, t_sq as u8, PromotedToRook));
                     } else {
-                        mv_list.add(Move::new(s_sq as u8, t_sq as u8, Quiet));
+                        mv_list.push(Move::new(s_sq as u8, t_sq as u8, Quiet));
                     }
 
                     single_push_targets &= single_push_targets - 1;
@@ -242,13 +242,13 @@ impl Board {
                 };
 
                 if can_promote {
-                    mv_list.add(Move::new(src as u8, target as u8, CaptureAndPromoteToBishop));
-                    mv_list.add(Move::new(src as u8, target as u8, CaptureAndPromoteToRook));
-                    mv_list.add(Move::new(src as u8, target as u8, CaptureAndPromoteToKnight));
-                    mv_list.add(Move::new(src as u8, target as u8, CaptureAndPromoteToQueen));
+                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToBishop));
+                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToRook));
+                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToKnight));
+                    mv_list.push(Move::new(src as u8, target as u8, CaptureAndPromoteToQueen));
 
                 } else {
-                    mv_list.add(Move::new(src as u8, target as u8, Capture));
+                    mv_list.push(Move::new(src as u8, target as u8, Capture));
 
                 }
                 captures &= captures-1;
@@ -278,14 +278,14 @@ impl Board {
                 if (enpass_right_attack & *self[piece]) != 0 {
                     let source = enpass_right_attack.trailing_zeros();
                     let bmove = Move::new(source as u8, enpass as u8, Enpassant);
-                    mv_list.add(bmove);
+                    mv_list.push(bmove);
                 }
             }
             if enpass_left_attack != 0 {
                 if (enpass_left_attack & *self[piece]) != 0 {
                     let source = enpass_left_attack.trailing_zeros();    
                     let bmove = Move::new(source as u8, enpass as u8, Enpassant);
-                    mv_list.add(bmove);
+                    mv_list.push(bmove);
                 }
             }
         }
@@ -302,7 +302,7 @@ impl Board {
                     let e1f1g1_attacked = self.is_square_attacked(u64::from(Square::E1), !color) || self.is_square_attacked(u64::from(Square::F1), !color) || self.is_square_attacked(u64::from(Square::G1), !color);
                     
                     if f1g1_empty && !e1f1g1_attacked {
-                        mv_list.add(Move::new(Square::E1 as u8, Square::G1 as u8, Castling));
+                        mv_list.push(Move::new(Square::E1 as u8, Square::G1 as u8, Castling));
                     }
                 }
 
@@ -311,7 +311,7 @@ impl Board {
                     let e1c1d1_attacked = self.is_square_attacked(u64::from(Square::E1), !color) || self.is_square_attacked(u64::from(Square::C1), !color)  || self.is_square_attacked(u64::from(Square::D1), !color);
 
                     if b1c1d1_empty && !e1c1d1_attacked {
-                        mv_list.add(Move::new(Square::E1 as u8, Square::C1 as u8, Castling));
+                        mv_list.push(Move::new(Square::E1 as u8, Square::C1 as u8, Castling));
                     }
                 }
             }
@@ -321,7 +321,7 @@ impl Board {
                     let e8f8g8_attacked = self.is_square_attacked(u64::from(Square::E8), !color) || self.is_square_attacked(u64::from(Square::F8), !color) || self.is_square_attacked(u64::from(Square::G8), !color);
 
                     if f8g8_empty && !e8f8g8_attacked {
-                        mv_list.add(Move::new(Square::E8 as u8, Square::G8 as u8, Castling));
+                        mv_list.push(Move::new(Square::E8 as u8, Square::G8 as u8, Castling));
                     }
                 }
 
@@ -330,7 +330,7 @@ impl Board {
                     let e8d8c8_attacked = self.is_square_attacked(u64::from(Square::E8), !color) || self.is_square_attacked(u64::from(Square::D8), !color) || self.is_square_attacked(u64::from(Square::C8), !color);
 
                     if b8c8d8_empty && !e8d8c8_attacked {
-                        mv_list.add(Move::new(Square::E8 as u8, Square::C8 as u8, Castling));
+                        mv_list.push(Move::new(Square::E8 as u8, Square::C8 as u8, Castling));
                     }
                 }
             }
@@ -380,7 +380,7 @@ impl Board {
                 targets.pop_bit(target);
 
                 if (mvt == Capture && T == MoveScope::QUIETS) || (mvt == Quiet && T == MoveScope::CAPTURES) { continue }
-                mv_list.add(Move::new(source as u8, target as u8, mvt));
+                mv_list.push(Move::new(source as u8, target as u8, mvt));
 
             }
         }
@@ -388,52 +388,26 @@ impl Board {
 
 
     /// T denotes whether you want to generate Quiet(= 0), Captures(= 1), or All(= 2) moves
-    pub(crate) fn gen_movement<const T: u8>(&self) -> Moves {
+    pub(crate) fn gen_movement<const T: u8>(&self, mut move_list: &mut Moves) {
         let color = self.turn;
-        let mut move_list = Moves::new();
 
-        self.get_pawn_attacks(color, &mut move_list);
-        self.get_pawn_movement(color, true, &mut move_list);
-        self.get_pawn_movement(color, false, &mut move_list);
-        self.get_castling(color, &mut move_list);
+        if T == MoveScope::CAPTURES || T == MoveScope::ALL {
+            self.get_pawn_attacks(color, &mut move_list);
+        }
+        
+        if T == MoveScope::QUIETS || T == MoveScope::ALL {
+            self.get_pawn_movement(color, true, &mut move_list);
+            self.get_pawn_movement(color, false, &mut move_list);
+            self.get_castling(color, &mut move_list);
+        }
+
         
         self.get_sliding_and_leaper_moves::<T>(Piece::knight(color), &mut move_list);
         self.get_sliding_and_leaper_moves::<T>(Piece::bishop(color), &mut move_list);
         self.get_sliding_and_leaper_moves::<T>(Piece::rook(color), &mut move_list);
         self.get_sliding_and_leaper_moves::<T>(Piece::queen(color), &mut move_list);
         self.get_sliding_and_leaper_moves::<T>(Piece::king(color), &mut move_list);
-        
-        
-        // move_list.add_many(&self.get_pawn_attacks(color));
-        // move_list.add_many(&self.get_pawn_movement(color, true));
-        // move_list.add_many(&self.get_pawn_movement(color, false));
-        // move_list.add_many(&self.get_castling(color));
-        // println!("****************************************AFTER CALLING BISHOP********************************************************************************");
-        // move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::knight(color)));
-        // move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::bishop(color)));
-        // move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::rook(color)));
-        // move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::queen(color)));
-        // move_list.add_many(&self.get_sliding_and_leaper_moves::<T>(Piece::king(color)));
-
-
-        move_list
     }
-
-    // pub(crate) fn get_mvs(&self, scope: MoveScope) -> Moves {
-    //     let color = self.turn;
-    //     let mut move_list = Moves::new();
-
-    //     match scope {
-    //         MoveScope::CapturesOnly => {
-    //             move_list.add_many(&self.get_pawn_attacks(color));
-
-    //         }
-    //         MoveScope::QuietOnly => {}
-    //         MoveScope::AllMoves => {}
-    //     }
-
-    //     0
-    // }
 
     /// turn: The turn of the attacker
     /// e.g. If white pawn just made an enpassant move, then we know we should deduct the tgt
@@ -718,6 +692,18 @@ impl Board {
         if self.turn == Color::Black {final_key ^= ZOBRIST.side_key};
 
         final_key
+    }
+
+    /// Returns the least valuable attacker based on the provided mask (attackers)
+    pub(crate) fn get_lva(&self, attackers: u64, stm: Color) -> Option<(Piece, Square)> {
+        let range = if stm == White {0..6} else {6..12};
+        for piece in range {
+            let bits = *self[piece] & attackers;
+            if bits != 0 {
+                return Some((Piece::from(piece as u8), Square::from(bits.trailing_zeros() as u64)))
+            }
+        }
+        None
     }
 }
 

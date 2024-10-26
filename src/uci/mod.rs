@@ -2,7 +2,7 @@ use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread}
 
 use thiserror::Error;
 
-use crate::{move_logic::bitmove::Move, board::{position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_scope::MoveScope, search::control::Control, syzygy::probe::TableBase, tt::table::TTable};
+use crate::{board::{position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_logic::{bitmove::Move, move_list::Moves}, move_scope::MoveScope, search::control::Control, syzygy::probe::TableBase, tt::table::TTable};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -153,7 +153,8 @@ impl UCI {
     }
 
     fn parse_move(board: &Position, mv: &str) -> Option<Move> {
-        let board_moves = board.gen_movement::<{ MoveScope::ALL }>();
+        let mut board_moves = Moves::new();
+        board.gen_movement::<{ MoveScope::ALL }>(&mut board_moves);
 
         for bmove in board_moves {
             if bmove.to_string().trim() == mv.trim() {

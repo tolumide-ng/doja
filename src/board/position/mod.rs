@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use crate::move_logic::bitmove::MoveType;
-use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
+use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, PIECE_ATTACKS, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
 use crate::nnue::accumulator::Feature;
 use crate::{move_logic::bitmove::Move, move_scope::MoveScope, squares::Square};
 use crate::nnue::network::NNUEState;
@@ -119,6 +119,88 @@ impl Position {
     pub(crate) fn set_zobrist(&mut self, key: u64) {
         self.board.set_zobrist(key);
     }
+
+    /// https://www.chessprogramming.net/static-exchange-evaluation-in-chess/
+    pub(crate) fn see(&self, mv: &Move, threshold: i32) -> bool {
+        let src = mv.get_src();
+        let tgt = mv.get_target();
+        let mt = mv.move_type();
+
+        // Castling cannot have a bad SEE, since all squares the king passes through are not under attack
+        if mt == MoveType::Castling { return true }
+
+        // Ony captures are evaluated with SEE
+        let piece_at_tgt = self.piece_at(tgt).unwrap();
+        let piece_at_src = self.piece_at(src).unwrap();
+
+        let mut move_value = if mv.get_capture() { piece_at_tgt.piece_value() } else { 0};
+
+        // Piece being removed later on is the promoted piece
+        let next_victim = if let Some(piece) = mv.get_promotion() {Piece::from((piece, self.turn))} else { self.piece_at(src).unwrap()};
+        if mv.get_promotion().is_some() { move_value += next_victim.piece_value() - Piece::pawn(White).piece_value() }
+
+        // Lose if the balance is already in our opponent's favour, and it's their turn
+        let mut balance = move_value - threshold;
+        if balance < 0 { return false }
+
+        // Assuming we lose the piece that made this capture, if balance is still positive (in our favour), then we can return true immediately
+        balance -= next_victim.piece_value();
+        if balance >= 0 { return true }
+        
+        let mut see_board = self.board.clone();
+        // Update the positions on the board: 1. Remove the moved piece, and place it at the target, 2. Remove the captured piece
+        see_board.remove_piece(piece_at_src, src);
+        see_board.remove_piece(piece_at_tgt, if mv.get_enpassant() {Board::enpass_tgt(tgt, see_board.turn).into()} else {tgt});
+        // Add the moved piece to the new position
+        see_board.add_piece(next_victim, tgt);
+        
+        let diaginal_sliders = *see_board[WB] | *see_board[BB] | *see_board[WQ] | *see_board[BQ];
+        let orthogonal_sliders = *see_board[WR] | *see_board[BR] | *see_board[WQ] | *see_board[BQ];
+        
+        // Get all possible pieces(regardless of the color) that can attack the `tgt` square
+        let mut attackers = see_board.get_all_attacks(tgt);
+
+        let mut stm = !see_board.turn;
+        let tgt_mask = 1u64 << u64::from(tgt);
+
+        loop {
+            // SEE terminates when no recapture is possible
+            // Pieces of stm that can attack the target square
+            let stm_attack_pieces = attackers & see_board.occupancies[stm];
+            if stm_attack_pieces == 0 { break }
+
+            // Get the least valuable attacker and simulate the recapture
+            let (attacker, sq_of_the_attacker) = see_board.get_lva(stm_attack_pieces, stm).unwrap();
+            see_board.remove_piece(attacker, sq_of_the_attacker);
+
+            // Diagonal recaptures uncover bishops/queens
+            if [Piece::pawn(stm), Piece::bishop(stm), Piece::queen(stm)].contains(&attacker) {
+                attackers |= PIECE_ATTACKS.nnbishop_attacks(tgt_mask, see_board.occupancies[Both]) & diaginal_sliders;
+            }
+            
+            // Orthognal recpatures uncover rooks/queens
+            if [Piece::rook(stm), Piece::queen(stm)].contains(&attacker) {
+                attackers |= PIECE_ATTACKS.nnrook_attacks(tgt_mask, see_board.occupancies[Both]) & orthogonal_sliders;
+            }
+
+            // Negamax the balance, cutoff if losing out attacker would still win the exchange
+            stm = !stm;
+            balance = -balance - 1 - attacker.piece_value();
+
+            if balance >= 0 {
+                // If the recapturing piece is a king, and the opponent has another attacker,
+                // a positrive balance should not translate to an exchange win.
+                if attacker == Piece::king(!stm) && ((attackers & *see_board[stm]) != 0) {
+                    return see_board.turn == stm
+                }
+                break;
+            }
+        }
+        // We win the exchange if we are not the one who should recapture
+        see_board.turn != stm
+    }
+
+
     
     pub(crate) fn make_move_nnue(&mut self, mv: Move, scope: MoveScope) -> bool {
         let (src, tgt) = (mv.get_src(), mv.get_target());

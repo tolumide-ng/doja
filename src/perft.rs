@@ -2,6 +2,7 @@ use std::time::Instant;
 
 use crate::constants::TRICKY_POSITION;
 use crate::board::state::board::Board;
+use crate::move_logic::move_list::Moves;
 use crate::move_scope::MoveScope;
 
 pub(crate) struct Perft;
@@ -14,7 +15,8 @@ impl Perft {
             return;
         }
 
-        let move_list =board.gen_movement::<{ MoveScope::ALL }>();
+        let mut move_list =Moves::new();
+        board.gen_movement::<{ MoveScope::ALL }>(&mut move_list);
 
         for index in 0..move_list.count_mvs() {
             let bmove = move_list.list[index];
@@ -48,7 +50,8 @@ impl Perft {
     }
 
     pub(crate) fn test(depth: usize, nodes: &mut usize, board: Board) {
-        let move_list = board.gen_movement::<{ MoveScope::ALL }>();
+        let mut move_list = Moves::new();
+        board.gen_movement::<{ MoveScope::ALL }>(&mut move_list);
 
         for index in 0..move_list.count_mvs() {
             let bmove = move_list.list[index];
