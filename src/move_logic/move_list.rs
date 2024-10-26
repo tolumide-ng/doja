@@ -41,7 +41,11 @@ impl Moves {
     pub(crate) fn to_vec(self) -> Vec<Move> {
         self.list.into_iter().collect::<Vec<_>>()[..self.count].to_vec()
     }
+
+    pub(crate) fn at(&self, index: usize) -> Option<&Move> {
+        self.list.get(index)
     }
+}
 
 
 impl Iterator for Moves {

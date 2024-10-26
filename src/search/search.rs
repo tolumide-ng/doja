@@ -104,6 +104,7 @@ impl<'a> Search<'a> {
 
         let mut sorted_mvs = Vec::with_capacity(mvs.len());
 
+
         if let Some(pv_mv) = self.pv_table.get_pv(self.ply).get(0) {
             if let Some(pos) = mvs.iter().position(|&m| *m == *pv_mv) {
                 sorted_mvs.push((mvs[pos], i32::MAX));

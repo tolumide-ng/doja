@@ -96,6 +96,11 @@ impl Move {
         // value != 0
     }
 
+    pub(crate) fn is_underpromotion(&self) -> bool {
+        let mv_ty = self.move_type() as u64;
+        mv_ty == MoveType::CaptureAndPromoteToQueen as u64 || mv_ty == MoveType::PromotedToQueen as u64
+    }
+
     pub(crate) fn get_castling(&self) -> bool {
         // let value = (**self  >> SQUARE_OFFSET) & (MoveType::Castling as u16);
         // value != 0

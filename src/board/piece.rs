@@ -227,13 +227,15 @@ impl Piece {
         return Piece::WK;
     }
 
+    const MVV_LVA: [i32; 6] = [0, 2400, 2400, 4800, 9600, 0];
+
     pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> i32 {
         let attacker = *self as usize;
         let victim = *victim as usize;
 
         // let index = ((attacker % PLAYER_PIECES) * PLAYER_PIECES) + (victim % PLAYER_PIECES);
         // return MVV_LVA[index];
-        return MVV_LVA[attacker][victim]
+        return Self::MVV_LVA[victim] - Self::MVV_LVA[attacker]
     }
 
     pub(crate) const PIECE_VALUES: [i32; 6] = [161, 446, 464, 705, 1322, 0];
