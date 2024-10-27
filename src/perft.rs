@@ -20,7 +20,7 @@ impl Perft {
         board.gen_movement::<{ MoveScope::ALL }, Move>(&mut move_list);
 
         for index in 0..move_list.count_mvs() {
-            let bmove = move_list.list[index];
+            let bmove = *move_list.at(index).unwrap();
             let legal_move = board.make_move(bmove, MoveScope::AllMoves);
             if let Some(new_board) = legal_move {                
                 Perft::driver(depth-1, nodes, new_board);
@@ -55,7 +55,7 @@ impl Perft {
         board.gen_movement::<{ MoveScope::ALL }, Move>(&mut move_list);
 
         for index in 0..move_list.count_mvs() {
-            let bmove = move_list.list[index];
+            let bmove = *move_list.at(index).unwrap();
             let legal_move = board.make_move(bmove, MoveScope::AllMoves);
             if let Some(new_board) = legal_move {
                 let cummulative_nodes = *nodes;

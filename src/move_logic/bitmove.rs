@@ -184,11 +184,11 @@ impl Move {
     }
  }
 
- impl From<(Move, i32)> for Move {
-    fn from(value: (Move, i32)) -> Self {
-        value.0
-    }
- }
+//  impl From<(Move, i32)> for Move {
+//     fn from(value: (Move, i32)) -> Self {
+//         value.0
+//     }
+//  }
 
 
  #[cfg(test)]

@@ -8,7 +8,7 @@ pub(crate) const STACK_SIZE: usize = 256; // should be changed to 218
 
 #[derive(Debug, Clone, Copy)]
 pub struct MoveStack<T: MoveAction> {
-    pub(crate) list: [T; 218], // maximum possible legal MoveStack
+    list: [T; 256], // maximum possible legal MoveStack
     count: usize,
     /// Only used internally for the implementation of the iterator
     at: usize
@@ -16,7 +16,7 @@ pub struct MoveStack<T: MoveAction> {
 
 impl<T: MoveAction> Default for MoveStack<T> {
     fn default() -> Self {
-        Self { list: [T::default(); 218], count: 0, at: 0 }
+        Self { list: [T::default(); 256], count: 0, at: 0 }
     }
 }
 
@@ -52,7 +52,8 @@ impl<T: MoveAction> Iterator for MoveStack<T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.at < self.count {
-            println!(":::::calling at {}, and count{}", self.at, self.count);
+            let value = self.list[self.at];
+            // println!(":::::calling at {}, and count{}", self.at, self.count);
             // for x in self.list {
             //     print!("====>>>{:?}", x);
             // }

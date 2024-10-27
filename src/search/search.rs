@@ -100,8 +100,7 @@ impl<'a> Search<'a> {
     fn get_sorted_moves<const T: u8>(&self, board: &Position) -> Vec<Move> {
         let mut mvs = MoveStack::<Move>::new();
         board.gen_movement::<T, Move>(&mut mvs);
-        // println!("total sorted mvs are >>>>>>>>>>>>>>>>>> {} at before is {}", mvs.count_mvs(), mvs.list[mvs.count()-1]);
-        let mut mvs = (mvs.collect::<Vec<_>>())[0..mvs.count_mvs()].to_vec();
+        let mut mvs = mvs.to_vec();
 
         let mut sorted_mvs = Vec::with_capacity(mvs.len());
 
@@ -345,9 +344,9 @@ impl<'a> Search<'a> {
         let mut best_score = -INFINITY;
         let mvs = self.get_sorted_moves::<{ MoveScope::ALL }>(&position);
         // println!("the total moves generated are >>>>>>{}, so that the ones after is now {}", mvs);
-        println!("<<<<<<<<<<<<<<<<<<<<<<<<<<<**************************************************************>>>>>>>>>>>>>>>>>>>>>>>>>>>");
         for (i, mv) in mvs.iter().enumerate() {
             let mv = *mv;
+            // println!("running {} at {i}", mv.to_string());
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
 
@@ -381,10 +380,6 @@ impl<'a> Search<'a> {
                 let zobrist_key = position.hash_key;
                 position.undo_move(true);
                 self.ply -= 1;
-                println!("{i}<><><><><>  {}", position.to_string());
-                // println!("<><><><><>  {}", position.to_string());
-                println!("the move is {}", mv.get_src().to_string());
-                println!("the move is {} \n\n\n", mv.get_target().to_string());
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
 
                 // if position.turn == Color::Black && i < 4 {
