@@ -2,6 +2,8 @@ use std::{fmt::Display, ops::Deref};
 
 use crate::{board::piece::PieceType, squares::Square};
 
+use crate::move_logic::move_action::MoveAction;
+
 
 const SOURCE_SQUARE: u16 = 0b0000_0000_0011_1111;
 const TARGET_SQUARE: u16 = 0b0000_1111_1100_0000;
@@ -98,7 +100,7 @@ impl Move {
 
     pub(crate) fn is_underpromotion(&self) -> bool {
         let mv_ty = self.move_type() as u64;
-        mv_ty == MoveType::CaptureAndPromoteToQueen as u64 || mv_ty == MoveType::PromotedToQueen as u64
+        !(mv_ty == MoveType::CaptureAndPromoteToQueen as u64 || mv_ty == MoveType::PromotedToQueen as u64)
     }
 
     pub(crate) fn get_castling(&self) -> bool {
@@ -130,6 +132,14 @@ impl Move {
  }
 
 
+
+ impl MoveAction for Move {
+    // type Input = Move;
+
+    fn create(input: Move) -> Self {
+        input
+    }
+ }
 
 /// for UCI purpose 
  impl Display for Move {
@@ -171,6 +181,12 @@ impl Move {
  impl From<Move> for u16 {
     fn from(value: Move) -> Self {
         *value
+    }
+ }
+
+ impl From<(Move, i32)> for Move {
+    fn from(value: (Move, i32)) -> Self {
+        value.0
     }
  }
 
