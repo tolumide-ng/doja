@@ -1,6 +1,6 @@
 use crate::{
     board::{piece::Piece, position::Position},
-    move_scope::MoveScope,
+    move_scope::MoveScope, search::heuristics::history::{self, HistoryHeuristic},
 };
 
 use super::{
@@ -16,8 +16,8 @@ pub(crate) enum Stage {
     TTMove,
     InitCaptures,
     GoodCaptures,
-    KillerZero,
-    KillerOne,
+    // KillerZero,
+    // KillerOne,
     Quiets,
     BadCapture,
     Done,
@@ -35,6 +35,7 @@ pub(crate) struct MovePicker<'a, const QUIET: bool> {
     see_threshold: i32,
     killers: [Option<Move>; 2],
     position: &'a Position,
+    history_table: &'a HistoryHeuristic,
     // the index where bad captures start and end (start, end)
     total_captures: usize,
     total_good_captures: usize,
@@ -46,6 +47,7 @@ impl<'a, const QUIET: bool> MovePicker<'a, QUIET> {
         tt_move: Option<Move>,
         killers: [Option<Move>; 2],
         position: &'a Position,
+        history_table: &'a HistoryHeuristic,
     ) -> Self {
         Self {
             moves: MoveStack::new(),
@@ -55,16 +57,18 @@ impl<'a, const QUIET: bool> MovePicker<'a, QUIET> {
             see_threshold,
             killers,
             position,
+            history_table,
             total_captures: 0,
             total_good_captures: 0,
         }
     }
 
-    const GOOD_CAPTURE: i32 = 100_000;
-    const QUEEN_PROMOTION: i32 = 30_500;
-    const OTHER_PROMOTIONS: i32 = 12_500;
-    const PROMOTES_AND_CAPTURE: i32 = 20_000;
+    const GOOD_CAPTURE: i32 = 500_000;
+    const QUEEN_PROMOTION: i32 = 300_500;
+    const OTHER_PROMOTIONS: i32 = 120_500;
+    const PROMOTES_AND_CAPTURE: i32 = 200_000;
     const BAD_CAPTURE: i32 = 1_000;
+    const KILLER_MV: i32 = 60_000;
 
     const GOOD_SEE_CAPTURE: bool = true;
 
@@ -90,6 +94,26 @@ impl<'a, const QUIET: bool> MovePicker<'a, QUIET> {
             };
 
             capture.update_score(score);
+        }
+    }
+
+    fn score_quiets(&mut self) {
+        let start = self.index; let end = self.moves.count_mvs();
+        for index in start..end {
+            let mut quiet_mv = self.moves.at_mut(index).unwrap();
+            let mv = quiet_mv.mv();
+            if self.killers[0].is_some_and(|m| m == mv) {
+                quiet_mv.update_score(Self::KILLER_MV);
+                continue;    
+            }
+
+            if self.killers[1].is_some_and(|m| m == mv) {
+                quiet_mv.update_score(Self::KILLER_MV - 20_000);
+                continue;
+            }
+
+            let p = self.position.piece_at(mv.get_src()).unwrap();
+            quiet_mv.update_score(self.history_table.get(p, mv.get_target()) as i32);
         }
     }
 
@@ -133,14 +157,21 @@ impl<'a, const QUIET: bool> Iterator for MovePicker<'a, QUIET> {
             if self.index < self.total_good_captures {
                 return self.partial_insertion_sort::<true>(self.index);
             }
-            if self.killers[0].is_some() {
-                // self.stage = Stage::KillerZero;
-            } else {
-                self.stage = Stage::Quiets
-            }
+            self.stage = Stage::Quiets;
+            self.index = self.total_captures;
+
+            self.position.gen_movement::<{MoveScope::QUIETS}, ScoredMove>(&mut self.moves);
+            self.score_quiets();
         }
 
-        // if self.stage == Stage::KillerOne
+        
+
+        if self.stage == Stage::Quiets {
+            if self.index < self.moves.count_mvs() {
+                return self.partial_insertion_sort::<true>(self.index);
+            }
+            self.index = self.total_good_captures;
+        }
 
 
         //  QUIET MOVES e..t.c 
@@ -148,8 +179,7 @@ impl<'a, const QUIET: bool> Iterator for MovePicker<'a, QUIET> {
 
         // BAD CAPTURES
         if self.stage == Stage::BadCapture {
-            if self.total_captures != self.total_good_captures {
-                self.index = self.total_good_captures;
+            if self.total_captures != self.total_good_captures && self.index < self.total_captures {
                 return self.partial_insertion_sort::<true>(self.index);
             }
         }
