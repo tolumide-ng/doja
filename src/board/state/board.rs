@@ -407,6 +407,10 @@ impl Board {
         self.get_sliding_and_leaper_moves::<T, U>(Piece::rook(color), &mut move_list);
         self.get_sliding_and_leaper_moves::<T, U>(Piece::queen(color), &mut move_list);
         self.get_sliding_and_leaper_moves::<T, U>(Piece::king(color), &mut move_list);
+
+        // if T == 1 {
+        //     println!("\n\n ------>>>>>> {}", move_list.count());
+        // }
     }
 
     /// turn: The turn of the attacker

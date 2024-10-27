@@ -27,7 +27,7 @@ pub(crate) enum Stage {
 /// At any point in time, there can always only be 16 captures
 /// T denotes the MoveScope (Capture, Quiet, or All moves)
 #[derive(Debug)]
-pub(crate) struct MovePicker<'a, const T: u8> {
+pub(crate) struct MovePicker<const T: u8> {
     moves: MoveStack<ScoredMove>,
     // used only by the iterator (to indicate where we currently are in the loop)
     index: usize,
@@ -35,21 +35,13 @@ pub(crate) struct MovePicker<'a, const T: u8> {
     tt_move: Option<Move>,
     see_threshold: i32,
     killers: [Option<Move>; 2],
-    position: &'a Position,
-    history_table: &'a HistoryHeuristic,
     // the index where bad captures start and end (start, end)
     total_captures: usize,
     total_good_captures: usize,
 }
 
-impl<'a, const T: u8> MovePicker<'a, T> {
-    pub(crate) fn new(
-        see_threshold: i32,
-        tt_move: Option<Move>,
-        killers: [Option<Move>; 2],
-        position: &'a Position,
-        history_table: &'a HistoryHeuristic,
-    ) -> Self {
+impl<const T: u8> MovePicker<T> {
+    pub(crate) fn new(see_threshold: i32, tt_move: Option<Move>, killers: [Option<Move>; 2]) -> Self {
         Self {
             moves: MoveStack::new(),
             index: 0,
@@ -57,8 +49,6 @@ impl<'a, const T: u8> MovePicker<'a, T> {
             tt_move,
             see_threshold,
             killers,
-            position,
-            history_table,
             total_captures: 0,
             total_good_captures: 0,
         }
@@ -73,10 +63,12 @@ impl<'a, const T: u8> MovePicker<'a, T> {
 
     const GOOD_SEE_CAPTURE: bool = true;
 
-    fn score_captures(&mut self) {
-        self.total_captures = self.moves.count_mvs();
+    fn score_captures(&mut self, position: &Position) {
+        self.total_captures = self.moves.count();
+        // println!("{:?}", self.moves);
         for index in 0..self.total_captures {
             let capture = self.moves.at_mut(index).unwrap();
+            println!("############################################# {:?} {}", capture, capture.mv());
             let mv = capture.mv();
             let pre_score = match mv.move_type() {
                 MoveType::CaptureAndPromoteToQueen => {
@@ -86,7 +78,7 @@ impl<'a, const T: u8> MovePicker<'a, T> {
                 _ => 0,
             };
 
-            let good_capture = self.position.see(&mv, self.see_threshold);
+            let good_capture = position.see(&mv, self.see_threshold);
             let score = if good_capture {
                 self.total_good_captures += 1;
                 Self::GOOD_CAPTURE + pre_score
@@ -98,7 +90,7 @@ impl<'a, const T: u8> MovePicker<'a, T> {
         }
     }
 
-    fn score_quiets(&mut self) {
+    fn score_quiets(&mut self, position: &Position, history_table: &HistoryHeuristic) {
         let start = self.index; let end = self.moves.count_mvs();
         for index in start..end {
             let mut quiet_mv = self.moves.at_mut(index).unwrap();
@@ -113,17 +105,18 @@ impl<'a, const T: u8> MovePicker<'a, T> {
                 continue;
             }
 
-            let p = self.position.piece_at(mv.get_src()).unwrap();
-            quiet_mv.update_score(self.history_table.get(p, mv.get_target()) as i32);
+            let p = position.piece_at(mv.get_src()).unwrap();
+            quiet_mv.update_score(history_table.get(p, mv.get_target()) as i32);
         }
     }
 
     /// Generic T indicates whether this sort is for captures(true) or quiet moves(false)
     /// If T is true, then we're sorting for captures only, else we're sorting for quiet moves only
     fn partial_insertion_sort<const CAPTURES: bool>(&mut self, start: usize) -> Option<Move> {
-        let end = if CAPTURES {self.total_good_captures} else {self.moves.count_mvs()};
+        let end = if CAPTURES {self.total_captures} else {self.moves.count_mvs()};
         let best_index = self.index;
         for i in best_index..end {
+            // println!("current best is {} comparing against ===>>> {}", self.moves[i].mv(), self.moves[best_index].mv());
             if self.moves[i].score() > self.moves[best_index].score() {
                 self.moves.swap(best_index, i);
             }
@@ -131,11 +124,8 @@ impl<'a, const T: u8> MovePicker<'a, T> {
         self.index += 1;
         return Some(self.moves[best_index].mv())
     }
-}
 
-impl<'a, const T: u8> Iterator for MovePicker<'a, T> {
-    type Item = Move;
-    fn next(&mut self) -> Option<Self::Item> {
+    pub(crate) fn next(&mut self, position: &Position, history_table: &HistoryHeuristic) -> Option<Move> {
         let move_scope = MoveScope::from(T);
         if self.stage == Stage::Done {
             return None;
@@ -151,10 +141,22 @@ impl<'a, const T: u8> Iterator for MovePicker<'a, T> {
         }
 
         if self.stage == Stage::InitCaptures {
+            // println!("should only be here once");
             self.stage = Stage::GoodCaptures;
-            self.position
-                .gen_movement::<{ MoveScope::CAPTURES }, ScoredMove>(&mut self.moves);
-            self.score_captures();
+            position.gen_movement::<{ MoveScope::CAPTURES }, ScoredMove>(&mut self.moves);
+
+            for i in 0..self.moves.count() {
+                let m = self.moves[i];
+                print!("==={}--{}===>>", m.mv(), m.score());
+            }
+
+            println!("\n\n");
+            self.score_captures(position);
+            for i in 0..self.moves.count() {
+                let m = self.moves[i];
+                print!("==={}--{}===>>", m.mv(), m.score());
+            }
+            println!("\n total={}, good={} \n\n", self.total_captures, self.total_good_captures);
         }
 
         if self.stage == Stage::GoodCaptures {
@@ -167,8 +169,8 @@ impl<'a, const T: u8> Iterator for MovePicker<'a, T> {
                 self.stage = Stage::Quiets;
                 self.index = self.total_captures;
     
-                self.position.gen_movement::<{MoveScope::QUIETS}, ScoredMove>(&mut self.moves);
-                self.score_quiets();
+                position.gen_movement::<{MoveScope::QUIETS}, ScoredMove>(&mut self.moves);
+                self.score_quiets(position, history_table);
             } else  { // movescope == MoveScope::CapturesOnly
                 self.stage = Stage::BadCapture;
                 self.index = self.total_good_captures;
@@ -191,7 +193,9 @@ impl<'a, const T: u8> Iterator for MovePicker<'a, T> {
                 return self.partial_insertion_sort::<true>(self.index);
             }
         }
-
-        unimplemented!()
+        
+        None
     }
+
+
 }

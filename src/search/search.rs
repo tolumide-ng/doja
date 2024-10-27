@@ -342,12 +342,15 @@ impl<'a> Search<'a> {
         }
 
         let mut best_score = -INFINITY;
-        // let mvs = MovePicker::<{MoveScope::ALL}>::new(0, tt_mv, killer_mvs, position, &self.history_table);
         let killer_mvs = self.killer_moves.get_killers(self.ply).map(|m| if m == 0 {None} else {Some(Move::from(m))});
         let mvs = self.get_sorted_moves::<{ MoveScope::ALL }>(&position);
+        let mut mvs = MovePicker::<{MoveScope::ALL}>::new(0, tt_mv, killer_mvs);
         // println!("the total moves generated are >>>>>>{}, so that the ones after is now {}", mvs);
-        for (i, mv) in mvs.iter().enumerate() {
-            let mv = *mv;
+        while let Some(mv) = mvs.next(&position, &self.history_table) {
+            println!("generating >>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", mv);
+        // for mv in mvs.iter() {
+            // let mv = &mv;
+            // let mv = *mv;
             // println!("running {} at {i}", mv.to_string());
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;

@@ -140,7 +140,7 @@ fn main() {
     let mut board = Position::from(Board::try_from("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap());
     println!("{}", board.to_string());
     let mut search = Search::new(table.get());
-    search.iterative_deepening(5, &mut board);
+    search.iterative_deepening(1, &mut board);
     // board.get_all_attacks(Square::A6);
     // Search::see(&board, &Move::new(F3 as u8, H3 as u8, MoveType::Capture), 0);
 
