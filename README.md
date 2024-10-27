@@ -16,6 +16,7 @@
 - [x] Late Move Reduction (LMR)
 - [x] MVV_LVA (Most Viable Victim -- Least Viable Attacker)
 - [ ] Move Ordering
+- [~] MovePicker
 - [x] Transposition Table
 - [x] Null Move forward Pruning
 - [x] Principal Variation Node
@@ -25,8 +26,8 @@
 - [x] Iterative Deepening
 - [x] PV-Table (Principal Variation Table)
 - [x] Repetitions https://www.chessprogramming.org/Repetitions
-- [-] Singular extensions
-- [-] Full WASM support
+- [ ] Singular extensions
+- [ ] Full WASM support
 
 
 

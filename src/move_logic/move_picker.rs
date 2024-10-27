@@ -1,5 +1,5 @@
 use crate::{
-    board::{piece::Piece, position::Position},
+    board::position::Position,
     move_scope::MoveScope, search::heuristics::history::{self, HistoryHeuristic},
 };
 
@@ -25,8 +25,9 @@ pub(crate) enum Stage {
 
 /// Maximum legal moves is 218
 /// At any point in time, there can always only be 16 captures
+/// T denotes the MoveScope (Capture, Quiet, or All moves)
 #[derive(Debug)]
-pub(crate) struct MovePicker<'a, const QUIET: bool> {
+pub(crate) struct MovePicker<'a, const T: u8> {
     moves: MoveStack<ScoredMove>,
     // used only by the iterator (to indicate where we currently are in the loop)
     index: usize,
@@ -41,7 +42,7 @@ pub(crate) struct MovePicker<'a, const QUIET: bool> {
     total_good_captures: usize,
 }
 
-impl<'a, const QUIET: bool> MovePicker<'a, QUIET> {
+impl<'a, const T: u8> MovePicker<'a, T> {
     pub(crate) fn new(
         see_threshold: i32,
         tt_move: Option<Move>,
@@ -119,8 +120,8 @@ impl<'a, const QUIET: bool> MovePicker<'a, QUIET> {
 
     /// Generic T indicates whether this sort is for captures(true) or quiet moves(false)
     /// If T is true, then we're sorting for captures only, else we're sorting for quiet moves only
-    fn partial_insertion_sort<const T: bool>(&mut self, start: usize) -> Option<Move> {
-        let end = if T {self.total_good_captures} else {self.moves.count_mvs()};
+    fn partial_insertion_sort<const CAPTURES: bool>(&mut self, start: usize) -> Option<Move> {
+        let end = if CAPTURES {self.total_good_captures} else {self.moves.count_mvs()};
         let best_index = self.index;
         for i in best_index..end {
             if self.moves[i].score() > self.moves[best_index].score() {
@@ -132,17 +133,20 @@ impl<'a, const QUIET: bool> MovePicker<'a, QUIET> {
     }
 }
 
-impl<'a, const QUIET: bool> Iterator for MovePicker<'a, QUIET> {
+impl<'a, const T: u8> Iterator for MovePicker<'a, T> {
     type Item = Move;
     fn next(&mut self) -> Option<Self::Item> {
+        let move_scope = MoveScope::from(T);
         if self.stage == Stage::Done {
             return None;
         }
 
         if self.stage == Stage::TTMove {
-            self.stage = Stage::InitCaptures;
-            if let Some(mv) = self.tt_move {
-                return Some(mv);
+            if move_scope == MoveScope::QuietOnly { self.stage = Stage::Quiets; } else { 
+                self.stage = Stage::InitCaptures;
+                if let Some(mv) = self.tt_move {
+                    return Some(mv);
+                }
             }
         }
 
@@ -157,11 +161,18 @@ impl<'a, const QUIET: bool> Iterator for MovePicker<'a, QUIET> {
             if self.index < self.total_good_captures {
                 return self.partial_insertion_sort::<true>(self.index);
             }
-            self.stage = Stage::Quiets;
-            self.index = self.total_captures;
 
-            self.position.gen_movement::<{MoveScope::QUIETS}, ScoredMove>(&mut self.moves);
-            self.score_quiets();
+            // we wouldn't be here in the first place if the move is not CapturesOnly or AllMoves, so those are the only two we need to check
+            if move_scope == MoveScope::AllMoves {
+                self.stage = Stage::Quiets;
+                self.index = self.total_captures;
+    
+                self.position.gen_movement::<{MoveScope::QUIETS}, ScoredMove>(&mut self.moves);
+                self.score_quiets();
+            } else  { // movescope == MoveScope::CapturesOnly
+                self.stage = Stage::BadCapture;
+                self.index = self.total_good_captures;
+            }
         }
 
         
@@ -170,12 +181,9 @@ impl<'a, const QUIET: bool> Iterator for MovePicker<'a, QUIET> {
             if self.index < self.moves.count_mvs() {
                 return self.partial_insertion_sort::<true>(self.index);
             }
+            if move_scope == MoveScope::QuietOnly { return None }
             self.index = self.total_good_captures;
         }
-
-
-        //  QUIET MOVES e..t.c 
-
 
         // BAD CAPTURES
         if self.stage == Stage::BadCapture {

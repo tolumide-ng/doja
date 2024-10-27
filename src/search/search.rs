@@ -1,4 +1,4 @@
-use crate::{board::{piece::{Piece, PieceType}, position::Position, state::board::Board}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, PIECE_ATTACKS, REDUCTION_LIMIT, VAL_WINDOW, ZOBRIST}, move_logic::{bitmove::{Move, MoveType}, move_stack::MoveStack}, move_scope::MoveScope, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
+use crate::{board::{piece::{Piece, PieceType}, position::Position, state::board::Board}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, PIECE_ATTACKS, REDUCTION_LIMIT, VAL_WINDOW, ZOBRIST}, move_logic::{bitmove::{Move, MoveType}, move_picker::MovePicker, move_stack::MoveStack}, move_scope::MoveScope, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 use crate::search::heuristics::pv_table::PVTable;
@@ -342,6 +342,8 @@ impl<'a> Search<'a> {
         }
 
         let mut best_score = -INFINITY;
+        // let mvs = MovePicker::<{MoveScope::ALL}>::new(0, tt_mv, killer_mvs, position, &self.history_table);
+        let killer_mvs = self.killer_moves.get_killers(self.ply).map(|m| if m == 0 {None} else {Some(Move::from(m))});
         let mvs = self.get_sorted_moves::<{ MoveScope::ALL }>(&position);
         // println!("the total moves generated are >>>>>>{}, so that the ones after is now {}", mvs);
         for (i, mv) in mvs.iter().enumerate() {
