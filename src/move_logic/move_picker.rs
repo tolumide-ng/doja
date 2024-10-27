@@ -1,6 +1,6 @@
-use crate::{board::position::Position, move_scope::MoveScope};
+use crate::{board::{piece::Piece, position::Position}, move_scope::MoveScope};
 
-use super::{bitmove::Move, move_stack::MoveStack};
+use super::{bitmove::{Move, MoveType}, move_stack::MoveStack, scored_move::ScoredMove};
 
 #[derive(Debug, PartialEq, Eq)]
 #[repr(u8)]
@@ -21,8 +21,7 @@ pub(crate) enum Stage {
 /// At any point in time, there can always only be 16 captures
 #[derive(Debug)]
 pub(crate) struct MovePicker<'a, const QUIET: bool> {
-    moves: Moves,
-    scores: [i32; MoveStack::SIZE],
+    moves: MoveStack<ScoredMove>,
     // used only by the iterator (to indicate where we currently are in the loop)
     index: usize,
     stage: Stage,
@@ -31,32 +30,45 @@ pub(crate) struct MovePicker<'a, const QUIET: bool> {
     killers: [Option<Move>; 2],
     position: &'a Position,
     // the index where bad captures start and end (start, end)
-    bad_captures: (usize, usize),
+    total_captures: usize,
 }
 
 impl<'a, const QUIET: bool> MovePicker<'a, QUIET> {
     pub(crate) fn new(see_threshold: i32, tt_move: Option<Move>, killers: [Option<Move>; 2], position: &'a Position) -> Self {
-        Self { moves: MoveStack::new(), scores: [0; MoveStack::SIZE], index: 0, stage: Stage::TTMove, tt_move, see_threshold, killers, position, bad_captures: (0, 0) }
+        Self { moves: MoveStack::new(), index: 0, stage: Stage::TTMove, tt_move, see_threshold, killers, position, total_captures: 0 }
     }
 
-    const GOOD_CAPTURE: usize = 20_000;
-    const BAD_CAPTURE: usize = 6_000;
+    const GOOD_CAPTURE: i32 = 100_000;
+    const QUEEN_PROMOTION: i32 = 30_500;
+    const OTHER_PROMOTIONS: i32 = 12_500;
+    const PROMOTES_AND_CAPTURE: i32 = 20_000;
+    const BAD_CAPTURE: i32 = 1_000;
 
     const GOOD_SEE_CAPTURE: bool = true;
+    
 
-    /// Assuming we have 5 Moves => A(bad), B(bad), C(good), D(good), E(bad), F(good)
-    /// where good_captures(start) is initialized as 0, and bad_captures(end) is initialized as 5 (i.e. mvs.len()-1); where  
-    /// start = 0, and end=5:: If start is bad, and end is good, -> swap, then increase start (start += 1), and decrease end (end -=1)
-    /// (s=1, e=4); start is bad, and end is bad, -> decrease the end only (e-=1)
-    /// (s=1, e=3); start is bad, and end is good, -> swap, then start (start += 1), and decrease end (e-=1)
-    /// (s=2, e=2); if start == end -> break 
-    fn score_tacticals(&mut self) {
-        // there's no need to sort, I just simply assign a lower score to all bad captures, and record the max length of the captures provided earlier
-        // let 
+    fn score_captures(&mut self) {
+        self.total_captures = self.moves.count_mvs();
+        for index in 0..self.total_captures {
+            let capture = self.moves.at_mut(index).unwrap();
+            let mv = capture.mv();
+            let pre_score = match mv.move_type() {
+                MoveType::CaptureAndPromoteToQueen => { Self::QUEEN_PROMOTION + Self::PROMOTES_AND_CAPTURE }
+                _ if mv.get_promotion().is_some() => { Self::OTHER_PROMOTIONS } // undepromotion (promotion to any type that isn't a queen)
+                _ => { 0 }
+            };
+
+            let good_capture = self.position.see(&mv, self.see_threshold);
+            let score = if good_capture {
+                Self::GOOD_CAPTURE + pre_score
+            } else { Self::BAD_CAPTURE };
+
+            capture.update_score(score);
+            
+        }
     }
 
-
-    fn partial_insertion_sort(&self) {
+    fn partial_insertion_sort(&mut self) {
         unimplemented!()
     }
 }
@@ -78,10 +90,10 @@ impl<'a, const QUIET: bool> Iterator for MovePicker<'a, QUIET> {
 
         if self.stage == Stage::InitCaptures {
             self.stage = Stage::GoodCapture;
-            self.position.gen_movement::<{MoveScope::CAPTURES}>(&mut self.moves);
+            self.position.gen_movement::<{MoveScope::CAPTURES}, ScoredMove>(&mut self.moves);
             let len = self.moves.count();
             for mv in self.moves {
-                let xx = self.position.see(&mv, self.see_threshold);
+                // let xx = self.position.see(&mv, self.see_threshold);
             }
         }
 

@@ -1,14 +1,11 @@
 use super::move_action::MoveAction;
 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub(crate) struct ScoredMove {mv: u16, score: u32}
-
 pub(crate) const STACK_SIZE: usize = 256; // should be changed to 218
 
 #[derive(Debug, Clone, Copy)]
 pub struct MoveStack<T: MoveAction> {
-    list: [T; 256], // maximum possible legal MoveStack
+    pub(crate) list: [T; 256], // maximum possible legal MoveStack
     count: usize,
     /// Only used internally for the implementation of the iterator
     at: usize
@@ -22,8 +19,6 @@ impl<T: MoveAction> Default for MoveStack<T> {
 
 
 impl<T: MoveAction> MoveStack<T> {
-    pub(crate) const SIZE: usize = 256;
-
     /// Creates a new move list with 256 items all intiialized as 0(zero)
     pub(crate) fn new() -> Self {
         Self::default()
@@ -43,6 +38,10 @@ impl<T: MoveAction> MoveStack<T> {
 
     pub(crate) fn at(&self, index: usize) -> Option<&T> {
         self.list.get(index)
+    }
+
+    pub(crate) fn at_mut(&mut self, index: usize) -> Option<&mut T> {
+        self.list.get_mut(index)
     }
 }
 

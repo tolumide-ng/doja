@@ -47,7 +47,7 @@ pub(crate) enum MoveType {
     CaptureAndPromoteToKnight = 0b1001,
     CaptureAndPromoteToBishop = 0b1010,
     CaptureAndPromoteToRook = 0b1011,
-    CaptureAndPromoteToQueen = 0b1100,
+    CaptureAndPromoteToQueen = 0b1100, // rename to `CapturesAndPromoteToQueen` (Capture(s)...) properly comunicates the action
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

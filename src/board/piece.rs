@@ -232,9 +232,6 @@ impl Piece {
     pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> i32 {
         let attacker = *self as usize;
         let victim = *victim as usize;
-
-        // let index = ((attacker % PLAYER_PIECES) * PLAYER_PIECES) + (victim % PLAYER_PIECES);
-        // return MVV_LVA[index];
         return Self::MVV_LVA[victim] - Self::MVV_LVA[attacker]
     }
 
