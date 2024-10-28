@@ -1,6 +1,5 @@
 use crate::{
-    board::position::Position,
-    move_scope::MoveScope, search::heuristics::history::{self, HistoryHeuristic},
+    board::position::Position, move_scope::MoveScope, search::heuristics::history::HistoryHeuristic
 };
 
 use super::{
@@ -54,28 +53,29 @@ impl<const T: u8> MovePicker<T> {
         }
     }
 
-    const GOOD_CAPTURE: i32 = 500_000;
-    const QUEEN_PROMOTION: i32 = 300_500;
-    const OTHER_PROMOTIONS: i32 = 120_500;
-    const PROMOTES_AND_CAPTURE: i32 = 200_000;
+    const GOOD_CAPTURE: i32 = 50_000;
+    const QUEEN_PROMOTION: i32 = 30_500;
+    const OTHER_PROMOTIONS: i32 = 12_500;
+    const PROMOTES_AND_CAPTURE: i32 = 20_000;
     const BAD_CAPTURE: i32 = 1_000;
-    const KILLER_MV: i32 = 60_000;
-
-    const GOOD_SEE_CAPTURE: bool = true;
+    const KILLER_MV: i32 = 6_000;
 
     fn score_captures(&mut self, position: &Position) {
         self.total_captures = self.moves.count();
         // println!("{:?}", self.moves);
         for index in 0..self.total_captures {
             let capture = self.moves.at_mut(index).unwrap();
-            println!("############################################# {:?} {}", capture, capture.mv());
+            const MVV: [i32; 6] = [0, 2400, 2400, 4800, 9600, 0];
+            // println!("############################################# {:?} {}", capture, capture.mv());
             let mv = capture.mv();
+            let attacker = (position.piece_at(mv.get_src()).unwrap() as usize) % 6;
+            let victim = (position.piece_at(mv.get_target()).unwrap() as usize) % 6;
             let pre_score = match mv.move_type() {
                 MoveType::CaptureAndPromoteToQueen => {
                     Self::QUEEN_PROMOTION + Self::PROMOTES_AND_CAPTURE
                 }
                 _ if mv.get_promotion().is_some() => Self::OTHER_PROMOTIONS, // undepromotion (promotion to any type that isn't a queen)
-                _ => 0,
+                _ => MVV[victim] - MVV[attacker],
             };
 
             let good_capture = position.see(&mv, self.see_threshold);
@@ -93,7 +93,7 @@ impl<const T: u8> MovePicker<T> {
     fn score_quiets(&mut self, position: &Position, history_table: &HistoryHeuristic) {
         let start = self.index; let end = self.moves.count_mvs();
         for index in start..end {
-            let mut quiet_mv = self.moves.at_mut(index).unwrap();
+            let quiet_mv = self.moves.at_mut(index).unwrap();
             let mv = quiet_mv.mv();
             if self.killers[0].is_some_and(|m| m == mv) {
                 quiet_mv.update_score(Self::KILLER_MV);
@@ -145,18 +145,18 @@ impl<const T: u8> MovePicker<T> {
             self.stage = Stage::GoodCaptures;
             position.gen_movement::<{ MoveScope::CAPTURES }, ScoredMove>(&mut self.moves);
 
-            for i in 0..self.moves.count() {
-                let m = self.moves[i];
-                print!("==={}--{}===>>", m.mv(), m.score());
-            }
+            // for i in 0..self.moves.count() {
+            //     let m = self.moves[i];
+            //     print!("==={}--{}===>>", m.mv(), m.score());
+            // }
 
-            println!("\n\n");
+            // println!("\n\n");
             self.score_captures(position);
-            for i in 0..self.moves.count() {
-                let m = self.moves[i];
-                print!("==={}--{}===>>", m.mv(), m.score());
-            }
-            println!("\n total={}, good={} \n\n", self.total_captures, self.total_good_captures);
+            // for i in 0..self.moves.count() {
+            //     let m = self.moves[i];
+            //     print!("==={}--{}===>>", m.mv(), m.score());
+            // }
+            // println!("\n total={}, good={} \n\n", self.total_captures, self.total_good_captures);
         }
 
         if self.stage == Stage::GoodCaptures {
@@ -185,8 +185,10 @@ impl<const T: u8> MovePicker<T> {
             }
             if move_scope == MoveScope::QuietOnly { return None }
             self.index = self.total_good_captures;
+            self.stage = Stage::BadCapture;
         }
-
+        
+        // println!("[[[[[[[[[********************]]]]]]]]]");
         // BAD CAPTURES
         if self.stage == Stage::BadCapture {
             if self.total_captures != self.total_good_captures && self.index < self.total_captures {

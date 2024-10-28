@@ -137,7 +137,7 @@ fn main() {
     // println!("the xx0 is {}", xx0);
 
 
-    let mut board = Position::from(Board::try_from("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap());
+    let mut board = Position::from(Board::try_from("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1 ").unwrap());
     println!("{}", board.to_string());
     let mut search = Search::new(table.get());
     search.iterative_deepening(1, &mut board);
