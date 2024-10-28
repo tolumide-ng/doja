@@ -141,6 +141,7 @@ pub(crate) const BIT_TABLE: [u64; 64] = [
 
 
 impl Square {
+    pub(crate) const TOTAL: usize = 64;
     pub fn name(index: u64) -> String {
         String::from(SQUARE_NAMES[index as usize])
     }

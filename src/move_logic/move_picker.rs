@@ -1,5 +1,5 @@
 use crate::{
-    board::position::Position, move_scope::MoveScope, search::heuristics::history::HistoryHeuristic
+    board::{piece::{Piece, PieceType}, position::Position}, move_scope::MoveScope, search::heuristics::{capture_history::CaptureHistory, history::HistoryHeuristic}
 };
 
 use super::{
@@ -60,22 +60,25 @@ impl<const T: u8> MovePicker<T> {
     const BAD_CAPTURE: i32 = 1_000;
     const KILLER_MV: i32 = 6_000;
 
-    fn score_captures(&mut self, position: &Position) {
+    fn score_captures(&mut self, position: &Position, caphist: &CaptureHistory) {
         self.total_captures = self.moves.count();
         // println!("{:?}", self.moves);
         for index in 0..self.total_captures {
             let capture = self.moves.at_mut(index).unwrap();
-            const MVV: [i32; 6] = [0, 2400, 2400, 4800, 9600, 0];
             // println!("############################################# {:?} {}", capture, capture.mv());
             let mv = capture.mv();
-            let attacker = (position.piece_at(mv.get_src()).unwrap() as usize) % 6;
-            let victim = (position.piece_at(mv.get_target()).unwrap() as usize) % 6;
+            // let attacker = (position.piece_at(mv.get_src()).unwrap() as usize) % 6;
+            // let victim = (position.piece_at(mv.get_target()).unwrap() as usize) % 6;
+
+            let attacker = position.piece_at(mv.get_src()).unwrap();
+            let victim = position.piece_at(mv.get_target()).unwrap();
             let pre_score = match mv.move_type() {
                 MoveType::CaptureAndPromoteToQueen => {
                     Self::QUEEN_PROMOTION + Self::PROMOTES_AND_CAPTURE
                 }
                 _ if mv.get_promotion().is_some() => Self::OTHER_PROMOTIONS, // undepromotion (promotion to any type that isn't a queen)
-                _ => MVV[victim] - MVV[attacker],
+                // _ => Piece::MVV_LVA[victim] - Piece::MVV_LVA[attacker],
+                _ => (Piece::MVV_LVA[victim as usize % 6] + caphist.get(attacker, mv.get_target(), PieceType::from(victim))) as i32,
             };
 
             let good_capture = position.see(&mv, self.see_threshold);
@@ -125,7 +128,7 @@ impl<const T: u8> MovePicker<T> {
         return Some(self.moves[best_index].mv())
     }
 
-    pub(crate) fn next(&mut self, position: &Position, history_table: &HistoryHeuristic) -> Option<Move> {
+    pub(crate) fn next(&mut self, position: &Position, history_table: &HistoryHeuristic, caphist: &CaptureHistory) -> Option<Move> {
         let move_scope = MoveScope::from(T);
         if self.stage == Stage::Done {
             return None;
@@ -151,7 +154,7 @@ impl<const T: u8> MovePicker<T> {
             // }
 
             // println!("\n\n");
-            self.score_captures(position);
+            self.score_captures(position, caphist);
             // for i in 0..self.moves.count() {
             //     let m = self.moves[i];
             //     print!("==={}--{}===>>", m.mv(), m.score());
