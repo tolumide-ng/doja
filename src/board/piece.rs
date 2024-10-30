@@ -232,12 +232,12 @@ impl Piece {
     pub(crate) const COUNT: usize = 6;
     pub(crate) const TOTAL: usize = 12;
 
-    pub(crate) const MVV_LVA: [i16; 6] = [0, 2400, 2400, 4800, 9600, 0];
+    pub(crate) const MVV: [i16; 6] = [0, 2400, 2400, 4800, 9600, 0];
 
     pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> i16 {
         let attacker = *self as usize;
         let victim = *victim as usize;
-        return Self::MVV_LVA[victim] - Self::MVV_LVA[attacker]
+        return Self::MVV[victim] - Self::MVV[attacker]
     }
 
     pub(crate) const PIECE_VALUES: [i32; 6] = [161, 446, 464, 705, 1322, 0];

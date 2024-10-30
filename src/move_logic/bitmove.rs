@@ -64,7 +64,13 @@ impl Move {
         Square::from(sq)
     }
 
+    /// DEPRECIATIOIN PLANS
     pub(crate) fn get_target(&self) -> Square {
+        let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
+        Square::from(sq)
+    }
+
+    pub(crate) fn get_tgt(&self) -> Square {
         let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
         Square::from(sq)
     }
@@ -85,6 +91,10 @@ impl Move {
         [MoveType::Capture, MoveType::CaptureAndPromoteToBishop, MoveType::CaptureAndPromoteToKnight, MoveType::CaptureAndPromoteToQueen, MoveType::CaptureAndPromoteToRook, 
             MoveType::Enpassant, // only updated recently (confirm tests) 12/10/24
         ].contains(&self.move_type())
+    }
+
+    pub(crate) fn is_tactical(&self) -> bool {
+        self.get_promotion().is_some() || self.get_capture()
     }
 
     pub(crate) fn get_double_push(&self) -> bool {

@@ -9,11 +9,11 @@ const MAX_HISTORY: i32 = i32::MAX/2;
 /// https://www.chessprogramming.org/History_Heuristic
 // pub(crate) struct CaptureHistory([CaptureHistoryTable; Piece::COUNT * 2]);
 #[derive(Debug)]
-pub(crate) struct CaptureHistory([i16; Piece::COUNT * Square::TOTAL * Piece::TOTAL]);
+pub(crate) struct CaptureHistory(Vec<i16>);
 
 impl Default for CaptureHistory {
     fn default() -> Self {
-        Self([0; Piece::COUNT * Square::TOTAL * Piece::TOTAL])
+        Self(vec![0; Piece::COUNT * Square::TOTAL * Piece::TOTAL])
     }
 }
 
@@ -33,6 +33,7 @@ impl CaptureHistory {
 
     /// Convert 3D index to 1D
     /// (z * yMax * xMax) + (y * xMax) + x;
+    /// https://stackoverflow.com/a/34363187/9347459
     const fn to_1_d_index(x: Piece, y: Square, z: PieceType) -> usize {
         ((z as usize) * Square::TOTAL * Piece::TOTAL) + ((y as usize) * Piece::COUNT) + x as usize
     }

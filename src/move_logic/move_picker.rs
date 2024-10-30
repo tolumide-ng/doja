@@ -78,8 +78,13 @@ impl<const T: u8> MovePicker<T> {
                 }
                 _ if mv.get_promotion().is_some() => Self::OTHER_PROMOTIONS, // undepromotion (promotion to any type that isn't a queen)
                 // _ => Piece::MVV_LVA[victim] - Piece::MVV_LVA[attacker],
-                _ => (Piece::MVV_LVA[victim as usize % 6] + caphist.get(attacker, mv.get_target(), PieceType::from(victim))) as i32,
+                _ => (Piece::MVV[victim as usize % 6] + caphist.get(attacker, mv.get_target(), PieceType::from(victim))) as i32,
             };
+
+            // if mv.to_string() == "d2c3x" {
+            //     println!("the score here is {} ", pre_score);
+            //     println!(":::: ---- {}", Piece::MVV[victim as usize % 6])
+            // }
 
             let good_capture = position.see(&mv, self.see_threshold);
             let score = if good_capture {

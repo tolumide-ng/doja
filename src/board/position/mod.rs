@@ -16,6 +16,8 @@ use super::{piece::{Piece, Piece::*}, state::board::Board};
 mod tests;
 
 
+
+/// todo! Should be moved to it's own module later
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct History {
     mv: Move, hash: u64, victim: Option<Piece>, piece: Piece,
@@ -29,6 +31,9 @@ impl History {
     pub(crate) fn hash(&self) -> u64 {
         return self.hash
     }
+
+    pub(crate) const fn mv(&self) -> Move { self.mv }
+    pub(crate) const fn mvd_piece(&self) -> Piece { self.piece }
 }
 
 /// If Feature is m256i, then the size = 32, and then that would be (1024/32) * 2 = 64 values

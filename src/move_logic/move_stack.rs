@@ -3,11 +3,11 @@ use std::ops::{Deref, DerefMut};
 use super::move_action::MoveAction;
 
 
-pub(crate) const STACK_SIZE: usize = 256; // should be changed to 218
+pub(crate) const STACK_SIZE: usize = 218; // should be changed to 218
 
 #[derive(Debug, Clone, Copy)]
 pub struct MoveStack<T: MoveAction> {
-    list: [T; 256], // maximum possible legal MoveStack
+    list: [T; STACK_SIZE], // maximum possible legal MoveStack
     count: usize,
     /// Only used internally for the implementation of the iterator
     at: usize
@@ -15,7 +15,7 @@ pub struct MoveStack<T: MoveAction> {
 
 impl<T: MoveAction> Default for MoveStack<T> {
     fn default() -> Self {
-        Self { list: [T::default(); 256], count: 0, at: 0 }
+        Self { list: [T::default(); STACK_SIZE], count: 0, at: 0 }
     }
 }
 
@@ -63,7 +63,7 @@ impl<T: MoveAction> Iterator for MoveStack<T> {
 
 
 impl<T: MoveAction> Deref for MoveStack<T> {
-    type Target = [T; 256];
+    type Target = [T; STACK_SIZE];
 
     fn deref(&self) -> &Self::Target {
         &self.list    

@@ -41,6 +41,7 @@ pub(crate) struct Search<'a> {
     /// Previosyly successful moves in a particular positioin that resulted in a beta-cutoff
     history_table: HistoryHeuristic,
     caphist: CaptureHistory,
+    // continuation_hist
     tt: TPT<'a>,
     limit: u8,
 }
@@ -343,16 +344,16 @@ impl<'a> Search<'a> {
         }
 
         let mut best_score = -INFINITY;
+        let original_alpha = alpha;
         let killer_mvs = self.killer_moves.get_killers(self.ply).map(|m| if m == 0 {None} else {Some(Move::from(m))});
         // let mvs = self.get_sorted_moves::<{ MoveScope::ALL }>(&position);
         let mut mvs = MovePicker::<{MoveScope::ALL}>::new(0, tt_mv, killer_mvs);
         // println!("the total moves generated are >>>>>>{}, so that the ones after is now {}", mvs);
         // println!("tt => {:?}, and pv={:?}", tt_mv, self.pv_table.get_pv(self.ply).get(0));
+
+        // 30 is a practical maximum number of quiet moves that can be generated in a chess position (MidGame)
+        let mut quiet_mvs: Vec<Move> = Vec::with_capacity(30);
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist) {
-        // for mv in mvs.iter() {
-            // let mv = &mv;
-            // let mv = *mv;
-            // println!("running {} at {i}", mv.to_string());
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
 
@@ -387,6 +388,10 @@ impl<'a> Search<'a> {
                 position.undo_move(true);
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
+
+                if !mv.is_tactical() {
+                    quiet_mvs.push(mv);
+                }
 
                 // if position.turn == Color::Black && i < 4 {
                 //     println!("THE MOVE: {} at depth -->> {depth} ----- the score {score}, the alpha==>> {alpha}, and the beta==>>{beta} \n\n\n", mv.to_string());
@@ -426,6 +431,12 @@ impl<'a> Search<'a> {
             }
             // king is not in check, but there are no legal moves
             return 0; // stalemate/draw
+        }
+
+        if alpha != original_alpha {
+            if best_mv.is_some_and(|mv| !mv.is_tactical()) {
+                // self.qu
+            }
         }
         
         let tt_flag = if best_score >= beta { HashFlag::LowerBound } else if best_score > alpha { HashFlag::Exact } else { HashFlag::UpperBound };
