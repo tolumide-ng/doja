@@ -9,12 +9,12 @@ pub(crate) mod continuation_history;
 
 
 // from Carp
-pub(crate) const HISTORY_MAX_BONUS: i16 = 1600;
+pub(crate) const CONT_HIST_MAX: i16 = 16384;
 pub(crate) const HISTORY_FACTOR: i16 = 350;
 pub(crate) const HISTORY_OFFSET: i16 = 350;
 
 pub(super) fn calc_history_bonus(depth: usize) -> i16 {
-    HISTORY_MAX_BONUS.min(HISTORY_FACTOR * depth as i16 - HISTORY_OFFSET)
+    CONT_HIST_MAX.min(HISTORY_FACTOR * depth as i16 - HISTORY_OFFSET)
 }
 
 

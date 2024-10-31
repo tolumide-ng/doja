@@ -7,6 +7,7 @@ const LENGTH: usize = Piece::TOTAL * Square::TOTAL * Piece::TOTAL * Square::TOTA
 /// The table is in the form of [prev_piece][prev_target][current_piece][current_target] = score;
 /// Basically a 4D vector
 /// We would turn this 4D vector into just 1D in this case.
+#[derive(Debug)]
 pub(crate) struct ContinuationHistory(Vec<i16>);
 const MAX_HISTORY: i32 = i32::MAX/2;
 
@@ -32,6 +33,7 @@ impl ContinuationHistory {
         let index = Self::to_1_d_index(prev_piece, prev_mv, curr_piece, curr_mv);
         let prev_value = unsafe{self.0.get_unchecked_mut(index)};
         *prev_value = taper_bonus(*(prev_value) as i32, bonus);
+        println!("the final value now is {prev_value}, taper bonus is {}", taper_bonus(*(prev_value) as i32, bonus));
     }
 
     /// 2-ply Continuation History
@@ -58,4 +60,8 @@ impl ContinuationHistory {
         }
     }
 
+    pub(crate) fn get(&self, prev_piece: Piece, prev_tgt: Square, curr_piece: Piece, curr_tgt: Square) -> i16 {
+        let idx = Self::to_1_d_index(prev_piece, prev_tgt, curr_piece, curr_tgt);
+        *unsafe{ self.0.get_unchecked(idx) }
+    }
 }

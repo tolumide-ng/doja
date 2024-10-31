@@ -1,5 +1,5 @@
 use crate::{
-    board::{piece::{Piece, PieceType}, position::Position}, move_scope::MoveScope, search::heuristics::{capture_history::CaptureHistory, history::HistoryHeuristic}
+    board::{piece::{Piece, PieceType}, position::Position}, move_scope::MoveScope, search::heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, history::HistoryHeuristic}
 };
 
 use super::{
@@ -98,8 +98,11 @@ impl<const T: u8> MovePicker<T> {
         }
     }
 
-    fn score_quiets(&mut self, position: &Position, history_table: &HistoryHeuristic) {
+    fn score_quiets(&mut self, position: &Position, history_table: &HistoryHeuristic, conthist: &ContinuationHistory) {
         let start = self.index; let end = self.moves.count_mvs();
+        let prev_mv_idx = position.history_len().checked_sub(1);
+        let parent = prev_mv_idx.and_then(|idx| position.history_at(idx)).map(|history| (history.mvd_piece(), history.mv()));
+
         for index in start..end {
             let quiet_mv = self.moves.at_mut(index).unwrap();
             let mv = quiet_mv.mv();
@@ -115,6 +118,11 @@ impl<const T: u8> MovePicker<T> {
 
             let p = position.piece_at(mv.get_src()).unwrap();
             quiet_mv.update_score(history_table.get(p, mv.get_target()) as i32);
+            if let Some((prev_piece, prev_mv)) = parent {
+                let value = conthist.get(prev_piece, prev_mv.get_tgt(), p, quiet_mv.mv().get_tgt());
+                // println!("the value of mv--> {} is {}", mv, value);
+                quiet_mv.update_score(value as i32);
+            }
         }
     }
 
@@ -133,7 +141,7 @@ impl<const T: u8> MovePicker<T> {
         return Some(self.moves[best_index].mv())
     }
 
-    pub(crate) fn next(&mut self, position: &Position, history_table: &HistoryHeuristic, caphist: &CaptureHistory) -> Option<Move> {
+    pub(crate) fn next(&mut self, position: &Position, history_table: &HistoryHeuristic, caphist: &CaptureHistory, conthist: &ContinuationHistory) -> Option<Move> {
         let move_scope = MoveScope::from(T);
         if self.stage == Stage::Done {
             return None;
@@ -166,19 +174,20 @@ impl<const T: u8> MovePicker<T> {
             // }
             // println!("\n total={}, good={} \n\n", self.total_captures, self.total_good_captures);
         }
-
+        
         if self.stage == Stage::GoodCaptures {
             if self.index < self.total_good_captures {
+                // need to confirm that this is not the TT_MOVE or PV_MOVE that was returned earlier
                 return self.partial_insertion_sort::<true>(self.index);
             }
-
+            
             // we wouldn't be here in the first place if the move is not CapturesOnly or AllMoves, so those are the only two we need to check
             if move_scope == MoveScope::AllMoves {
                 self.stage = Stage::Quiets;
                 self.index = self.total_captures;
-    
+                
                 position.gen_movement::<{MoveScope::QUIETS}, ScoredMove>(&mut self.moves);
-                self.score_quiets(position, history_table);
+                self.score_quiets(position, history_table, conthist);
             } else  { // movescope == MoveScope::CapturesOnly
                 self.stage = Stage::BadCapture;
                 self.index = self.total_good_captures;
@@ -189,6 +198,7 @@ impl<const T: u8> MovePicker<T> {
 
         if self.stage == Stage::Quiets {
             if self.index < self.moves.count_mvs() {
+                // need to confirm that this is not the TT_MOVE or PV_MOVE that was returned earlier
                 return self.partial_insertion_sort::<true>(self.index);
             }
             if move_scope == MoveScope::QuietOnly { return None }

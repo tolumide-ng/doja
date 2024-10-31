@@ -93,9 +93,9 @@ impl Move {
         ].contains(&self.move_type())
     }
 
-    pub(crate) fn is_tactical(&self) -> bool {
-        self.get_promotion().is_some() || self.get_capture()
-    }
+    // pub(crate) fn is_tactical(&self) -> bool {
+    //     self.get_promotion().is_some() || self.get_capture()
+    // }
 
     pub(crate) fn get_double_push(&self) -> bool {
         let value = (**self >> SQUARE_OFFSET) & (MoveType::DoublePush as u16);

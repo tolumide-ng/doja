@@ -3,7 +3,7 @@ use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 use crate::search::heuristics::pv_table::PVTable;
 
-use super::heuristics::{capture_history::CaptureHistory, history::HistoryHeuristic, killer_moves::KillerMoves};
+use super::heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, history::HistoryHeuristic, killer_moves::KillerMoves};
 
 /// The number of nodes you can actually cut depends on:
 /// 1. How well written your alpha-beta program is
@@ -41,6 +41,7 @@ pub(crate) struct Search<'a> {
     /// Previosyly successful moves in a particular positioin that resulted in a beta-cutoff
     history_table: HistoryHeuristic,
     caphist: CaptureHistory,
+    conthist: ContinuationHistory,
     // continuation_hist
     tt: TPT<'a>,
     limit: u8,
@@ -50,7 +51,7 @@ pub(crate) struct Search<'a> {
 impl<'a> Search<'a> {
     pub(crate) fn new(tt: TPT<'a>) -> Self {
         Self { nodes: 0, ply: 0, pv_table: PVTable::new(), killer_moves: KillerMoves::new(),
-            history_table: HistoryHeuristic::new(), tt, limit: 0, caphist: CaptureHistory::default() }
+            history_table: HistoryHeuristic::new(), tt, limit: 0, caphist: CaptureHistory::default(), conthist: ContinuationHistory::new() }
     }
 
     // fn aspiration_window(&mut self) {
@@ -353,7 +354,7 @@ impl<'a> Search<'a> {
 
         // 30 is a practical maximum number of quiet moves that can be generated in a chess position (MidGame)
         let mut quiet_mvs: Vec<Move> = Vec::with_capacity(30);
-        while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist) {
+        while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist) {
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
 
@@ -389,10 +390,6 @@ impl<'a> Search<'a> {
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
 
-                if !mv.is_tactical() {
-                    quiet_mvs.push(mv);
-                }
-
                 // if position.turn == Color::Black && i < 4 {
                 //     println!("THE MOVE: {} at depth -->> {depth} ----- the score {score}, the alpha==>> {alpha}, and the beta==>>{beta} \n\n\n", mv.to_string());
                 // }
@@ -404,6 +401,9 @@ impl<'a> Search<'a> {
                         self.caphist.update(depth, HashFlag::LowerBound, moved_piece, mv.get_target(), PieceType::from(position.piece_at(mv.get_target()).unwrap()));
                     } else {
                         self.killer_moves.store(depth as usize, &mv);
+                    }
+                    if !mv.get_capture() {
+                        self.conthist.update_many(&position, quiet_mvs, depth, mv);
                     }
                     return beta;
                 }
@@ -420,6 +420,7 @@ impl<'a> Search<'a> {
                         self.caphist.update(depth, HashFlag::UpperBound, moved_piece, mv.get_target(), PieceType::from(position.piece_at(mv.get_target()).unwrap()));
                     } else {
                         self.history_table.update(moved_piece, mv.get_src(), depth);
+                        quiet_mvs.push(mv);
                     }
                 }
             }
@@ -433,11 +434,11 @@ impl<'a> Search<'a> {
             return 0; // stalemate/draw
         }
 
-        if alpha != original_alpha {
-            if best_mv.is_some_and(|mv| !mv.is_tactical()) {
-                // self.qu
-            }
-        }
+        // if alpha != original_alpha {
+        //     if best_mv.is_some_and(|mv| !mv.get_capture()) {
+        //         self.conthist.update_many(&position, quiet_mvs, depth, best_mv.unwrap());
+        //     }
+        // }
         
         let tt_flag = if best_score >= beta { HashFlag::LowerBound } else if best_score > alpha { HashFlag::Exact } else { HashFlag::UpperBound };
         self.tt.record(position.hash_key, depth, best_score, INFINITY, self.ply, tt_flag, 0, best_mv);
