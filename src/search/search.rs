@@ -393,7 +393,6 @@ impl<'a> Search<'a> {
                 // if position.turn == Color::Black && i < 4 {
                 //     println!("THE MOVE: {} at depth -->> {depth} ----- the score {score}, the alpha==>> {alpha}, and the beta==>>{beta} \n\n\n", mv.to_string());
                 // }
-
                 
                 if score >= beta {
                     self.tt.record(zobrist_key, depth, beta, INFINITY, self.ply, HashFlag::LowerBound, 0, best_mv); 

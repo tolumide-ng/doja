@@ -81,12 +81,20 @@ impl<const T: u8> MovePicker<T> {
                 _ => (Piece::MVV[victim as usize % 6] + caphist.get(attacker, mv.get_target(), PieceType::from(victim))) as i32,
             };
 
-            // if mv.to_string() == "d2c3x" {
-            //     println!("the score here is {} ", pre_score);
-            //     println!(":::: ---- {}", Piece::MVV[victim as usize % 6])
+            // if ["d2c3x", "e2a6x"].contains(&(mv.to_string()).as_str()) {
+            //     let xx = caphist.get(attacker, mv.get_target(), PieceType::from(victim));
+            //     println!("{} the score here is {} ----->>>>>>> {xx}", mv.to_string(), pre_score);
+            //     // println!(":::: ---- {}", Piece::MVV[victim as usize % 6])
             // }
 
             let good_capture = position.see(&mv, self.see_threshold);
+            if ["d2c3x", "e2a6xz"].contains(&(mv.to_string()).as_str()) {
+                // println!("victim>>>>> {}", victim);
+                // let xx = caphist.get(attacker, mv.get_target(), PieceType::from(victim));
+                // let abc = Piece::MVV[victim as usize % 6];
+                // println!("{} the score here is {} ----->>>>>>> {xx} {}", mv.to_string(), good_capture, abc);
+                // println!(":::: ---- {}", Piece::MVV[victim as usize % 6])
+            }
             let score = if good_capture {
                 self.total_good_captures += 1;
                 Self::GOOD_CAPTURE + pre_score

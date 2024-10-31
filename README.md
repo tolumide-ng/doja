@@ -20,7 +20,7 @@
     - [x] Capture History(CapHist)
     - [x] Killer Moves
     - [x] History Moves
-    - [ ] [CounterMove Heuristic](https://www.chessprogramming.org/Countermove_Heuristic)
+    - [x] [CounterMove Heuristic](https://www.chessprogramming.org/Countermove_Heuristic)
     - [ ] Follow-Up History (FUH) tables
     - [ ] Continuation History
     - [ ] [Refutation Table](https://www.chessprogramming.org/Refutation_Table)
