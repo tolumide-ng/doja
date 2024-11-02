@@ -1,9 +1,9 @@
-use crate::{board::{piece::{Piece, PieceType}, position::Position, state::board::Board}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, PIECE_ATTACKS, REDUCTION_LIMIT, VAL_WINDOW, ZOBRIST}, move_logic::{bitmove::{Move, MoveType}, move_picker::MovePicker, move_stack::MoveStack}, move_scope::MoveScope, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
+use crate::{board::{piece::{Piece, PieceType}, position::Position, state::board::Board}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, PIECE_ATTACKS, REDUCTION_LIMIT, VAL_WINDOW, ZOBRIST}, move_logic::{bitmove::{Move, MoveType}, move_picker::MovePicker, move_stack::MoveStack}, move_scope::MoveScope, search::constants::Root, squares::Square, tt::{flag::HashFlag, tpt::TPT}};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 use crate::search::heuristics::pv_table::PVTable;
 
-use super::{constants::NodeType, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, history_bonus, killer_moves::KillerMoves}};
+use super::{constants::{NodeType, NotPv}, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, history_bonus, killer_moves::KillerMoves}, stack::{Stack, StackItem}};
 
 /// The number of nodes you can actually cut depends on:
 /// 1. How well written your alpha-beta program is
@@ -46,14 +46,21 @@ pub(crate) struct Search<'a> {
     // continuation_hist
     tt: TPT<'a>,
     limit: u8,
+    ss: Stack,
 }
+
+
+/// Defines a margin to decide how "bad" a position must be to be considered for razoring. The margin can depend on the search depth and should be empirically tuned.
+/// For instance, at depth 1, the margin might be a small value (like half a pawn), whereas at depth 2, you might use a larger margin.
+/// Should still be further tuned
+const RAZORING_MARGIN: [i32; 3] = [0, 293, 512];
 
 
 impl<'a> Search<'a> {
     pub(crate) fn new(tt: TPT<'a>) -> Self {
         Self { nodes: 0, ply: 0, pv_table: PVTable::new(), killer_moves: KillerMoves::new(),
             history_table: HistoryHeuristic::new(), tt, limit: 0, caphist: CaptureHistory::default(), conthist: ContinuationHistory::new(),
-                counter_mvs: CounterMove::new() }
+                counter_mvs: CounterMove::new(), ss: Stack::default() }
     }
 
     // fn aspiration_window(&mut self) {
@@ -74,7 +81,7 @@ impl<'a> Search<'a> {
             println!("RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {depth}");
             println!("{}", position.to_string());
             self.ply = 0;
-            let score = self.negamax(alpha, beta, depth, position);
+            let score = self.negamax::<Root>(alpha, beta, depth, position);
             println!("the score is {score} and nodes {}", self.nodes);
             depth += 1;
 
@@ -163,6 +170,11 @@ impl<'a> Search<'a> {
         // println!("\n\n");
         
         return sorted_mvs.iter().map(|mv| mv.0).collect::<Vec<_>>()
+    }
+
+    #[inline]
+    fn futility_margin(depth : u8, improving: bool) -> i32 {
+        (depth as i32) * (175 - 50 * improving as i32)
     }
 
     fn is_repetition(position: &Position, key: u64) -> bool {
@@ -296,7 +308,7 @@ impl<'a> Search<'a> {
         position.set_zobrist(position.hash_key ^ ZOBRIST.side_key); // side about to move
         position.nnue_push();
 
-        let score = -self.negamax(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut position);
+        let score = -self.negamax::<NotPv>(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut position);
 
         // reverse all actions, after we're done
         self.ply -= 1;
@@ -314,9 +326,7 @@ impl<'a> Search<'a> {
         None
     }
 
-    pub(crate) fn negamax
-    // <NT: NodeType>
-    (&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
+    pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
         if Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&s| s >= 50) {
             return 0; // draw
         }
@@ -346,12 +356,38 @@ impl<'a> Search<'a> {
             return value;
         }
 
-        // let pv_node = NT::PV;
+        if !NT::ROOT && depth > 7 {}
+        
+
+        // Pausing razoring for now
+        if !NT::ROOT && !NT::PV && !stm_in_check {
+            // let eval = position.evaluate();
+            // currently uses 'Stockfishs\'' value, this need to be fine-tuned more later 
+            // if eval < (alpha - 490 - 290 * depth as i32 * depth as i32) {
+            //     let value = self.quiescence(alpha-1, alpha, position);
+            //     // println!("the value here is {value}, and the alpha here is {alpha}");
+            //     if value < alpha {
+            //         return eval;
+            //     }
+
+            // }
+        //     let eval = position.evaluate();
+        //     // currently uses 'Stockfishs\'' value, this need to be fine-tuned more later 
+        //     // if eval < (alpha - 392 - 267 * depth as i32 * depth as i32) {
+                
+        //     // }
+        //     if depth < 3 && eval <= alpha - RAZORING_MARGIN[depth as usize] {
+        //         let r_alpha = alpha - (depth >= 2) as i32 * RAZORING_MARGIN[depth as usize];
+        //         let value = self.quiescence(alpha-1, alpha, position);
+        //         // println!("the value here is {value}, and the alpha here is {alpha}");
+        //         if depth < 2 || value < r_alpha { return eval; }
+        //     }
+        }
         
         // When beta - alpha > 1, it indicates that there is a significant gap between the two bounds. This gap suggests that there are possible values for the evaluation score that have not yet been fully explored or are still uncertain.
         // The search can continue to explore more moves because the values returned by the evaluated moves could potentially fall within this range, providing room for a better evaluation.
-        let explore_more_moves = (beta - alpha) > 1;
-        if self.ply > 0 && tt_value.is_some() && !explore_more_moves { return tt_value.unwrap() }
+        // let explore_more_moves = (beta - alpha) > 1;
+        // if self.ply > 0 && tt_value.is_some() && !explore_more_moves { return tt_value.unwrap() }
         // if self.ply > MAX_PLY - 1 { return position.evaluate() }
 
         self.nodes += 1;
@@ -382,23 +418,23 @@ impl<'a> Search<'a> {
                 self.ply += 1;
 
                 let score = match mvs_searched {
-                    0 => -self.negamax(-beta, -alpha, depth -1, &mut position),
+                    0 => -self.negamax::<NotPv>(-beta, -alpha, depth -1, &mut position),
                     _ => {
                         // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
                         // condition for Late Move Reduction
                         let non_tatcital_mv = !stm_in_check && mv.get_promotion().is_none() && !mv.get_capture();
 
                         let mut value = if (mvs_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
-                            -self.negamax(-(alpha + 1), -alpha, depth-2, position)
+                            -self.negamax::<NotPv>(-(alpha + 1), -alpha, depth-2, position)
                         } else {
                             alpha + 1 // Hack to ensure that full-depth search is done
                         };
 
                         if value > alpha {
-                            value = -self.negamax(-(alpha - 1), -alpha, depth-1, position);
+                            value = -self.negamax::<NotPv>(-(alpha - 1), -alpha, depth-1, position);
 
                             if (value > alpha) && value < beta {
-                                value = -self.negamax(-beta, -alpha, depth-1, position);
+                                value = -self.negamax::<NotPv>(-beta, -alpha, depth-1, position);
                             }
                         }
 
@@ -463,6 +499,7 @@ impl<'a> Search<'a> {
         
         let tt_flag = if best_score >= beta { HashFlag::LowerBound } else if best_score > alpha { HashFlag::Exact } else { HashFlag::UpperBound };
         self.tt.record(position.hash_key, depth, best_score, INFINITY, self.ply, tt_flag, 0, best_mv);
+        self.ss[self.ply].best_move = best_mv;
         alpha
     }
 
