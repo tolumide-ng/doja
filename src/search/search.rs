@@ -3,7 +3,7 @@ use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 use crate::search::heuristics::pv_table::PVTable;
 
-use super::heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, history::HistoryHeuristic, killer_moves::KillerMoves};
+use super::{constants::NodeType, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, history_bonus, killer_moves::KillerMoves}};
 
 /// The number of nodes you can actually cut depends on:
 /// 1. How well written your alpha-beta program is
@@ -42,6 +42,7 @@ pub(crate) struct Search<'a> {
     history_table: HistoryHeuristic,
     caphist: CaptureHistory,
     conthist: ContinuationHistory,
+    counter_mvs: CounterMove,
     // continuation_hist
     tt: TPT<'a>,
     limit: u8,
@@ -51,7 +52,8 @@ pub(crate) struct Search<'a> {
 impl<'a> Search<'a> {
     pub(crate) fn new(tt: TPT<'a>) -> Self {
         Self { nodes: 0, ply: 0, pv_table: PVTable::new(), killer_moves: KillerMoves::new(),
-            history_table: HistoryHeuristic::new(), tt, limit: 0, caphist: CaptureHistory::default(), conthist: ContinuationHistory::new() }
+            history_table: HistoryHeuristic::new(), tt, limit: 0, caphist: CaptureHistory::default(), conthist: ContinuationHistory::new(),
+                counter_mvs: CounterMove::new() }
     }
 
     // fn aspiration_window(&mut self) {
@@ -261,13 +263,14 @@ impl<'a> Search<'a> {
 
     fn probe_tt(&self, key: u64, depth: Option<u8>, alpha: i32, beta: i32) -> (Option<i32>, Option<Move>)  {
         if let Some(entry) = self.tt.probe(key) {
-            if depth.is_some_and(|d| d != entry.depth) { return (None, None) };
+            if depth.is_some_and(|d| entry.depth < d) { return (None, None) };
             let entry_score = entry.score(self.ply);
             let value = match entry.flag {
                 HashFlag::Exact => (Some(entry_score), None),
-                HashFlag::LowerBound if entry_score >= beta => (Some(beta), None),
-                HashFlag::UpperBound if entry_score <= alpha => (Some(alpha), None),
-                _ => (None, entry.mv)
+                HashFlag::LowerBound if entry_score >= beta => (Some(beta), entry.mv),
+                HashFlag::UpperBound if entry_score < alpha => (Some(alpha), None),
+                // _ => (None, entry.mv) // should be changed to None, None
+                _ => (None, None)
             };
             return value
         }
@@ -311,7 +314,9 @@ impl<'a> Search<'a> {
         None
     }
 
-    pub(crate) fn negamax(&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
+    pub(crate) fn negamax
+    // <NT: NodeType>
+    (&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
         if Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&s| s >= 50) {
             return 0; // draw
         }
@@ -323,13 +328,30 @@ impl<'a> Search<'a> {
             return self.quiescence(alpha, beta, position);
         }
 
-        let (tt_score, tt_mv) = self.probe_tt(position.hash_key, Some(depth), alpha, beta);
-        let mut best_mv: Option<Move> = tt_mv;
+        let (tt_value, tt_mv) = self.probe_tt(position.hash_key, Some(depth), alpha, beta);
+        // let (tt_score, tt_mv) = self.probe_tt(position.hash_key, Some(self.ply as u8), alpha, beta);
+        
+        if let Some(value) = tt_value {
+            if let Some(mv) = tt_mv {
+                let quiet = mv.get_capture() && mv.get_promotion().is_none();
+                if quiet {
+                    self.killer_moves.store(depth as usize, &mv);
+                    self.conthist.update_many(&position, vec![mv], depth, mv);
+                    self.counter_mvs.add(&position, mv);
+                } else {
+                    self.conthist.update_many(&position, vec![mv], depth, Move::from(0));
+                }
+            }
+
+            return value;
+        }
+
+        // let pv_node = NT::PV;
         
         // When beta - alpha > 1, it indicates that there is a significant gap between the two bounds. This gap suggests that there are possible values for the evaluation score that have not yet been fully explored or are still uncertain.
         // The search can continue to explore more moves because the values returned by the evaluated moves could potentially fall within this range, providing room for a better evaluation.
         let explore_more_moves = (beta - alpha) > 1;
-        if self.ply > 0 && tt_score.is_some() && !explore_more_moves { return tt_score.unwrap() }
+        if self.ply > 0 && tt_value.is_some() && !explore_more_moves { return tt_value.unwrap() }
         // if self.ply > MAX_PLY - 1 { return position.evaluate() }
 
         self.nodes += 1;
@@ -345,6 +367,7 @@ impl<'a> Search<'a> {
         }
 
         let mut best_score = -INFINITY;
+        let mut best_mv: Option<Move> = None;
         let original_alpha = alpha;
         let killer_mvs = self.killer_moves.get_killers(self.ply).map(|m| if m == 0 {None} else {Some(Move::from(m))});
         // let mvs = self.get_sorted_moves::<{ MoveScope::ALL }>(&position);
@@ -354,7 +377,7 @@ impl<'a> Search<'a> {
 
         // 30 is a practical maximum number of quiet moves that can be generated in a chess position (MidGame)
         let mut quiet_mvs: Vec<Move> = Vec::with_capacity(30);
-        while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist) {
+        while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
 
@@ -400,9 +423,8 @@ impl<'a> Search<'a> {
                         self.caphist.update(depth, HashFlag::LowerBound, moved_piece, mv.get_target(), PieceType::from(position.piece_at(mv.get_target()).unwrap()));
                     } else {
                         self.killer_moves.store(depth as usize, &mv);
-                    }
-                    if !mv.get_capture() {
                         self.conthist.update_many(&position, quiet_mvs, depth, mv);
+                        self.counter_mvs.add(&position, mv);
                     }
                     return beta;
                 }

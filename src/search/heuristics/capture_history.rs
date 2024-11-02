@@ -1,5 +1,7 @@
 use crate::{board::piece::{Piece, PieceType}, squares::Square, tt::flag::HashFlag};
 
+use super::{history_bonus, malus};
+
 const MAX_HISTORY: i32 = i32::MAX/2;
 
 // type CaptureHistoryTable = [[i16; Piece::COUNT]; Square::TOTAL];
@@ -18,19 +20,6 @@ impl Default for CaptureHistory {
 }
 
 impl CaptureHistory {
-    /// From 'Stockfish'
-    pub(crate) const fn malus(depth: u8) -> i32 {
-        if depth < 4 { return 736 * (depth+1) as i32} else {2044}
-    }
-
-    /// From 'Stockfish'
-    pub(crate) const fn bonus(depth: u8) -> i32 {
-        let value = 190 * (depth as i16) - 298;
-        if value < 20 { return 20; }
-        if value > 1596 { return 1596 }
-        return value as i32;
-    }
-
     /// Convert 3D index to 1D
     /// (z * yMax * xMax) + (y * xMax) + x;
     /// https://stackoverflow.com/a/34363187/9347459
@@ -45,7 +34,7 @@ impl CaptureHistory {
     pub(crate) fn update(&mut self, depth: u8, flag: HashFlag, attacker: Piece, tgt_sq: Square, victim: PieceType) {
         let index = Self::to_1_d_index(attacker, tgt_sq, victim);
         let prev_value = self.0.get_mut(index).unwrap();
-        let bonus = if flag == HashFlag::LowerBound {Self::bonus(depth)} else {Self::malus(depth)};
+        let bonus = if flag == HashFlag::LowerBound {history_bonus(depth)} else {malus(depth)};
         *prev_value = Self::taper_bonus((*prev_value) as i32, bonus);
     }
 

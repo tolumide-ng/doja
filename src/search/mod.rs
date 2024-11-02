@@ -7,3 +7,4 @@ pub(crate) mod search_entry;
 pub(crate) mod clock;
 pub(crate) mod search;
 pub(crate) mod heuristics;
+pub(crate) mod constants;

@@ -1,5 +1,5 @@
 use crate::{
-    board::{piece::{Piece, PieceType}, position::Position}, move_scope::MoveScope, search::heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, history::HistoryHeuristic}
+    board::{piece::{Piece, PieceType}, position::Position}, move_scope::MoveScope, search::heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::{self, CounterMove}, history::HistoryHeuristic}
 };
 
 use super::{
@@ -59,6 +59,7 @@ impl<const T: u8> MovePicker<T> {
     const PROMOTES_AND_CAPTURE: i32 = 20_000;
     const BAD_CAPTURE: i32 = 1_000;
     const KILLER_MV: i32 = 6_000;
+    const COUNTER_MV: i32 = 5_000;
 
     fn score_captures(&mut self, position: &Position, caphist: &CaptureHistory) {
         self.total_captures = self.moves.count();
@@ -78,7 +79,10 @@ impl<const T: u8> MovePicker<T> {
                 }
                 _ if mv.get_promotion().is_some() => Self::OTHER_PROMOTIONS, // undepromotion (promotion to any type that isn't a queen)
                 // _ => Piece::MVV_LVA[victim] - Piece::MVV_LVA[attacker],
-                _ => (Piece::MVV[victim as usize % 6] + caphist.get(attacker, mv.get_target(), PieceType::from(victim))) as i32,
+                _ => {
+                    let scc = caphist.get(attacker, mv.get_target(), PieceType::from(victim));
+                    // println!("the scc here is already  {scc}, the max is {}", i16::MAX);
+                    (Piece::MVV[victim as usize % 6] as i32 + caphist.get(attacker, mv.get_target(), PieceType::from(victim)) as i32) as i32},
             };
 
             // if ["d2c3x", "e2a6x"].contains(&(mv.to_string()).as_str()) {
@@ -88,13 +92,6 @@ impl<const T: u8> MovePicker<T> {
             // }
 
             let good_capture = position.see(&mv, self.see_threshold);
-            if ["d2c3x", "e2a6xz"].contains(&(mv.to_string()).as_str()) {
-                // println!("victim>>>>> {}", victim);
-                // let xx = caphist.get(attacker, mv.get_target(), PieceType::from(victim));
-                // let abc = Piece::MVV[victim as usize % 6];
-                // println!("{} the score here is {} ----->>>>>>> {xx} {}", mv.to_string(), good_capture, abc);
-                // println!(":::: ---- {}", Piece::MVV[victim as usize % 6])
-            }
             let score = if good_capture {
                 self.total_good_captures += 1;
                 Self::GOOD_CAPTURE + pre_score
@@ -106,11 +103,11 @@ impl<const T: u8> MovePicker<T> {
         }
     }
 
-    fn score_quiets(&mut self, position: &Position, history_table: &HistoryHeuristic, conthist: &ContinuationHistory) {
+    fn score_quiets(&mut self, position: &Position, history_table: &HistoryHeuristic, conthist: &ContinuationHistory, counter_mvs: &CounterMove) {
         let start = self.index; let end = self.moves.count_mvs();
         let prev_mv_idx = position.history_len().checked_sub(1);
         let parent = prev_mv_idx.and_then(|idx| position.history_at(idx)).map(|history| (history.mvd_piece(), history.mv()));
-
+        
         for index in start..end {
             let quiet_mv = self.moves.at_mut(index).unwrap();
             let mv = quiet_mv.mv();
@@ -127,9 +124,11 @@ impl<const T: u8> MovePicker<T> {
             let p = position.piece_at(mv.get_src()).unwrap();
             quiet_mv.update_score(history_table.get(p, mv.get_target()) as i32);
             if let Some((prev_piece, prev_mv)) = parent {
-                let value = conthist.get(prev_piece, prev_mv.get_tgt(), p, quiet_mv.mv().get_tgt());
-                // println!("the value of mv--> {} is {}", mv, value);
-                quiet_mv.update_score(value as i32);
+                let prev_tgt = prev_mv.get_tgt(); let prev_src = prev_mv.get_src();
+                let conthist_score = conthist.get(prev_piece, prev_tgt, p, quiet_mv.mv().get_tgt());
+                let countermv = counter_mvs.get(prev_src, prev_tgt);
+                if countermv == quiet_mv.mv() { quiet_mv.update_score(conthist_score as i32)}
+                quiet_mv.update_score(conthist_score as i32);
             }
         }
     }
@@ -149,7 +148,7 @@ impl<const T: u8> MovePicker<T> {
         return Some(self.moves[best_index].mv())
     }
 
-    pub(crate) fn next(&mut self, position: &Position, history_table: &HistoryHeuristic, caphist: &CaptureHistory, conthist: &ContinuationHistory) -> Option<Move> {
+    pub(crate) fn next(&mut self, position: &Position, history_table: &HistoryHeuristic, caphist: &CaptureHistory, conthist: &ContinuationHistory, counter_mvs: &CounterMove) -> Option<Move> {
         let move_scope = MoveScope::from(T);
         if self.stage == Stage::Done {
             return None;
@@ -195,7 +194,7 @@ impl<const T: u8> MovePicker<T> {
                 self.index = self.total_captures;
                 
                 position.gen_movement::<{MoveScope::QUIETS}, ScoredMove>(&mut self.moves);
-                self.score_quiets(position, history_table, conthist);
+                self.score_quiets(position, history_table, conthist, counter_mvs);
             } else  { // movescope == MoveScope::CapturesOnly
                 self.stage = Stage::BadCapture;
                 self.index = self.total_good_captures;

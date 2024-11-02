@@ -68,6 +68,10 @@ impl Position {
         self.history.get(index).unwrap().as_ref()
     }
 
+    pub(crate) fn last_history(&self) -> Option<&History> {
+        self.history.last().unwrap_or(&None).as_ref()
+    }
+
     pub(crate) fn history_len(&self) -> usize {
         self.history.len()
     }

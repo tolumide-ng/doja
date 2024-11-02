@@ -32,8 +32,8 @@ impl ContinuationHistory {
     pub(crate) fn update(&mut self, prev_piece: Piece, prev_mv: Square, curr_piece: Piece, curr_mv: Square, bonus: i32) {
         let index = Self::to_1_d_index(prev_piece, prev_mv, curr_piece, curr_mv);
         let prev_value = unsafe{self.0.get_unchecked_mut(index)};
+        // *prev_value = taper_bonus(*(prev_value) as i32, bonus);
         *prev_value = taper_bonus(*(prev_value) as i32, bonus);
-        println!("the final value now is {prev_value}, taper bonus is {}", taper_bonus(*(prev_value) as i32, bonus));
     }
 
     /// 2-ply Continuation History
@@ -44,7 +44,7 @@ impl ContinuationHistory {
         // 2-ply Continuation history, so we need to get the last two moves
         for i in 0..Self::CONTINUATION_HISTORY {
             if let Some(idx) = history_len.checked_sub(i+1) {
-                let pos_history = pos.history_at(idx).unwrap();
+                let Some(pos_history) = pos.history_at(idx) else {continue};
                 let prev_piece = pos_history.mvd_piece(); let prev_mv = pos_history.mv().get_tgt();
                 
                 for mv in &quiets {

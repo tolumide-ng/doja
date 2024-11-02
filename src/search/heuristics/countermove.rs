@@ -2,18 +2,29 @@
 // https://talkchess.com/viewtopic.php?t=76255
 // I should probably read: https://www.researchgate.net/publication/306413279_The_Countermove_Heuristic
 
-// use crate::{move_logic::bitmove::Move, constants::TOTAL_SQUARES, squares::Square};
+use crate::{board::position::Position, move_logic::bitmove::Move, squares::Square};
 
-// /// CounterMove Heuristic
-// /// https://www.chessprogramming.org/Countermove_Heuristic
-// pub(crate) struct CounterMove([u16; TOTAL_SQUARES * TOTAL_SQUARES]);
+/// CounterMove Heuristic
+/// https://www.chessprogramming.org/Countermove_Heuristic
+pub(crate) struct CounterMove([u16; Square::TOTAL * Square::TOTAL]);
 
-// impl CounterMove {
-//     pub(crate) fn new() -> Self {
-//         CounterMove([0; TOTAL_SQUARES * TOTAL_SQUARES])
-//     }
+impl CounterMove {
+    pub(crate) fn new() -> Self {
+        CounterMove([0; Square::TOTAL * Square::TOTAL])
+    }
 
-//     pub(crate) fn store(&mut self, src: Square, tgt: Square, mv: &Move) {
-//         self.0[(src as usize * TOTAL_SQUARES) + tgt as usize] = **mv;
-//     }
-// }
+    pub(crate) fn add(&mut self, pos: &Position, mv: Move) {
+        if let Some(history) = pos.last_history() {
+            let src = history.mv().src(); let tgt = history.mv().tgt();
+            self.0[Self::index(src, tgt)] = *mv;
+        } 
+    }
+
+    const fn index(src: Square, tgt: Square) -> usize {
+        ((src as usize) * Square::TOTAL) + tgt as usize
+    }
+
+    pub(crate) fn get(&self, src: Square, tgt: Square) -> Move {
+        Move::from(self.0[Self::index(src, tgt)])
+    }
+}

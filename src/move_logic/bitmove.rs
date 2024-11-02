@@ -64,6 +64,11 @@ impl Move {
         Square::from(sq)
     }
 
+    pub(crate) fn src(&self) -> Square {
+        let sq = (**self & SOURCE_SQUARE) as u64;
+        Square::from(sq)
+    }
+
     /// DEPRECIATIOIN PLANS
     pub(crate) fn get_target(&self) -> Square {
         let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
@@ -71,6 +76,11 @@ impl Move {
     }
 
     pub(crate) fn get_tgt(&self) -> Square {
+        let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
+        Square::from(sq)
+    }
+    
+    pub(crate) fn tgt(&self) -> Square {
         let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
         Square::from(sq)
     }
