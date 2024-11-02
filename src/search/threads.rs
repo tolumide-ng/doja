@@ -28,3 +28,17 @@
 //         }
 //     }
 // }
+
+use super::{heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic}, stack::Stack};
+
+pub(crate) struct Thread {
+    eval: i32,
+    depth: u8,
+    nodes: usize,
+    ply: usize,
+    // ss: Stack,
+    // history_table: HistoryHeuristic,
+    // caphist: CaptureHistory,
+    // conthist: ContinuationHistory,
+    // counter_mvs: CounterMove,
+}
