@@ -1,4 +1,4 @@
-use crate::{board::{piece::{Piece, PieceType}, position::Position, state::board::Board}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, LONGEST_TB_MATE, MATE_VALUE, PIECE_ATTACKS, REDUCTION_LIMIT, VAL_WINDOW, ZOBRIST}, move_logic::{bitmove::{Move, MoveType}, move_picker::MovePicker, move_stack::MoveStack}, move_scope::MoveScope, search::constants::Root, squares::Square, tt::{entry::TTData, flag::HashFlag, tpt::TPT}};
+use crate::{board::{piece::{Piece, PieceType}, position::Position, state::board::Board}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, PIECE_ATTACKS, REDUCTION_LIMIT, VAL_WINDOW, ZOBRIST}, move_logic::{bitmove::{Move, MoveType}, move_picker::MovePicker, move_stack::MoveStack}, move_scope::MoveScope, search::constants::Root, squares::Square, tt::{entry::TTData, flag::HashFlag, tpt::TPT}};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 use crate::search::heuristics::pv_table::PVTable;
@@ -48,6 +48,7 @@ pub(crate) struct Search<'a> {
     ss: Stack,
     depth: usize,
     limit: usize,
+    eval: i32,
 }
 
 
@@ -61,39 +62,50 @@ impl<'a> Search<'a> {
     pub(crate) fn new(tt: TPT<'a>) -> Self {
         Self { nodes: 0, ply: 0, pv_table: PVTable::new(), killer_moves: KillerMoves::new(),
             history_table: HistoryHeuristic::new(), tt, caphist: CaptureHistory::default(), conthist: ContinuationHistory::new(),
-                counter_mvs: CounterMove::new(), ss: Stack::default(), depth: 0, limit: 0 }
+                counter_mvs: CounterMove::new(), ss: Stack::default(), depth: 0, limit: 0, eval: 0 }
     }
 
-    fn aspiration_window(&mut self, position: &mut Position) -> i32 {
+    fn aspiration_window(&mut self, position: &mut Position, depth: usize) -> i32 {
         let mut alpha = -INFINITY;
         let mut beta = INFINITY;
-        let mut delta = VAL_WINDOW;
-        let mut depth = 1;
+        let mut delta = -INFINITY;
+        let mut depth = depth + 1;
 
         const BIG_DELTA: usize = 975;
 
+        println!("||||||||||||||||||||||||||||||||||||||||||||||||| alpha-> {alpha}, and beta-->> {beta} ---------------- ((((({}))))))", depth);
+        println!("XXXXXXXXXXXXXXX eval => {}, delta==> {}, for al-->> {}, and for beta-->> {}", self.eval, delta, self.eval - delta, self.eval + delta);
+
+        if depth >= 5 {
+            delta = 20;
+            alpha = (-INFINITY).max(self.eval - delta);
+            beta = (INFINITY).min(self.eval + delta);
+        }
+
+        println!("proceeding with alpha-> {alpha}, and beta-->> {beta}");
+
         loop {
-            println!("RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {depth}");
+            self.ply = 0;
             let score = self.negamax::<Root>(alpha, beta, depth  as u8, position);
-            println!("the score is {score}, alpha={alpha}, beta={beta} and nodes {}", self.nodes);
+            // println!("the score is {score}, alpha={alpha}, beta={beta} and nodes {}", self.nodes);
             
             // if depth > self.limit { break; }
             // self.depth = depth;
-            // self.ply = 0;
-            println!("{}", position.to_string());
+            // println!("{}", position.to_string());
             depth += 1;
 
             if score <= alpha {
                 beta = (alpha + beta) / 2;
                 alpha = (-INFINITY).max(alpha - beta);
-                depth = self.limit + 1;
+                depth = self.depth + 1;
                 println!("00000");
             } else if score >= beta {
+                println!("currently alpha={alpha}, beta={beta}, and score==>>{score}");
                 beta = (INFINITY).min(beta + delta);
                 println!("1111-1111 {}", beta);
-                if score.abs() < LONGEST_TB_MATE && depth > 1 {
-                    depth -= 1;
-                }
+                // if score.abs() < LONGEST_TB_MATE && depth > 1 {
+                //     depth -= 1;
+                // }
             } else {
                 println!("4444---->>>4444");
                 return score;
@@ -101,81 +113,42 @@ impl<'a> Search<'a> {
             delta += delta/2;
             if delta >= BIG_DELTA as i32 { alpha = -INFINITY; beta = INFINITY } 
 
-            let mvs = self.pv_table.get_pv(0);
-            println!("dddd is {depth}");
-            for i in 0..mvs.len() {
-                print!("-->> {}", Move::from(mvs[i as usize]));
-            }
-            println!("\n\n");
+            // let mvs = self.pv_table.get_pv(0);
+            // println!("dddd is {depth}");
+            // for i in 0..mvs.len() {
+            //     print!("-->> {}", Move::from(mvs[i as usize]));
+            // }
+            // println!("\n\n");
 
         }
-
-        println!("MOVES ARE :::: with length of {}", self.pv_table.len(0));
-        let mvs = self.pv_table.get_pv(0);
-        for i in 0..self.limit {
-            print!("-->> {}", Move::from(mvs[i as usize]));
-            // println!("in check???? {}", position);
-        }
-        println!("\n");
-    }
-
-    pub(crate) fn iterative_deepening(&mut self, limit: usize, position: &mut Position) {
-        self.limit = limit;
-        while self.depth < MAX_DEPTH {
-            let eval = self.aspiration_window(position);
-        }
-        // while t
-        // let mut alpha = -INFINITY;
-        // let mut beta = INFINITY;
-        // let mut delta = VAL_WINDOW;
-        // let mut depth = 1;
-
-        // const BIG_DELTA: usize = 975;
-
-        // loop {
-        //     if depth > limit { break; }
-        //     self.limit = depth;
-        //     println!("RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {depth}");
-        //     println!("{}", position.to_string());
-        //     self.ply = 0;
-        //     let score = self.negamax::<Root>(alpha, beta, depth, position);
-        //     println!("the score is {score}, alpha={alpha}, beta={beta} and nodes {}", self.nodes);
-        //     depth += 1;
-
-        //     if score <= alpha {
-        //         beta = (alpha + beta) / 2;
-        //         alpha = (-INFINITY).max(alpha - beta);
-        //         depth = limit + 1;
-        //         println!("00000");
-        //     } else if score >= beta {
-        //         beta = (INFINITY).min(beta + delta);
-        //         println!("1111-1111 {}", beta);
-        //         if score.abs() < LONGEST_TB_MATE && depth > 1 {
-        //             depth -= 1;
-        //         }
-        //     } else {
-        //         println!("4444---->>>4444");
-        //         // break
-        //     }
-        //     delta += delta/2;
-        //     if delta >= BIG_DELTA as i32 { alpha = -INFINITY; beta = INFINITY } 
-
-        //     let mvs = self.pv_table.get_pv(0);
-        //     println!("dddd is {depth}");
-        //     for i in 0..mvs.len() {
-        //         print!("-->> {}", Move::from(mvs[i as usize]));
-        //     }
-        //     println!("\n\n");
-
-        // }
 
         // println!("MOVES ARE :::: with length of {}", self.pv_table.len(0));
         // let mvs = self.pv_table.get_pv(0);
-        // for i in 0..limit {
+        // for i in 0..self.limit {
         //     print!("-->> {}", Move::from(mvs[i as usize]));
         //     // println!("in check???? {}", position);
         // }
         // println!("\n");
+    }
+
+    pub(crate) fn iterative_deepening(&mut self, limit: usize, position: &mut Position) {
+        self.limit = limit;
+        while self.depth < MAX_DEPTH && self.depth < self.limit {
+            // println!("\n\n\n RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {}", self.depth);
+            let eval = self.aspiration_window(position, self.depth);
+            
+            self.eval = eval;
+            self.depth += 1;
+        }
+
+
+        println!("MOVES ARE :::: with length of {}", self.pv_table.len(0));
+        let mvs = self.pv_table.get_pv(0);
+        for i in 0..limit {
+            print!("-->> {}", Move::from(mvs[i as usize]));
+            // println!("in check???? {}", position);
+        }
+        println!("\n");
     }
 
 
@@ -217,7 +190,7 @@ impl<'a> Search<'a> {
 
         
         // Probe the Transposition Table here
-        let tt_hit = self.probe_tt(position.hash_key, None, alpha, beta);
+        // let tt_hit = self.probe_tt(position.hash_key, None, alpha, beta);
         // if tt_score.is_some() { return tt_score.unwrap() }
 
         // conditions
@@ -226,53 +199,82 @@ impl<'a> Search<'a> {
         // So, if the king of the stm is in check - WE MUST SEARCH EVERY MOVE IN THE POSITION, RATHER THAN ONLY CAPTURES.
         // - LIMIT THE GENERATION OF CHECKS TO THE FIRST X PLIES OF QUIESCENCE (AND USE "DELTA PRUNNING" TO AVOID LONG FRUITLESS SEARCHES TO GET OUT OF BEEN IN CHECK)
         let in_check = Self::in_check(&position, position.turn);
-        let mut best_move: Option<Move> = None;
-        
-        // let eval = if in_check {
-        //     self.ss[self.ply].eval = -INFINITY;
-        //     self.ss[self.ply].eval
-        // } else {
-        //     if let Some(data) = tt_hit {
-        //         let tt_value = data.score;
-        //         self.ss[self.ply].eval = if (data.eval as i32) == -INFINITY {
-        //              position.evaluate()
-        //         } else { tt_value };   
-        //     }
-        //     self.ss[self.ply].eval
-        // };
-        // beta cutoff
-        if !in_check && stand_pat >= beta { 
-            // println!("{}", position.to_string());
-            // println!("RETURNING BETA************************************* stand_pat={stand_pat} alpha==>>{alpha}, and beta is {beta}",);
-            return beta }
-        if !in_check && stand_pat > alpha { alpha = stand_pat }
+        let mut tt_move: Option<Move> = None;
 
+        if let Some(entry) = self.tt.probe(position.hash_key) {
+            let tt_value = entry.score;
+            match entry.flag {
+                HashFlag::Exact => return tt_value,
+                HashFlag::LowerBound if tt_value >= beta => return beta,
+                HashFlag::UpperBound if tt_value <= alpha => return alpha,
+                _ => tt_move = entry.mv,
+            }
+        }
+        
+        let eval = if in_check {
+            self.ss[self.ply].eval = -INFINITY;
+            self.ss[self.ply].eval
+        } else {
+            if let Some(entry) = self.tt.probe(position.hash_key) {
+                let tt_eval = entry.eval as i32; let tt_value = entry.score;
+
+                self.ss[self.ply].eval = if tt_eval == -INFINITY {
+                    position.evaluate() } else { tt_eval };
+                match entry.flag {
+                    HashFlag::Exact => return tt_value,
+                    HashFlag::LowerBound if tt_value > self.ss[self.ply].eval => return tt_value,
+                    HashFlag::UpperBound if tt_value < self.ss[self.ply].eval => return tt_value,
+                    _ => self.ss[self.ply].eval,
+                }
+            } else {
+                self.ss[self.ply].eval = position.evaluate();
+                self.ss[self.ply].eval
+            }
+        };
+
+        let old_alpha = alpha;
+        alpha = alpha.max(eval);
+        // standing pat
+        if eval >= beta { return beta }
     
         // let captures_only = !in_check;
         // let moves = self.get_sorted_moves::<{MoveScope::CAPTURES}>(&position);
-        let mut best_score = -INFINITY;
+        // let mut best_score = -INFINITY;
+        let mut best_move: Option<Move> = None;
+        let best_value = eval;
 
         let killer_mvs = self.killer_moves.get_killers(self.ply).map(|m| if m == 0 {None} else {Some(Move::from(m))});
 
-        let mut mvs = MovePicker::<{MoveScope::CAPTURES}>::new(0, tt_hit.and_then(|x| x.mv), killer_mvs);
+        let mut mvs = MovePicker::<{MoveScope::CAPTURES}>::new(0, tt_move, killer_mvs);
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
-                let score = -self.quiescence(-beta, -alpha, position);
+                let value = -self.quiescence(-beta, -alpha, position);
                 position.undo_move(true);
                 
                 self.ply -= 1;
+
+                if value > best_value {
+                    if value > alpha {
+                        best_move = Some(mv);
+                        alpha = value;
+                    }
+
+                    if value >= beta {
+                        alpha = beta;break;
+                    }
+                }
                 
 
                 // if position.turn == Color::Black {
                 //     println!(":::::::::::::::::::::::::::::::::::::::::::: mm-->>{} alpha={alpha}, beta={beta}, score={score} ply==>>{} eval-->>{}", mv.to_string(), self.ply, position.evaluate());
                 // }
-                if score > best_score {
-                    best_score = score;
+                // if score > best_score {
+                //     best_score = score;
                     
-                    if score > alpha { best_move = Some(mv); alpha = score; }
-                    if score >= beta {alpha = beta; break}
-                }
+                //     if score > alpha { best_move = Some(mv); alpha = score; }
+                //     if score >= beta {alpha = beta; break}
+                // }
             }
         }
 
@@ -301,12 +303,12 @@ impl<'a> Search<'a> {
 
         // }
 
-        if in_check && best_score == -INFINITY {
+        if in_check && best_value == -INFINITY {
             return  - 5000;
         }
 
-        let tt_flag = if best_score >= beta { HashFlag::LowerBound } else if best_score > alpha { HashFlag::Exact } else { HashFlag::UpperBound };
-        self.tt.record(position.hash_key, 0, alpha, 0, self.ply, tt_flag, 0, best_move);
+        let tt_flag = if best_value >= beta { HashFlag::LowerBound } else if best_value > alpha { HashFlag::Exact } else { HashFlag::UpperBound };
+        self.tt.record(position.hash_key, 0, alpha, self.ss[self.ply].eval, self.ply, tt_flag, 0, best_move);
 
         
         alpha
@@ -380,6 +382,15 @@ impl<'a> Search<'a> {
         if depth == 0 || self.ply >= MAX_DEPTH {
             return self.quiescence(alpha, beta, position);
         }
+
+        let improving = if self.ply >= 2 && self.ss[self.ply - 2].eval != -INFINITY {
+            self.ss[self.ply].eval > self.ss[self.ply - 2].eval
+        } else if self.ply >= 4 && self.ss[self.ply - 4].eval != -INFINITY {
+            self.ss[self.ply].eval > self.ss[self.ply - 4].eval
+        } else {
+            true
+        };
+
 
         let tt_hit = self.probe_tt(position.hash_key, Some(self.ply as u8), alpha, beta);
         // let (tt_score, tt_mv) = self.probe_tt(position.hash_key, Some(self.ply as u8), alpha, beta);
@@ -523,16 +534,44 @@ impl<'a> Search<'a> {
                         quiet_mvs.push(mv);
                     }
                 }
+
+                // if score > best_score {
+                //     best_score = score;
+
+                //     if score > alpha {
+                //         best_mv = Some(mv);
+                //         alpha = score;
+                //         self.pv_table.store_pv(self.ply, &mv);
+                //     }
+
+                //     if score >= beta {
+                //         if mv.get_capture() {
+                //             self.caphist.update(depth, HashFlag::LowerBound, moved_piece, mv.get_target(), PieceType::from(position.piece_at(mv.get_target()).unwrap()));
+                //         } else {
+                //             self.killer_moves.store(depth as usize, &mv);
+                //             self.conthist.update_many(&position, quiet_mvs, depth, mv);
+                //             self.counter_mvs.add(&position, mv);
+                //         }
+
+                //         break;
+                //     }
+                // }
+
+                // if !mv.get_capture() {
+                //     quiet_mvs.push(mv);
+                // } else {
+                //     // 
+                // }
             }
         }
 
-        if mvs_searched == 0 {
-            if stm_in_check {
-                return -MATE_VALUE + self.ply as i32;
-            }
-            // king is not in check, but there are no legal moves
-            return 0; // stalemate/draw
-        }
+        // if mvs_searched == 0 {
+        //     if stm_in_check {
+        //         return -MATE_VALUE + self.ply as i32;
+        //     }
+        //     // king is not in check, but there are no legal moves
+        //     return 0; // stalemate/draw
+        // }
 
         // if alpha != original_alpha {
         //     if best_mv.is_some_and(|mv| !mv.get_capture()) {
