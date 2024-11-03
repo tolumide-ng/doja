@@ -517,7 +517,7 @@ impl Board {
                 
                 
                 // Removes the captured piece from the the captured piece bitboard
-                if bit_move.get_capture() {
+                if bit_move.get_capture() && !bit_move.get_enpassant() {
                     // there would usually only be a maximum of 2 captures each, consider unrolling this for loop (what did I mean here by 2???????)
                     let target_pieces = Piece::all_pieces_for(!turn);
                     // let mut found = false;
@@ -610,15 +610,19 @@ impl Board {
                     board.fifty[turn] +=1;
                 }
 
-                // *self = board;
+                // // *self = board;
 
-                if bit_move.get_double_push() {
-                    if board.enpassant.is_none() {
-                        println!("xxxxxxxx >>>>> {} --{} {:?} {} {}", bit_move, bit_move.to_string(), board.enpassant, bit_move.src(), bit_move.tgt());
-                        let enpass_target = Self::enpass_tgt(to, !board.turn);
-                        println!("this is a double push to >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {} {} -->> {} \n\n\n",bit_move.src(), to, Square::from(enpass_target));
-                    }
-                }
+                // if bit_move.get_double_push() {
+                //     if board.enpassant.is_none() {
+                //         println!("xxxxxxxx >>>>> {} --{} {:?} {} {}", bit_move, bit_move.to_string(), board.enpassant, bit_move.src(), bit_move.tgt());
+                //         let enpass_target = Self::enpass_tgt(to, !board.turn);
+                //         println!("this is a double push to >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {} {} -->> {} \n\n\n",bit_move.src(), to, Square::from(enpass_target));
+                //     }
+                //     // if bit_move.to_string() == "a2a4" {
+                //     //     println!("the double move here is >>>> done");
+                //     //     println!("the board now is >>>>>>>>>>>>>>>>>>>>>>>>> {}\n\n\n\n", board.to_string());
+                //     // }
+                // }
 
                 Some(board)
             }

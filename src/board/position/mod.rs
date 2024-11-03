@@ -303,7 +303,8 @@ impl Position {
         }
 
         if mv.move_type() == MoveType::DoublePush {
-            self.board.enpassant = None;
+            println!("XXXXXXXXXXx called <<<<<<< undoing >>><<<<<><><>{}", mv.to_string());
+            self.board.set_enpassant(None);
         }
 
 

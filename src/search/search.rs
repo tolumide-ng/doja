@@ -145,7 +145,7 @@ impl<'a> Search<'a> {
         println!("MOVES ARE :::: with length of {}", self.pv_table.len(0));
         let mvs = self.pv_table.get_pv(0);
         for i in 0..limit {
-            print!("-->> {}", Move::from(mvs[i as usize]));
+            print!("|||-->> {}", Move::from(mvs[i as usize]));
             // println!("in check???? {}", position);
         }
         println!("\n");
@@ -245,17 +245,21 @@ impl<'a> Search<'a> {
 
         let killer_mvs = self.killer_moves.get_killers(self.ply).map(|m| if m == 0 {None} else {Some(Move::from(m))});
 
+        if self.depth == 5 {
+        }
         let mut mvs = MovePicker::<{MoveScope::CAPTURES}>::new(0, tt_move, killer_mvs);
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
-            // if  mv.to_string() == "d7f6x" {
-            //     let victim = position.get_piece_at(mv.get_tgt(), White);
-            //     if victim.is_none() {
-            //         if let Some(x) = position.last_history() {
-            //             println!("<<<<<<<<<THE PREVIOUS MOVE IS>>>>>>>>> {} ---<<<<<{}", x.mv(), x.mv().get_double_push());
-            //         }
-            //         // println!("NEGAMAX--NEGAMAX--NEGAMAX--, but tt is {:?}", tt_hit.and_then(|x| x.mv));
-            //     }
-            // }
+            if  mv.to_string() == "d5c6x" {
+                println!("quiescence--quiescence--quiescence--quiescence--quiescence--quiescence--quiescence--");
+                // let victim = position.get_piece_at(mv.get_tgt(), !position.turn);
+                // if victim.is_none() {
+                //     if let Some(x) = position.last_history() {
+                //         println!("{} -->>\n the board here is {}", mv.to_string(), position.to_string());
+                //         println!("<<<<<<<<<THE PREVIOUS MOVE IS>>>>>>>>> {} ---<<<<<{}", x.mv(), x.mv().get_double_push());
+                //     }
+                //     // println!("NEGAMAX--NEGAMAX--NEGAMAX--, but tt is {:?}", tt_hit.and_then(|x| x.mv));
+                // }
+            }
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
                 let value = -self.quiescence(-beta, -alpha, position);
@@ -476,16 +480,20 @@ impl<'a> Search<'a> {
 
         // 30 is a practical maximum number of quiet moves that can be generated in a chess position (MidGame)
         let mut quiet_mvs: Vec<Move> = Vec::with_capacity(30);
+        if self.depth == 5 {
+        }
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
             // if mv.to_string() == "b4a3x" && mv.get_enpassant() && position.enpassant.is_none() {
-            if  mv.to_string() == "d7f6x" {
-                let victim = position.get_piece_at(mv.get_tgt(), White);
-                if victim.is_none() {
-                    if let Some(x) = position.last_history() {
-                        println!("THE PREVIOUS MOVE IS {} ---<<<<<{}", x.mv(), x.mv().get_double_push());
-                    }
-                    println!("NEGAMAX--NEGAMAX--NEGAMAX--, but tt is {:?}", tt_hit.and_then(|x| x.mv));
-                }
+                if  mv.to_string() == "d5c6x" {
+                println!("negamax-->>negamax-->>negamax_->>negamax-->>negamax-->>negamax-->>negamax-->> {} {}", mv.to_string(), self.depth);
+                // println!("\n\n");
+                // let victim = position.get_piece_at(mv.get_tgt(), !position.turn);
+                // if victim.is_none() {
+                //     if let Some(x) = position.last_history() {
+                //         println!("THE PREVIOUS MOVE IS {} ---<<<<<{}", x.mv(), x.mv().get_double_push());
+                //     }
+                //     println!("NEGAMAX--NEGAMAX--NEGAMAX--, but tt is {:?}", tt_hit.and_then(|x| x.mv));
+                // }
             }
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;

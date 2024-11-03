@@ -185,7 +185,23 @@ impl<const T: u8> MovePicker<T> {
         if self.stage == Stage::GoodCaptures {
             if self.index < self.total_good_captures {
                 // need to confirm that this is not the TT_MOVE or PV_MOVE that was returned earlier
-                return self.partial_insertion_sort::<true>(self.index);
+                let next_one = self.partial_insertion_sort::<true>(self.index);
+                if  let Some(mv) = next_one {
+                    let victim = position.piece_at(mv.get_tgt());
+                    if victim.is_none() {
+                        if let Some(x) = position.last_history() {
+                            println!("the current one is mv-->>{} enpass==>>{} double_push->{}", mv.to_string(), mv.get_enpassant(), mv.get_double_push());
+                            println!("{} -->>\n <<<<<<<<capture generator>>>>>>>> {}", mv.to_string(), position.to_string());
+                            // println!("data about the last history doublepush??? ==>> {}", x.mv().get_double_push());
+                            println!("<<<<<<<<<[[[[[[THE PREVIOUS MOVE IS]]]]]]>>>>>>>>> {} ---<<<<<{}", x.mv(), x.mv().get_double_push());
+                            // println!("the current board is {}", position)
+                            println!("\n\n\n");
+                        }
+                        // println!("NEGAMAX--NEGAMAX--NEGAMAX--, but tt is {:?}", tt_hit.and_then(|x| x.mv));
+                    }
+                }
+                
+                return next_one;
             }
             
             // we wouldn't be here in the first place if the move is not CapturesOnly or AllMoves, so those are the only two we need to check
