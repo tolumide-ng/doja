@@ -187,6 +187,11 @@ impl Board {
                     let mv = Move::new(src, target, DoublePush);
                     mv_list.push(T::create(mv));
 
+                    // if mv.get_src().to_string() == "f7" && mv.tgt().to_string() == "g8" {
+                    //     println!("---------------------------************---------------------------************---------------------------************  eleniyan {}", mv);
+                    // }
+                    // println!("the pushed move is >>>>>>>>>>>>>>>>>>>>>>> {}", mv.to_string());
+
                     src2 &= src2 -1;
                     target2 &= target2 -1;
                 }
@@ -488,6 +493,9 @@ impl Board {
         
         match scope {
             MoveScope::AllMoves => {
+                // if bit_move.get_double_push() {
+                //     println!("input is ((((((((((((((((((((((((((((((((((((((((((((((( {} >>>>> {}", bit_move.to_string(), bit_move.get_double_push());
+                // }
                 let from = bit_move.get_src(); // initial position of the piece
                 let to = bit_move.get_target(); // target position of the piece
 
@@ -512,13 +520,19 @@ impl Board {
                 if bit_move.get_capture() {
                     // there would usually only be a maximum of 2 captures each, consider unrolling this for loop (what did I mean here by 2???????)
                     let target_pieces = Piece::all_pieces_for(!turn);
+                    // let mut found = false;
                    for p in target_pieces {
                         if board[p].get_bit(to.into()) != 0 {
                             board[p].pop_bit(to.into());
                             board.hash_key ^= ZOBRIST.piece_keys[p][to];
+                            // found = true;
                             break;
                         }
                     }
+                    // this is an illegal move, the victim is not on the target square
+                    // if !bit_move.get_enpassant() && !found { 
+                    //     println!("the mv is >>>>> {}, the board now \n {}", bit_move.to_string(), self.board.to_string());
+                    //     return None }
                 }
                 
                 if let Some(promoted_to) = bit_move.get_promotion() { // if this piece is eligible for promotion, the new type it's vying for
@@ -547,6 +561,7 @@ impl Board {
                 if bit_move.move_type() == MoveType::DoublePush {
                     // let enpass_target = match board.turn {Color::Black => to as u64 + 8, _ => to as u64 -  8};
                     let enpass_target = Self::enpass_tgt(to, board.turn);
+                    // println!("this is a double push to >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {} {} -->> {}",bit_move.src(), to, Square::from(enpass_target));
                     board.enpassant = Some(enpass_target.into());
                     // double move results in an enpassant, add it to the hash key
                     board.hash_key ^= ZOBRIST.enpassant_keys[enpass_target as usize];
@@ -596,6 +611,14 @@ impl Board {
                 }
 
                 // *self = board;
+
+                if bit_move.get_double_push() {
+                    if board.enpassant.is_none() {
+                        println!("xxxxxxxx >>>>> {} --{} {:?} {} {}", bit_move, bit_move.to_string(), board.enpassant, bit_move.src(), bit_move.tgt());
+                        let enpass_target = Self::enpass_tgt(to, !board.turn);
+                        println!("this is a double push to >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {} {} -->> {} \n\n\n",bit_move.src(), to, Square::from(enpass_target));
+                    }
+                }
 
                 Some(board)
             }

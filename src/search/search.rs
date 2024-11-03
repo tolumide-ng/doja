@@ -247,6 +247,15 @@ impl<'a> Search<'a> {
 
         let mut mvs = MovePicker::<{MoveScope::CAPTURES}>::new(0, tt_move, killer_mvs);
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
+            // if  mv.to_string() == "d7f6x" {
+            //     let victim = position.get_piece_at(mv.get_tgt(), White);
+            //     if victim.is_none() {
+            //         if let Some(x) = position.last_history() {
+            //             println!("<<<<<<<<<THE PREVIOUS MOVE IS>>>>>>>>> {} ---<<<<<{}", x.mv(), x.mv().get_double_push());
+            //         }
+            //         // println!("NEGAMAX--NEGAMAX--NEGAMAX--, but tt is {:?}", tt_hit.and_then(|x| x.mv));
+            //     }
+            // }
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
                 let value = -self.quiescence(-beta, -alpha, position);
@@ -468,6 +477,16 @@ impl<'a> Search<'a> {
         // 30 is a practical maximum number of quiet moves that can be generated in a chess position (MidGame)
         let mut quiet_mvs: Vec<Move> = Vec::with_capacity(30);
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
+            // if mv.to_string() == "b4a3x" && mv.get_enpassant() && position.enpassant.is_none() {
+            if  mv.to_string() == "d7f6x" {
+                let victim = position.get_piece_at(mv.get_tgt(), White);
+                if victim.is_none() {
+                    if let Some(x) = position.last_history() {
+                        println!("THE PREVIOUS MOVE IS {} ---<<<<<{}", x.mv(), x.mv().get_double_push());
+                    }
+                    println!("NEGAMAX--NEGAMAX--NEGAMAX--, but tt is {:?}", tt_hit.and_then(|x| x.mv));
+                }
+            }
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
 

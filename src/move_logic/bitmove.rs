@@ -108,8 +108,9 @@ impl Move {
     // }
 
     pub(crate) fn get_double_push(&self) -> bool {
-        let value = (**self >> SQUARE_OFFSET) & (MoveType::DoublePush as u16);
-        value == MoveType::DoublePush as u16
+        // let value = (**self >> SQUARE_OFFSET) & (MoveType::DoublePush as u16);
+        // value == MoveType::DoublePush as u16
+        self.move_type() == MoveType::DoublePush
     }
 
     pub(crate) fn get_enpassant(&self) -> bool {

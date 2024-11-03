@@ -94,6 +94,7 @@ impl Position {
 
     pub(crate) fn make_move(&mut self, mv: Move, scope: MoveScope) -> bool {
         let Some(piece) = self.piece_at(mv.get_src()) else {return false};
+        // println!("from ppp -->> 11from ppp -->> 11 {}", mv);
         if let Some(new_board) = self.board.make_move(mv, scope) {
             let mut captured = None;
             let tgt = mv.get_target() as u64;
@@ -216,6 +217,10 @@ impl Position {
         let tgt_sq = Square::from(tgt);
         let turn = self.board.turn;
         let victim = self.board.get_piece_at(tgt, !turn);
+        // if mv.get_capture() && victim.is_none() {
+        //     println!("<<<<<<<<the>>>>>>>> mv is {} enpass?? {}", mv.to_string(), mv.get_enpassant());
+        //     println!("[[[[[the]]]]] current board is {}", self.board.to_string());
+        // }
         
         let mut rook_mvs = None;
         if mv.get_castling() { 
@@ -225,6 +230,8 @@ impl Position {
         let Some(piece) = self.board.piece_at(src) else {
             return false
         };
+
+        // println!("the mv is still>>>> {}", mv);
         
         if self.make_move(mv, scope) {
             // self.nnue_state.push();
@@ -236,6 +243,10 @@ impl Position {
                 // self.nnue_state.manual_update::<OFF>(Piece::pawn(!turn), enpass_tgt);
                 remove.push((Piece::pawn(!turn), enpass_tgt));
             } else if mv.get_capture() {
+                if victim.is_none() {
+                    println!("the mv is {} >> cap=>{} promo==>>{}, encap==>>{}, doubles==>>{}", mv.to_string(), mv.get_capture(), mv.get_promotion().is_some(), mv.get_enpassant(), mv.get_double_push());
+                    println!("the current board is {}", self.board.to_string());
+                }
                 // println!("src {:#?}--- tgt {:#?}", src, tgt);
                 // self.nnue_state.manual_update::<OFF>(victim.unwrap(), tgt_sq);
                 remove.push((victim.unwrap(), tgt_sq));
