@@ -165,7 +165,7 @@ impl<'a> Search<'a> {
         // stepping by 2 because we don't care about the opponent's key positional history in this case
         for index in (0..len-1).rev().step_by(2) {
             if let Some(history) = position.history_at(index) { 
-                if history.hash() == key { return true }
+                if history.board().hash_key == key { return true }
              } else { continue }
         } 
 
@@ -410,7 +410,7 @@ impl<'a> Search<'a> {
         
         if let Some(tt_data) = tt_hit {
             if let Some(mv) = tt_data.mv {
-                let quiet = mv.get_capture() && mv.get_promotion().is_none();
+                let quiet = !mv.get_capture() && mv.get_promotion().is_none();
                 if quiet {
                     self.killer_moves.store(depth as usize, &mv);
                     self.conthist.update_many(&position, vec![mv], depth, mv);

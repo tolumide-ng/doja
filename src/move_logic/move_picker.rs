@@ -106,7 +106,14 @@ impl<const T: u8> MovePicker<T> {
     fn score_quiets(&mut self, position: &Position, history_table: &HistoryHeuristic, conthist: &ContinuationHistory, counter_mvs: &CounterMove) {
         let start = self.index; let end = self.moves.count_mvs();
         let prev_mv_idx = position.history_len().checked_sub(1);
-        let parent = prev_mv_idx.and_then(|idx| position.history_at(idx)).map(|history| (history.mvd_piece(), history.mv()));
+        let parent = prev_mv_idx.and_then(|idx| position.history_at(idx)).map(|history| 
+            {
+                let prev_mv = history.mv();
+                let piece = history.board().piece_at(prev_mv.src()).unwrap();
+                // (history.mvd_piece(), history.mv())
+                (piece, prev_mv)
+            }
+        );
         
         for index in start..end {
             let quiet_mv = self.moves.at_mut(index).unwrap();

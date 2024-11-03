@@ -45,13 +45,21 @@ impl ContinuationHistory {
         for i in 0..Self::CONTINUATION_HISTORY {
             if let Some(idx) = history_len.checked_sub(i+1) {
                 let Some(pos_history) = pos.history_at(idx) else {continue};
-                let prev_piece = pos_history.mvd_piece(); let prev_mv = pos_history.mv().get_tgt();
+                let prev_tgt = pos_history.mv().tgt();
+                // println!()
+                // if pos_history.board().piece_at(prev_tgt).is_none() {
+                //     println!("the board {}", pos_history.board().to_string());
+                //     println!("the mv is {}", pos_history.mv());
+                //     println!("is the mv castling --->>> {}", pos_history.mv().get_castling());
+                // }
+                let prev_piece = pos_history.board().piece_at(pos_history.mv().src()).unwrap();
+                // let prev_piece = pos_history.mvd_piece(); let prev_mv = pos_history.mv().get_tgt();
                 
                 for mv in &quiets {
                     let curr_piece = pos.piece_at(mv.get_src()).unwrap();
                     let curr_mv = mv.get_tgt();
                     let bonus = if mv == &best_mv { history_bonus(depth) } else { malus(depth)};
-                    self.update(prev_piece, prev_mv, curr_piece, curr_mv, bonus);
+                    self.update(prev_piece, prev_tgt, curr_piece, curr_mv, bonus);
                 }
                 
             } else {
