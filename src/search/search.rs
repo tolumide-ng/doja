@@ -433,7 +433,7 @@ impl<'a> Search<'a> {
 
         // 30 is a practical maximum number of quiet moves that can be generated in a chess position (MidGame)
         let mut quiet_mvs: Vec<Move> = Vec::with_capacity(30);
-        let mut captures: Vec<Move> = Vec::with_capacity(16);
+        let mut captures: Vec<(Move, HashFlag)> = Vec::with_capacity(16);
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
             // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--{}", mv.to_string());
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
@@ -501,33 +501,63 @@ impl<'a> Search<'a> {
                 //     }
                 // }
 
+                let quiet_mv = !mv.is_capture();
                 if score > best_value {
                     best_value = score;
-
-                    if score > alpha {
-                        best_mv = Some(mv);
-                    }
                     
-                    if score >= beta {
-                        self.conthist.update_many(&position, quiet_mvs, depth, mv);
-                        alpha = beta;
-                        break;
-                    } else {
-                        self.pv_table.store_pv(self.ply, &mv);
-                        alpha = score;
+                    if score > alpha { 
+                        best_mv = Some(mv);
+
+                        if score >= beta {
+                            if mv.get_capture() {
+                                // self.caphist.update_many(pos, depth, flag, mvs);
+                            } else {
+                                self.killer_moves.store(depth as usize, &mv);
+                                self.history_table.update(moved_piece, mv.get_src(), depth);
+                                self.caphist.update_many(&position, depth, &captures);
+                                self.counter_mvs.add(&position, mv);
+                                self.conthist.update_many(&position, &quiet_mvs, depth, best_mv.unwrap());
+                            }
+                            captures.push((mv, HashFlag::LowerBound));
+                        } else {
+                            captures.push((mv, HashFlag::UpperBound));
+                        }
                     }
                 }
-
-                mvs_searched += 1;
-                
-                if mv.get_capture() {
-                    self.caphist.update(depth, HashFlag::LowerBound, moved_piece, mv.get_target(), PieceType::from(position.piece_at(mv.get_target()).unwrap()));
-                } else {
+                if quiet_mv {
                     quiet_mvs.push(mv);
-                    self.killer_moves.store(depth as usize, &mv);
-                    self.counter_mvs.add(&position, mv);
-                    self.history_table.update(moved_piece, mv.get_src(), depth)
                 }
+                //  else {
+                //     captures.push(mv);
+                // }
+                mvs_searched += 1;
+
+                // if score > best_value {
+                //     best_value = score;
+
+                //     if score > alpha {
+                //         best_mv = Some(mv);
+                //     }
+                    
+                //     if score >= beta {
+                //         self.conthist.update_many(&position, quiet_mvs, depth, mv);
+                //         alpha = beta;
+                //         break;
+                //     } else {
+                //         self.pv_table.store_pv(self.ply, &mv);
+                //         alpha = score;
+                //     }
+                // }
+
+                
+                // if mv.get_capture() {
+                //     self.caphist.update(depth, HashFlag::LowerBound, moved_piece, mv.get_target(), PieceType::from(position.piece_at(mv.get_target()).unwrap()));
+                // } else {
+                //     quiet_mvs.push(mv);
+                //     self.killer_moves.store(depth as usize, &mv);
+                //     self.counter_mvs.add(&position, mv);
+                //     self.history_table.update(moved_piece, mv.get_src(), depth)
+                // }
                 // if score >= beta {
                 //     self.tt.record(zobrist_key, depth, beta, INFINITY, self.ply, HashFlag::LowerBound, 0, best_mv); 
                 //             if mv.get_capture() {

@@ -1,4 +1,4 @@
-use crate::{board::piece::{Piece, PieceType}, squares::Square, tt::flag::HashFlag};
+use crate::{board::{piece::{Piece, PieceType}, position::Position}, move_logic::bitmove::Move, squares::Square, tt::flag::HashFlag};
 
 use super::{history_bonus, malus};
 
@@ -41,5 +41,14 @@ impl CaptureHistory {
     pub(crate) fn get(&self, attacker: Piece, tgt_sq: Square, victim: PieceType) -> i16 {
         let index = Self::to_1_d_index(attacker, tgt_sq, victim);
         return *(unsafe { self.0.get_unchecked(index) })
+    }
+
+    pub(crate) fn update_many(&mut self, pos: &Position, depth: u8, mvs: &Vec<(Move, HashFlag)>) {
+        for (mv, flag) in mvs {
+            let attacker = pos.piece_at(mv.get_src()).unwrap();
+            let tgt_sq = mv.get_tgt();
+            let victim = PieceType::from(pos.piece_at(tgt_sq).unwrap());
+            self.update(depth, *flag, attacker, tgt_sq, victim);
+        }
     }
 }
