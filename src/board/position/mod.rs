@@ -3,14 +3,12 @@ use std::ops::Deref;
 use history::History;
 
 use crate::move_logic::bitmove::MoveType;
-use crate::constants::{BLACK_KING_CASTLING_MASK, BLACK_QUEEN_CASTLING_MASK, PIECE_ATTACKS, WHITE_KING_CASTLING_MASK, WHITE_QUEEN_CASTLING_MASK};
+use crate::constants::PIECE_ATTACKS;
 use crate::nnue::accumulator::Feature;
 use crate::{move_logic::bitmove::Move, move_scope::MoveScope, squares::Square};
 use crate::nnue::network::NNUEState;
 use crate::color::Color::{self, *};
 use crate::nnue::constants::custom_kp::*;
-use crate::squares::Square::*;
-use super::castling::Castling;
 use super::{piece::{Piece, Piece::*}, state::board::Board};
 
 #[cfg(test)]
@@ -18,26 +16,6 @@ use super::{piece::{Piece, Piece::*}, state::board::Board};
 mod tests;
 mod history;
 
-
-
-// /// todo! Should be moved to it's own module later
-// #[derive(Debug, Clone, Copy)]
-// pub(crate) struct History {
-//     mv: Move, hash: u64, victim: Option<Piece>, piece: Piece,
-// }
-
-// impl History {
-//     pub(crate) fn new(mv: Move, hash: u64, victim: Option<Piece>, piece: Piece) -> Self {
-//         Self { mv, hash, victim, piece }
-//     }
-
-//     pub(crate) fn hash(&self) -> u64 {
-//         return self.hash
-//     }
-
-//     pub(crate) const fn mv(&self) -> Move { self.mv }
-//     pub(crate) const fn mvd_piece(&self) -> Piece { self.piece }
-// }
 
 /// If Feature is m256i, then the size = 32, and then that would be (1024/32) * 2 = 64 values
 /// If Feature is i16, then the size = 2, and then that would be (1024/2) * 2 = 1024 values
@@ -220,10 +198,10 @@ impl Position {
         let tgt_sq = Square::from(tgt);
         let turn = self.board.turn;
         let victim = self.board.get_piece_at(tgt, !turn);
-        // if mv.get_capture() && victim.is_none() {
-        //     println!("<<<<<<<<the>>>>>>>> mv is {} enpass?? {}", mv.to_string(), mv.get_enpassant());
-        //     println!("[[[[[the]]]]] current board is {}", self.board.to_string());
-        // }
+        if mv.get_capture() && victim.is_none() {
+            println!("<<<<<<<<the>>>>>>>> mv is {} enpass?? {}", mv.to_string(), mv.get_enpassant());
+            println!("[[[[[the]]]]] current board is {}", self.board.to_string());
+        }
         
         let mut rook_mvs = None;
         if mv.get_castling() { 

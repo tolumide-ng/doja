@@ -137,11 +137,17 @@ fn main() {
     // println!("the xx0 is {}", xx0);
 
 
-    // let mut board = Position::from(Board::try_from("r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2p2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ").unwrap());
+    // let mut board = Position::from(Board::try_from("r2Rk2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2p2Q1p/PPPBBPPP/R3K21 b KQkq - 0 1 ").unwrap());
     let mut board = Position::from(Board::try_from(TRICKY_POSITION).unwrap());
     println!("{}", board.to_string());
     let mut search = Search::new(table.get());
-    search.iterative_deepening(4, &mut board);
+    search.iterative_deepening(2, &mut board);
+
+    // let status = board.stm_in_check();
+    // println!("the status is {status}");
+
+
+
     // board.get_all_attacks(Square::A6);
     // Search::see(&board, &Move::new(F3 as u8, H3 as u8, MoveType::Capture), 0);
 

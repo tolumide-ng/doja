@@ -161,12 +161,22 @@ impl<const T: u8> MovePicker<T> {
             return None;
         }
 
+        
         if self.stage == Stage::TTMove {
-            if move_scope == MoveScope::QuietOnly { self.stage = Stage::Quiets; } else { 
-                self.stage = Stage::InitCaptures;
-                if let Some(mv) = self.tt_move {
-                    return Some(mv);
-                }
+            // println!("here with *********---------------------------------------------------------------------*********---------------------------------------------------------------------");
+            if move_scope == MoveScope::QuietOnly { self.stage = Stage::Quiets } else { self.stage = Stage::InitCaptures };
+            
+            if let Some(mv) = self.tt_move {
+                if position.is_pseudo_legal(&mv) {
+                    let expects_quiet_but_tt_is_capturing = move_scope == MoveScope::QuietOnly && mv.is_capture();
+                    let expects_capturing_but_tt_is_quiet = move_scope == MoveScope::CapturesOnly && !mv.is_capture();
+                    let does_not_fit_expectations = expects_capturing_but_tt_is_quiet || expects_quiet_but_tt_is_capturing;
+                    let fits_expectations = !does_not_fit_expectations;
+
+                    if fits_expectations {
+                        return Some(mv);
+                    }
+                 }
             }
         }
 
@@ -174,42 +184,19 @@ impl<const T: u8> MovePicker<T> {
             // println!("should only be here once");
             self.stage = Stage::GoodCaptures;
             position.gen_movement::<{ MoveScope::CAPTURES }, ScoredMove>(&mut self.moves);
-
-            // for i in 0..self.moves.count() {
-            //     let m = self.moves[i];
-            //     print!("==={}--{}===>>", m.mv(), m.score());
-            // }
-
-            // println!("\n\n");
             self.score_captures(position, caphist);
-            // for i in 0..self.moves.count() {
-            //     let m = self.moves[i];
-            //     print!("==={}--{}===>>", m.mv(), m.score());
-            // }
-            // println!("\n total={}, good={} \n\n", self.total_captures, self.total_good_captures);
         }
         
         if self.stage == Stage::GoodCaptures {
             if self.index < self.total_good_captures {
                 // need to confirm that this is not the TT_MOVE or PV_MOVE that was returned earlier
-                let next_one = self.partial_insertion_sort::<true>(self.index);
-                if  let Some(mv) = next_one {
-                    let victim = position.piece_at(mv.get_tgt());
-                    if victim.is_none() {
-                        if let Some(x) = position.last_history() {
-                            println!("the current one is mv-->>{} enpass==>>{} double_push->{}", mv.to_string(), mv.get_enpassant(), mv.get_double_push());
-                            println!("{} -->>\n <<<<<<<<capture generator>>>>>>>> {}", mv.to_string(), position.to_string());
-                            // println!("data about the last history doublepush??? ==>> {}", x.mv().get_double_push());
-                            println!("<<<<<<<<<[[[[[[THE PREVIOUS MOVE IS]]]]]]>>>>>>>>> {} ---<<<<<{}", x.mv(), x.mv().get_double_push());
-                            // println!("the current board is {}", position)
-                            println!("\n\n\n");
-                        }
-                        // println!("NEGAMAX--NEGAMAX--NEGAMAX--, but tt is {:?}", tt_hit.and_then(|x| x.mv));
-                    }
+                let next_mv = self.partial_insertion_sort::<true>(self.index);
+                if let Some(mv) = next_mv {
+                    if self.tt_move.is_some_and(|tt_mv| tt_mv == mv) {
+                        return self.next(position, history_table, caphist, conthist, counter_mvs); }
+                    return Some(mv);
                 }
-                
-                return next_one;
-            }
+        }
             
             // we wouldn't be here in the first place if the move is not CapturesOnly or AllMoves, so those are the only two we need to check
             if move_scope == MoveScope::AllMoves {
@@ -228,8 +215,11 @@ impl<const T: u8> MovePicker<T> {
 
         if self.stage == Stage::Quiets {
             if self.index < self.moves.count_mvs() {
-                // need to confirm that this is not the TT_MOVE or PV_MOVE that was returned earlier
-                return self.partial_insertion_sort::<true>(self.index);
+                let next_mv = self.partial_insertion_sort::<true>(self.index);
+                if let Some(mv) = next_mv {
+                    if self.tt_move.is_some_and(|tt_mv| tt_mv == mv) { return self.next(position, history_table, caphist, conthist, counter_mvs); }
+                }
+                return next_mv;
             }
             if move_scope == MoveScope::QuietOnly { return None }
             self.index = self.total_good_captures;
@@ -240,7 +230,11 @@ impl<const T: u8> MovePicker<T> {
         // BAD CAPTURES
         if self.stage == Stage::BadCapture {
             if self.total_captures != self.total_good_captures && self.index < self.total_captures {
-                return self.partial_insertion_sort::<true>(self.index);
+                let next_one = self.partial_insertion_sort::<true>(self.index);
+                if  let Some(mv) = next_one {
+                    if self.tt_move.is_some_and(|tt_mv| tt_mv == mv) { return self.next(position, history_table, caphist, conthist, counter_mvs); }
+                }
+                return next_one;
             }
         }
         
