@@ -526,31 +526,62 @@ impl<'a> Search<'a> {
                 // if quiet_mv {
                 //     quiet_mvs.push(mv);
                 // }
-
-                if score >= best_value {
-                    best_value = score;
-
-                    if best_value > alpha {
-                        best_mv = Some(mv);
-
-                        if best_value >= beta {
-                            self.update_logs(position, &best_mv, &quiet_mvs, &captures);
-                            self.killer_moves.store(self.ply, &mv);
-                            break;
-                        }
-
-                        self.pv_table.store_pv(self.ply, &mv);
-                        alpha = best_value;
-                    }
-                }
-
-                if Some(mv) != best_mv {
-                    if quiet_mv {
+                if score >= beta {
+                    if mv.get_capture() {
+                        captures.push((mv, HashFlag::LowerBound));
+                    } else {
                         quiet_mvs.push(mv);
-                    }else {
-                        // captures.push((mv));
+                        self.killer_moves.store(self.ply, &mv);
+                        self.history_table.update(moved_piece, mv.get_src(), self.ply as u8);
                     }
+
+                    self.update_logs(position, &best_mv, &quiet_mvs, &captures);
+                    break;
                 }
+
+                if score > alpha {
+                    best_value = score;
+                    best_mv = Some(mv);
+                    self.pv_table.store_pv(self.ply, &mv);
+                    alpha = score;
+
+                }
+
+                // if score >= best_value {
+                //     best_value = score;
+
+                //     if best_value > alpha {
+                //         best_mv = Some(mv);
+
+                //         if best_value >= beta {
+                //             if quiet_mv { 
+                //                 quiet_mvs.push(mv);
+                //                 self.killer_moves.store(self.ply, &mv);
+                //             } else {
+                //                 captures.push((mv, HashFlag::LowerBound));
+                //             }
+
+                //             self.update_logs(position, &best_mv, &quiet_mvs, &captures);
+                //             self.history_table.update(moved_piece, mv.get_src(), self.ply as u8);
+                //             break;
+                //         } else {
+                //             if mv.is_capture() {
+                //                 captures.push((mv, HashFlag::UpperBound));
+                //             }
+                //         }
+
+                //         self.pv_table.store_pv(self.ply, &mv);
+                //         alpha = best_value;
+                //     }
+                // }
+
+                // // if Some(mv) != best_mv {
+                //     if quiet_mv {
+                //         quiet_mvs.push(mv);
+                //     }else {
+                //         // captures.push((mv));
+                //     }
+                // }
 
 
                 //  else {
@@ -624,8 +655,8 @@ impl<'a> Search<'a> {
 
     pub(crate) fn update_logs(&mut self, position: &Position, best_mv: &Option<Move>, quiets: &Vec<Move>, captures: &Vec<(Move, HashFlag)>) {
         self.conthist.update_many(&position, &quiets, self.ply as u8, best_mv);
-            self.caphist.update_many(&position, self.ply as u8, captures);
-            self.counter_mvs.add_many(&position, quiets);
+        self.caphist.update_many(&position, self.ply as u8, captures);
+        self.counter_mvs.add_many(&position, quiets);
     }
 
 
