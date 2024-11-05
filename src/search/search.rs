@@ -502,31 +502,57 @@ impl<'a> Search<'a> {
                 // }
 
                 let quiet_mv = !mv.is_capture();
-                if score > best_value {
-                    best_value = score;
+                // if score > best_value {
+                //     best_value = score;
                     
-                    if score > alpha { 
+                //     if score > alpha { 
+                //         best_mv = Some(mv);
+
+                //         if score >= beta {
+                //             if mv.get_capture() {
+                //                 captures.push((mv, HashFlag::LowerBound));
+                //                 // self.caphist.update_many(pos, depth, flag, mvs);
+                //             } else {
+                //                 captures.push((mv, HashFlag::UpperBound));
+                //             }
+                //             self.caphist.update_many(&position, depth, &captures);
+                //             self.killer_moves.store(depth as usize, &mv);
+                //             self.history_table.update(moved_piece, mv.get_src(), depth);
+                //             self.counter_mvs.add(&position, mv);
+                //             self.conthist.update_many(&position, &quiet_mvs, depth, best_mv.unwrap());
+                //         } 
+                //     }
+                // }
+                // if quiet_mv {
+                //     quiet_mvs.push(mv);
+                // }
+
+                if score >= best_value {
+                    best_value = score;
+
+                    if best_value > alpha {
                         best_mv = Some(mv);
 
-                        if score >= beta {
-                            if mv.get_capture() {
-                                // self.caphist.update_many(pos, depth, flag, mvs);
-                            } else {
-                                self.killer_moves.store(depth as usize, &mv);
-                                self.history_table.update(moved_piece, mv.get_src(), depth);
-                                self.caphist.update_many(&position, depth, &captures);
-                                self.counter_mvs.add(&position, mv);
-                                self.conthist.update_many(&position, &quiet_mvs, depth, best_mv.unwrap());
-                            }
-                            captures.push((mv, HashFlag::LowerBound));
-                        } else {
-                            captures.push((mv, HashFlag::UpperBound));
+                        if best_value >= beta {
+                            self.update_logs(position, &best_mv, &quiet_mvs, &captures);
+                            self.killer_moves.store(self.ply, &mv);
+                            break;
                         }
+
+                        self.pv_table.store_pv(self.ply, &mv);
+                        alpha = best_value;
                     }
                 }
-                if quiet_mv {
-                    quiet_mvs.push(mv);
+
+                if Some(mv) != best_mv {
+                    if quiet_mv {
+                        quiet_mvs.push(mv);
+                    }else {
+                        // captures.push((mv));
+                    }
                 }
+
+
                 //  else {
                 //     captures.push(mv);
                 // }
@@ -569,27 +595,12 @@ impl<'a> Search<'a> {
                 //     }
                 //     return beta;
                 // }
-
-                // if score > alpha {
-                //     best_score = score;
-                    
-                //     best_mv = Some(mv);
-                //     // hash_flag = HashFlag::Exact;
-                //     self.pv_table.store_pv(self.ply, &mv);
-                //     alpha = score;
-
-                //     if !mv.get_capture() {
-                //         self.history_table.update(moved_piece, mv.get_src(), depth);
-                //     }
-                // }
-
-                // if !mv.get_capture() {
-                //     quiet_mvs.push(mv);
-                // } else {
-                //     // 
-                // }
             }
         }
+
+        // if best_value >= beta {
+        //     self.update_logs(position, &best_mv, &quiet_mvs, &captures);
+        // }
 
         if mvs_searched == 0 {
             if stm_in_check {
@@ -611,7 +622,11 @@ impl<'a> Search<'a> {
         alpha
     }
 
-    pub(crate) fn update_logs(&mut self, quiets: Vec<Move>, captures: Vec<Move>) {}
+    pub(crate) fn update_logs(&mut self, position: &Position, best_mv: &Option<Move>, quiets: &Vec<Move>, captures: &Vec<(Move, HashFlag)>) {
+        self.conthist.update_many(&position, &quiets, self.ply as u8, best_mv);
+            self.caphist.update_many(&position, self.ply as u8, captures);
+            self.counter_mvs.add_many(&position, quiets);
+    }
 
 
 

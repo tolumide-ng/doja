@@ -20,6 +20,12 @@ impl CounterMove {
         } 
     }
 
+    pub(crate) fn add_many(&mut self, pos: &Position, mvs: &Vec<Move>) {
+        for mv in mvs {
+            self.add(pos, *mv);
+        }
+    }
+
     const fn index(src: Square, tgt: Square) -> usize {
         ((src as usize) * Square::TOTAL) + tgt as usize
     }

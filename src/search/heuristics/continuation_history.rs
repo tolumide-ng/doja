@@ -39,7 +39,7 @@ impl ContinuationHistory {
     /// 2-ply Continuation History
     const CONTINUATION_HISTORY: usize = 2;
 
-    pub(crate) fn update_many(&mut self, pos: &Position, quiets: &Vec<Move>, depth: u8, best_mv: Move) {
+    pub(crate) fn update_many(&mut self, pos: &Position, quiets: &Vec<Move>, depth: u8, best_mv: &Option<Move>) {
         let history_len = pos.history_len();
         // 2-ply Continuation history, so we need to get the last two moves
         for i in 0..Self::CONTINUATION_HISTORY {
@@ -58,7 +58,7 @@ impl ContinuationHistory {
                 for mv in quiets {
                     let curr_piece = pos.piece_at(mv.get_src()).unwrap();
                     let curr_mv = mv.get_tgt();
-                    let bonus = if mv == &best_mv { history_bonus(depth) } else { malus(depth)};
+                    let bonus = if Some(mv) == best_mv.as_ref() { history_bonus(depth) } else { malus(depth)};
                     self.update(prev_piece, prev_tgt, curr_piece, curr_mv, bonus);
                 }
                 

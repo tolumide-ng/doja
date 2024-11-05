@@ -141,7 +141,7 @@ fn main() {
     let mut board = Position::from(Board::try_from(TRICKY_POSITION).unwrap());
     println!("{}", board.to_string());
     let mut search = Search::new(table.get());
-    search.iterative_deepening(2, &mut board);
+    search.iterative_deepening(4, &mut board);
 
     // let status = board.stm_in_check();
     // println!("the status is {status}");
