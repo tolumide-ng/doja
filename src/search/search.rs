@@ -468,10 +468,11 @@ impl<'a> Search<'a> {
                 position.undo_move(true);
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
-
+                
                 // if position.turn == Color::Black && i < 4 {
-                //     println!("THE MOVE: {} at depth -->> {depth} ----- the score {score}, the alpha==>> {alpha}, and the beta==>>{beta} \n\n\n", mv.to_string());
-                // }
+                    //     println!("THE MOVE: {} at depth -->> {depth} ----- the score {score}, the alpha==>> {alpha}, and the beta==>>{beta} \n\n\n", mv.to_string());
+                    // }
+                //     let quiet_mv = !mv.is_capture();
                 
                 // if score >= beta {
                 //     self.tt.record(zobrist_key, depth, beta, INFINITY, self.ply, HashFlag::LowerBound, 0, best_mv); 
@@ -501,38 +502,14 @@ impl<'a> Search<'a> {
                 //     }
                 // }
 
-                let quiet_mv = !mv.is_capture();
-                // if score > best_value {
-                //     best_value = score;
-                    
-                //     if score > alpha { 
-                //         best_mv = Some(mv);
 
-                //         if score >= beta {
-                //             if mv.get_capture() {
-                //                 captures.push((mv, HashFlag::LowerBound));
-                //                 // self.caphist.update_many(pos, depth, flag, mvs);
-                //             } else {
-                //                 captures.push((mv, HashFlag::UpperBound));
-                //             }
-                //             self.caphist.update_many(&position, depth, &captures);
-                //             self.killer_moves.store(depth as usize, &mv);
-                //             self.history_table.update(moved_piece, mv.get_src(), depth);
-                //             self.counter_mvs.add(&position, mv);
-                //             self.conthist.update_many(&position, &quiet_mvs, depth, best_mv.unwrap());
-                //         } 
-                //     }
-                // }
-                // if quiet_mv {
-                //     quiet_mvs.push(mv);
-                // }
                 if score >= beta {
                     if mv.get_capture() {
                         captures.push((mv, HashFlag::LowerBound));
                     } else {
                         quiet_mvs.push(mv);
-                        self.killer_moves.store(self.ply, &mv);
-                        self.history_table.update(moved_piece, mv.get_src(), self.ply as u8);
+                        self.killer_moves.store(depth as usize, &mv);
+                        self.history_table.update(moved_piece, mv.get_src(), depth as usize as u8);
                     }
 
                     self.update_logs(position, &best_mv, &quiet_mvs, &captures);
@@ -547,85 +524,7 @@ impl<'a> Search<'a> {
 
                 }
 
-                // if score >= best_value {
-                //     best_value = score;
-
-                //     if best_value > alpha {
-                //         best_mv = Some(mv);
-
-                //         if best_value >= beta {
-                //             if quiet_mv { 
-                //                 quiet_mvs.push(mv);
-                //                 self.killer_moves.store(self.ply, &mv);
-                //             } else {
-                //                 captures.push((mv, HashFlag::LowerBound));
-                //             }
-
-                //             self.update_logs(position, &best_mv, &quiet_mvs, &captures);
-                //             self.history_table.update(moved_piece, mv.get_src(), self.ply as u8);
-                //             break;
-                //         } else {
-                //             if mv.is_capture() {
-                //                 captures.push((mv, HashFlag::UpperBound));
-                //             }
-                //         }
-
-                //         self.pv_table.store_pv(self.ply, &mv);
-                //         alpha = best_value;
-                //     }
-                // }
-
-                // // if Some(mv) != best_mv {
-                //     if quiet_mv {
-                //         quiet_mvs.push(mv);
-                //     }else {
-                //         // captures.push((mv));
-                //     }
-                // }
-
-
-                //  else {
-                //     captures.push(mv);
-                // }
                 mvs_searched += 1;
-
-                // if score > best_value {
-                //     best_value = score;
-
-                //     if score > alpha {
-                //         best_mv = Some(mv);
-                //     }
-                    
-                //     if score >= beta {
-                //         self.conthist.update_many(&position, quiet_mvs, depth, mv);
-                //         alpha = beta;
-                //         break;
-                //     } else {
-                //         self.pv_table.store_pv(self.ply, &mv);
-                //         alpha = score;
-                //     }
-                // }
-
-                
-                // if mv.get_capture() {
-                //     self.caphist.update(depth, HashFlag::LowerBound, moved_piece, mv.get_target(), PieceType::from(position.piece_at(mv.get_target()).unwrap()));
-                // } else {
-                //     quiet_mvs.push(mv);
-                //     self.killer_moves.store(depth as usize, &mv);
-                //     self.counter_mvs.add(&position, mv);
-                //     self.history_table.update(moved_piece, mv.get_src(), depth)
-                // }
-                // if score >= beta {
-                //     self.tt.record(zobrist_key, depth, beta, INFINITY, self.ply, HashFlag::LowerBound, 0, best_mv); 
-                //             if mv.get_capture() {
-                //         self.caphist.update(depth, HashFlag::LowerBound, moved_piece, mv.get_target(), PieceType::from(position.piece_at(mv.get_target()).unwrap()));
-                //     } else {
-                //         self.killer_moves.store(depth as usize, &mv);
-                //         self.conthist.update_many(&position, quiet_mvs, depth, mv);
-                //         self.counter_mvs.add(&position, mv);
-                //     }
-                //     return beta;
-                // }
             }
         }
 
