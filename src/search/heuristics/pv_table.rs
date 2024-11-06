@@ -30,13 +30,13 @@ impl PVTable {
         let len = self.lengths[depth + 1];
 
         let prev = depth + 1;
-        let prev_len = self.lengths[prev];
+        // let prev_len = self.lengths[prev];
         // Copy the PV from depth + 1 into this depth
         for i in 0..len {
             self.pv[index + i + 1] = self.pv[prev_depth_index + i];
         }
         self.lengths[depth] = len + 1;
-        let xx = self.lengths[depth];
+        // let xx = self.lengths[depth];
 
     }
 

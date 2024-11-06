@@ -349,13 +349,13 @@ impl<'a> Search<'a> {
             return self.quiescence(alpha, beta, position);
         }
 
-        let improving = if self.ply >= 2 && self.ss[self.ply - 2].eval != -INFINITY {
-            self.ss[self.ply].eval > self.ss[self.ply - 2].eval
-        } else if self.ply >= 4 && self.ss[self.ply - 4].eval != -INFINITY {
-            self.ss[self.ply].eval > self.ss[self.ply - 4].eval
-        } else {
-            true
-        };
+        // let improving = if self.ply >= 2 && self.ss[self.ply - 2].eval != -INFINITY {
+        //     self.ss[self.ply].eval > self.ss[self.ply - 2].eval
+        // } else if self.ply >= 4 && self.ss[self.ply - 4].eval != -INFINITY {
+        //     self.ss[self.ply].eval > self.ss[self.ply - 4].eval
+        // } else {
+        //     true
+        // };
 
 
         let tt_hit = self.probe_tt(position.hash_key, Some(self.ply as u8), alpha, beta);
@@ -439,28 +439,28 @@ impl<'a> Search<'a> {
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
 
-                let score = match mvs_searched {
+                let value = match mvs_searched {
                     0 => -self.negamax::<NotPv>(-beta, -alpha, depth -1, &mut position),
                     _ => {
                         // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
                         // condition for Late Move Reduction
                         let non_tatcital_mv = !stm_in_check && mv.get_promotion().is_none() && !mv.get_capture();
 
-                        let mut value = if (mvs_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
+                        let mut result = if (mvs_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
                             -self.negamax::<NotPv>(-(alpha + 1), -alpha, depth-2, position)
                         } else {
                             alpha + 1 // Hack to ensure that full-depth search is done
                         };
 
-                        if value > alpha {
-                            value = -self.negamax::<NotPv>(-(alpha - 1), -alpha, depth-1, position);
+                        if result > alpha {
+                            result = -self.negamax::<NotPv>(-(alpha - 1), -alpha, depth-1, position);
 
-                            if (value > alpha) && value < beta {
-                                value = -self.negamax::<NotPv>(-beta, -alpha, depth-1, position);
+                            if (result > alpha) && result < beta {
+                                result = -self.negamax::<NotPv>(-beta, -alpha, depth-1, position);
                             }
                         }
 
-                        value
+                        result
                     }
                 };
                                 
@@ -469,60 +469,61 @@ impl<'a> Search<'a> {
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
                 
-                // if position.turn == Color::Black && i < 4 {
-                    //     println!("THE MOVE: {} at depth -->> {depth} ----- the score {score}, the alpha==>> {alpha}, and the beta==>>{beta} \n\n\n", mv.to_string());
-                    // }
-                //     let quiet_mv = !mv.is_capture();
-                
-                // if score >= beta {
-                //     self.tt.record(zobrist_key, depth, beta, INFINITY, self.ply, HashFlag::LowerBound, 0, best_mv); 
-                //     if mv.get_capture() {
-                //         self.caphist.update(depth, HashFlag::LowerBound, moved_piece, mv.get_target(), PieceType::from(position.piece_at(mv.get_target()).unwrap()));
-                //     } else {
-                //         self.killer_moves.store(depth as usize, &mv);
-                //         self.conthist.update_many(&position, quiet_mvs, depth, mv);
-                //         self.counter_mvs.add(&position, mv);
-                //     }
-                //     return beta;
-                // }
+                if value > best_value {
+                    best_value = value;
 
-                // if score > alpha {
-                //     best_score = score;
-                    
-                //     best_mv = Some(mv);
-                //     // hash_flag = HashFlag::Exact;
-                //     self.pv_table.store_pv(self.ply, &mv);
-                //     alpha = score;
-
-                //     if mv.get_capture() {
-                //         self.caphist.update(depth, HashFlag::UpperBound, moved_piece, mv.get_target(), PieceType::from(position.piece_at(mv.get_target()).unwrap()));
-                //     } else {
-                //         self.history_table.update(moved_piece, mv.get_src(), depth);
-                //         quiet_mvs.push(mv);
-                //     }
-                // }
-
-
-                if score >= beta {
-                    if mv.get_capture() {
-                        captures.push((mv, HashFlag::LowerBound));
-                    } else {
-                        quiet_mvs.push(mv);
-                        self.killer_moves.store(depth as usize, &mv);
-                        self.history_table.update(moved_piece, mv.get_src(), depth as usize as u8);
+                    if value > alpha {
+                        best_mv = Some(mv);
+                        alpha = value;
+                        self.pv_table.store_pv(self.ply, &mv);
                     }
 
-                    self.update_logs(position, &best_mv, &quiet_mvs, &captures);
-                    break;
-                }
 
-                if score > alpha {
-                    best_value = score;
-                    best_mv = Some(mv);
-                    self.pv_table.store_pv(self.ply, &mv);
-                    alpha = score;
+                    if value >= beta {
+                        self.tt.record(position.hash_key, depth, best_value, self.ss[self.ply].eval, self.ply, HashFlag::LowerBound, 0, best_mv);
+                        self.update_logs(&position, &best_mv, &quiet_mvs, &captures);
+                        if mv.get_capture() {
+                            captures.push((mv, HashFlag::LowerBound));
+                        } else {
+                            quiet_mvs.push(mv);
+                            self.killer_moves.store(depth as usize, &mv);
+                            self.history_table.update(moved_piece, mv.get_src(), depth);
+                        }
+                        break;
+                    } else {
+                        // if !NT::ROOT {}
+                        // println!("H************************************************************************************************************************************************************");
 
+                        // if mv.get_capture() {
+                        //     captures.push((mv, HashFlag::UpperBound));
+                        // }
+                    }
                 }
+                
+                // self.update_logs(&position, &best_mv, &quiet_mvs, &captures);
+                
+                // if value >= beta {
+                //     if mv.get_capture() {
+                //             captures.push((mv, HashFlag::LowerBound));
+                //         } else {
+                //         quiet_mvs.push(mv);
+                //         self.killer_moves.store(depth as usize, &mv);
+                //         self.history_table.update(moved_piece, mv.get_src(), depth as usize as u8);
+                //     }
+
+                //     // self.update_logs(position, &best_mv, &quiet_mvs, &captures);
+                //     break;
+                // }
+                
+                // captures.push((mv, HashFlag::UpperBound));
+                // if value > alpha {
+                //     best_value = value;
+                //     best_mv = Some(mv);
+                //     self.pv_table.store_pv(self.ply, &mv);
+                //     alpha = value;
+
+                // }
+                
 
                 mvs_searched += 1;
             }
