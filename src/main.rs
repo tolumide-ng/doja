@@ -27,7 +27,7 @@ mod syzygy;
 
 use std::{num::NonZero, sync::{Arc, Mutex}};
 
-use move_logic::bitmove::{Move, MoveType};
+// use move_logic::bitmove::{Move, MoveType};
 use board::{position::Position, state::board::Board};
 use color::Color;
 use constants::TRICKY_POSITION;
@@ -123,6 +123,7 @@ fn main() {
     // // println!("black king on 63 --->>>> {:?}", bk_63);
     // // println!("white king on 63 --->>>> {:?}", wk_63);
     // // println!("black queen on 56 --->>>> {:?}", bk_56);
+ 
     // // println!("white pawn on 01 --->>>> {:?}", wp_01);
 
     // println!("H8 index is {}", H8 as usize);
@@ -175,4 +176,3 @@ fn main() {
 // 1|0|0|1|
 // 0|0|1|1|
 // 1|0|0|0|
-  

@@ -115,14 +115,19 @@ pub const REPETITIONS: &str = "2r3k1/R7/8/1R6/8/8/P4KPP/8 w - - 0 40 ";
 /// -- "MATE" is in this case a constant with a large positive value, larger than any score created by summing material and positional factors could be.
 /// https://web.archive.org/web/20071031100110/http://www.brucemo.com/compchess/programming/matescore.htm
 pub(crate) const INFINITY: i32 = 32001;
-pub(crate) const MATE_VALUE: i32 = 31000;
+// pub(crate) const MATE_VALUE: i32 = 31000;
+pub(crate) const MATE_VALUE: i32 = 32000;
 // pub(crate) const MATE_VALUE: i32 = 47_999;
 // pub(crate) const MATE_SCORE: i32 = 48_000; // i.e. MATE_VALUE - 1000
 // pub(crate) const INFINITY: i32 = 50_000;
 // pub(crate) const MATE_SCORE: i32 = 48_000; // i.e. MATE_VALUE - 1000
 pub const MATE_IN_MAX_PLY: i32 = MATE_VALUE - 2 * 128;
 pub const MATED_IN_MAX_PLY: i32 = -MATE_VALUE + 2 * 128;
+pub const LONGEST_TB_MATE: i32 = MATE_VALUE - 127;
 pub const NONE: i32 = 32002;
+
+
+pub const SE_LOWER_LIMIT: u8 = 8;
 // pub(crate) const TB_MATE: i32 = 30_000;
 // pub const LONGEST_TB_MATE: i32 = TB_MATE - MAX_DEPTH as i32;
 

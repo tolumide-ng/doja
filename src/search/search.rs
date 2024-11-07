@@ -1,9 +1,9 @@
-use crate::{board::{piece::{Piece, PieceType}, position::Position, state::board::Board}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_VALUE, PIECE_ATTACKS, REDUCTION_LIMIT, VAL_WINDOW, ZOBRIST}, move_logic::{bitmove::{Move, MoveType}, move_picker::MovePicker, move_stack::MoveStack}, move_scope::MoveScope, search::constants::Root, squares::Square, tt::{entry::TTData, flag::HashFlag, tpt::TPT}};
+use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_IN_MAX_PLY, MATE_VALUE, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::MovePicker}, move_scope::MoveScope, search::constants::Root, tt::{entry::TTData, flag::HashFlag, tpt::TPT}};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 use crate::search::heuristics::pv_table::PVTable;
 
-use super::{constants::{NodeType, NotPv}, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, history_bonus, killer_moves::KillerMoves}, stack::{Stack, StackItem}};
+use super::{constants::{NodeType, NotPv}, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves}, stack::Stack};
 
 /// The number of nodes you can actually cut depends on:
 /// 1. How well written your alpha-beta program is
@@ -337,46 +337,120 @@ impl<'a> Search<'a> {
         None
     }
 
-    pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, beta: i32, depth: u8, mut position: &mut Position) -> i32 {
+    pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, mut beta: i32, depth: u8, mut position: &mut Position) -> i32 {
         if Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&s| s >= 50) {
             return 0; // draw
         }
         
         let stm_in_check = Self::in_check(position, position.turn);
+        // Check extension
+        // https://www.chessprogramming.org/Check_Extensions
         let depth = if stm_in_check && depth < MAX_DEPTH as u8 { depth + 1 } else { depth };
         
         if depth == 0 || self.ply >= MAX_DEPTH {
             return self.quiescence(alpha, beta, position);
         }
 
-        // let improving = if self.ply >= 2 && self.ss[self.ply - 2].eval != -INFINITY {
-        //     self.ss[self.ply].eval > self.ss[self.ply - 2].eval
-        // } else if self.ply >= 4 && self.ss[self.ply - 4].eval != -INFINITY {
-        //     self.ss[self.ply].eval > self.ss[self.ply - 4].eval
-        // } else {
-        //     true
-        // };
+        let pv_node = alpha != beta -1;
 
+        // if !NT::ROOT {
+        //     // Mate distance pruning
+        //     alpha = alpha.max(-MATE_VALUE + self.ply as i32);
+        //     beta = beta.min(MATE_VALUE - self.ply as i32 - 1);
+        //     if alpha >= beta { return alpha }
 
-        let tt_hit = self.probe_tt(position.hash_key, Some(self.ply as u8), alpha, beta);
-        // let (tt_score, tt_mv) = self.probe_tt(position.hash_key, Some(self.ply as u8), alpha, beta);
-        
-        // if let Some(tt_data) = tt_hit {
-        //     if let Some(mv) = tt_data.mv {
-        //         let quiet = !mv.get_capture() && mv.get_promotion().is_none();
-        //         if quiet {
-        //             self.killer_moves.store(depth as usize, &mv);
-        //             self.conthist.update_many(&position, vec![mv], depth, mv);
-        //             self.counter_mvs.add(&position, mv);
-        //         } else {
-        //             self.conthist.update_many(&position, vec![mv], depth, Move::from(0));
-        //         }
+        //     if self.ply > 0 && (Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&p| p >= 50)) {
+        //         return 0 // draw
         //     }
-
-        //     return tt_data.score;
         // }
 
-        if !NT::ROOT && depth > 7 {}
+
+        // let tt_entry = self.probe_tt(position.hash_key, Some(self.ply as u8), alpha, beta);
+        let tt_entry = self.tt.probe(position.hash_key);
+        let mut tt_move = None;
+
+        let excluded = self.ss[self.ply].excluded;
+        let in_signular_search = excluded.is_some();
+        let mut possible_singularity = false;
+
+        if let Some(entry) = tt_entry {
+            // Don't use the tt result at the root of a singular search
+            if !in_signular_search {
+                let tt_depth = entry.depth;
+                let tt_flag = entry.flag;
+                let tt_value = entry.score;
+
+                if !pv_node && tt_depth >= depth {
+                    match entry.flag {
+                        HashFlag::Exact => return tt_value,
+                        HashFlag::LowerBound if tt_value >= beta => return beta,
+                        HashFlag::UpperBound if tt_value <= alpha => return alpha,
+                        _ => ()
+                    };
+                }
+
+                tt_move = entry.mv;
+                possible_singularity = !NT::ROOT && depth >= SE_LOWER_LIMIT
+                && tt_value.abs() < MATE_IN_MAX_PLY && (tt_flag == HashFlag::LowerBound || HashFlag::Exact == tt_flag)
+                && tt_depth >= depth -3;
+            }
+        }
+
+        // Compute static eval
+        let eval = if in_signular_search {
+            self.ss[self.ply].eval
+        } else if !stm_in_check {
+            if let Some(entry) = tt_entry {
+                let tt_value = entry.score;
+                let tt_eval = entry.eval as i32;
+                
+
+                self.ss[self.ply].eval = if tt_eval == -INFINITY {
+                    position.evaluate()
+                } else {
+                    tt_eval
+                };
+
+                match entry.flag {
+                    HashFlag::Exact => tt_value,
+                    HashFlag::LowerBound if tt_value > self.ss[self.ply].eval => tt_value,
+                    HashFlag::UpperBound if tt_value < self.ss[self.ply].eval => tt_value,
+                    _ => self.ss[self.ply].eval,
+                }
+            } else {
+                self.ss[self.ply].eval = position.evaluate();
+                self.ss[self.ply].eval
+            }
+        } else {
+            self.ss[self.ply].eval = -INFINITY;
+            self.ss[self.ply].eval
+        };
+
+
+
+        let improving = if self.ply >= 2 && self.ss[self.ply - 2].eval != -INFINITY {
+            self.ss[self.ply].eval > self.ss[self.ply - 2].eval
+        } else if self.ply >= 4 && self.ss[self.ply - 4].eval != -INFINITY {
+            self.ss[self.ply].eval > self.ss[self.ply - 4].eval
+        } else {
+            true
+        };
+
+        if !pv_node && !stm_in_check && !in_signular_search {
+            let rfp_margin = 80 * depth as i32 - 55 * (improving as i32);
+            if depth <= 8 && eval - rfp_margin >= beta {
+                return beta;
+            }
+
+
+            if depth > 3 && self.ply > 0 && eval >= self.ss[self.ply].eval && eval + 70 * (improving as i32) >= beta 
+            // && !self.only_king_pawns_left
+            {
+                // let r = ()
+            }
+        }
+
+        // if !NT::ROOT && depth > 7 {}
         
 
         // Pausing razoring for now
@@ -427,7 +501,7 @@ impl<'a> Search<'a> {
         let original_alpha = alpha;
         let killer_mvs = self.killer_moves.get_killers(self.ply).map(|m| if m == 0 {None} else {Some(Move::from(m))});
         // let mvs = self.get_sorted_moves::<{ MoveScope::ALL }>(&position);
-        let mut mvs = MovePicker::<{MoveScope::ALL}>::new(0, tt_hit.and_then(|tt| tt.mv), killer_mvs);
+        let mut mvs = MovePicker::<{MoveScope::ALL}>::new(0, tt_entry.and_then(|tt| tt.mv), killer_mvs);
         // println!("the total moves generated are >>>>>>{}, so that the ones after is now {}", mvs);
         // println!("tt => {:?}, and pv={:?}", tt_mv, self.pv_table.get_pv(self.ply).get(0));
 
@@ -437,7 +511,7 @@ impl<'a> Search<'a> {
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
             // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--{}", mv.to_string());
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
-                self.ply += 1;
+                self.ply += 1;;
 
                 let value = match mvs_searched {
                     0 => -self.negamax::<NotPv>(-beta, -alpha, depth -1, &mut position),
@@ -464,13 +538,15 @@ impl<'a> Search<'a> {
                     }
                 };
                                 
-                let zobrist_key = position.hash_key;
+                // let zobrist_key = position.hash_key;
                 position.undo_move(true);
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
                 
+                let mut flag = HashFlag::UpperBound;
                 if value > best_value {
                     best_value = value;
+                    mvs_searched += 1;
 
                     if value > alpha {
                         best_mv = Some(mv);
@@ -479,53 +555,31 @@ impl<'a> Search<'a> {
                     }
 
 
+
                     if value >= beta {
-                        self.tt.record(position.hash_key, depth, best_value, self.ss[self.ply].eval, self.ply, HashFlag::LowerBound, 0, best_mv);
                         self.update_logs(&position, &best_mv, &quiet_mvs, &captures);
-                        if mv.get_capture() {
-                            captures.push((mv, HashFlag::LowerBound));
-                        } else {
-                            quiet_mvs.push(mv);
-                            self.killer_moves.store(depth as usize, &mv);
-                            self.history_table.update(moved_piece, mv.get_src(), depth);
+                        // self.tt.record(position.hash_key, depth, best_value, self.ss[self.ply].eval, self.ply, HashFlag::LowerBound, 0, best_mv);
+                        if !mv.get_capture() {
                         }
+                        alpha = beta;
+                        flag = HashFlag::LowerBound;
+
                         break;
                     } else {
                         // if !NT::ROOT {}
                         // println!("H************************************************************************************************************************************************************");
-
-                        // if mv.get_capture() {
-                        //     captures.push((mv, HashFlag::UpperBound));
-                        // }
+                        
                     }
                 }
                 
-                // self.update_logs(&position, &best_mv, &quiet_mvs, &captures);
-                
-                // if value >= beta {
-                //     if mv.get_capture() {
-                //             captures.push((mv, HashFlag::LowerBound));
-                //         } else {
-                //         quiet_mvs.push(mv);
-                //         self.killer_moves.store(depth as usize, &mv);
-                //         self.history_table.update(moved_piece, mv.get_src(), depth as usize as u8);
-                //     }
+                if mv.get_capture() {
+                    captures.push((mv, flag));
+                } else {
+                    self.killer_moves.store(depth as usize, &mv);
+                    self.history_table.update(moved_piece, mv.get_src(), depth);
+                    quiet_mvs.push(mv);
+                }
 
-                //     // self.update_logs(position, &best_mv, &quiet_mvs, &captures);
-                //     break;
-                // }
-                
-                // captures.push((mv, HashFlag::UpperBound));
-                // if value > alpha {
-                //     best_value = value;
-                //     best_mv = Some(mv);
-                //     self.pv_table.store_pv(self.ply, &mv);
-                //     alpha = value;
-
-                // }
-                
-
-                mvs_searched += 1;
             }
         }
 
