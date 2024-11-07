@@ -1,4 +1,4 @@
-use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, MATE_IN_MAX_PLY, MATE_VALUE, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::MovePicker}, move_scope::MoveScope, search::constants::Root, tt::{entry::TTData, flag::HashFlag, tpt::TPT}};
+use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::MovePicker}, move_scope::MoveScope, search::constants::Root, tt::{entry::TTData, flag::HashFlag, tpt::TPT}};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 use crate::search::heuristics::pv_table::PVTable;
@@ -353,25 +353,25 @@ impl<'a> Search<'a> {
 
         let pv_node = alpha != beta -1;
 
-        // if !NT::ROOT {
-        //     // Mate distance pruning
-        //     alpha = alpha.max(-MATE_VALUE + self.ply as i32);
-        //     beta = beta.min(MATE_VALUE - self.ply as i32 - 1);
-        //     if alpha >= beta { return alpha }
+        if !NT::ROOT {
+            let ply = self.ply as i32;
+            // Mate distance pruning
+            alpha = alpha.max(-MATE_VALUE + ply);
+            beta = beta.min(MATE_VALUE - ply - 1);
+            if alpha >= beta { return alpha }
 
-        //     if self.ply > 0 && (Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&p| p >= 50)) {
-        //         return 0 // draw
-        //     }
-        // }
+            if ply > 0 && (Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&p| p >= 50)) {
+                return 0 // draw
+            }
+        }
 
-
-        // let tt_entry = self.probe_tt(position.hash_key, Some(self.ply as u8), alpha, beta);
+        // Transposition table lookup
+        let excluded = self.ss[self.ply].excluded;
         let tt_entry = self.tt.probe(position.hash_key);
         let mut tt_move = None;
-
-        let excluded = self.ss[self.ply].excluded;
+        
         let in_signular_search = excluded.is_some();
-        let mut possible_singularity = false;
+        let mut possibly_singular = false;
 
         if let Some(entry) = tt_entry {
             // Don't use the tt result at the root of a singular search
@@ -390,8 +390,10 @@ impl<'a> Search<'a> {
                 }
 
                 tt_move = entry.mv;
-                possible_singularity = !NT::ROOT && depth >= SE_LOWER_LIMIT
-                && tt_value.abs() < MATE_IN_MAX_PLY && (tt_flag == HashFlag::LowerBound || HashFlag::Exact == tt_flag)
+                possibly_singular = !NT::ROOT && depth >= SE_LOWER_LIMIT
+                && excluded.is_none()
+                && matches!(tt_flag, HashFlag::LowerBound | HashFlag::UpperBound)
+                && tt_value.abs() < LONGEST_TB_MATE
                 && tt_depth >= depth -3;
             }
         }
@@ -511,7 +513,27 @@ impl<'a> Search<'a> {
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
             // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--{}", mv.to_string());
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
-                self.ply += 1;;
+                self.ply += 1;
+
+                let mut extension = depth;
+
+                if in_signular_search  && tt_move.is_some_and(|tt_mv| tt_mv == mv) {
+                    let tt_value = tt_entry.unwrap().score;
+                    let se_beta = (tt_value - 2 * depth as i32).max(-INFINITY); // singular extension beta
+                    // let se_beta = (tt_value - (depth as i32 * 3/4).max(-MATE_VALUE));
+                    let se_depth = (depth-1)/2;
+
+                    self.ss[self.ply].excluded = Some(mv);
+                    let value = self.negamax::<NotPv>(se_beta -1, se_beta, se_depth, position);
+                    self.ss[self.ply].excluded = None;
+
+                    // if value >= se_beta && se_beta >= beta {
+                    //     return tt_value - (depth as i32 * 3/4).max(-MATE_VALUE)
+                    // }
+                    if value < se_beta {
+                        extension += 1;
+                    }
+                }
 
                 let value = match mvs_searched {
                     0 => -self.negamax::<NotPv>(-beta, -alpha, depth -1, &mut position),
@@ -565,10 +587,6 @@ impl<'a> Search<'a> {
                         flag = HashFlag::LowerBound;
 
                         break;
-                    } else {
-                        // if !NT::ROOT {}
-                        // println!("H************************************************************************************************************************************************************");
-                        
                     }
                 }
                 
