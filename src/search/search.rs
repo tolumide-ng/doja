@@ -486,8 +486,7 @@ impl<'a> Search<'a> {
                 // Null move dynamic reduction based on depth
                 let r = (4 + depth/4).min(depth);
                 // let r = if depth > 6 {4} else {3};
-                let r = ((eval - beta)/202).min(6) + (depth as i32)/3 + 5;
-                println!(":the depth is {depth}, and then r is {r}");
+                // let r = ((eval - beta)/202).min(6) + (depth as i32)/3 + 5;
                 if let Some(beta) = self.make_null_move(beta, depth-r as u8, position) {
                     return beta;
                 }
@@ -534,23 +533,19 @@ impl<'a> Search<'a> {
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
 
-                let mut extension = depth;
+                let mut ext_depth = depth;
 
                 if in_signular_search  && tt_move.is_some_and(|tt_mv| tt_mv == mv) {
                     let tt_value = tt_entry.unwrap().score;
                     let se_beta = (tt_value - 2 * depth as i32).max(-INFINITY); // singular extension beta
-                    // let se_beta = (tt_value - (depth as i32 * 3/4).max(-MATE_VALUE));
                     let se_depth = (depth-1)/2;
 
                     self.ss[self.ply].excluded = Some(mv);
                     let value = self.negamax::<NotPv>(se_beta -1, se_beta, se_depth, position);
                     self.ss[self.ply].excluded = None;
 
-                    // if value >= se_beta && se_beta >= beta {
-                    //     return tt_value - (depth as i32 * 3/4).max(-MATE_VALUE)
-                    // }
                     if value < se_beta {
-                        extension += 1;
+                        ext_depth += 1;
                     }
                 }
 

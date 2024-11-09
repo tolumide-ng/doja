@@ -13,11 +13,11 @@ const MOVE_TYPE: u16 = 0b1111_0000_0000_0000;
  * binary representation
  * 0000 0000 0011 1111      source square 0x3f
  * 0000 1111 11xx xxxx      target square 0xfc0
- * 0001 xxxx xxxx xxxx      quiet  move
- * 0001 xxxx xxxx xxxx      capture
+ * 0001 xxxx xxxx xxxx      castling
+ * 0100 xxxx xxxx xxxx      quiet  move
  * 0010 xxxx xxxx xxxx      enpassant
  * 0011 xxxx xxxx xxxx      double push
- * 0100 xxxx xxxx xxxx      castling
+ * 0001 xxxx xxxx xxxx      capture
  * 0101 xxxx xxxx xxxx      Promotion to Knight
  * 0110 xxxx xxxx xxxx      Promotion to Bishop
  * 0111 xxxx xxxx xxxx      Promotion to Rook
@@ -36,10 +36,10 @@ const MOVE_TYPE: u16 = 0b1111_0000_0000_0000;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum MoveType {
     Quiet = 0b0000,
-    Capture = 0b0001,
+    Castling = 0b0001,
     Enpassant = 0b0010,
     DoublePush = 0b0011,
-    Castling = 0b0100,
+    Capture = 0b0100,
     PromotedToKnight = 0b0101,
     PromotedToBishop = 0b0110,
     PromotedToRook = 0b0111,
@@ -78,6 +78,10 @@ impl Move {
     pub(crate) fn get_tgt(&self) -> Square {
         let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
         Square::from(sq)
+    }
+
+    pub(crate) fn is_quiet(&self) -> bool {
+        (**self as u16) & 0b1100 == 0
     }
     
     pub(crate) fn tgt(&self) -> Square {
@@ -137,10 +141,10 @@ impl Move {
 
         match value {
             0b0000 => MoveType::Quiet,
-            0b0001 => MoveType::Capture,
+            0b0001 => MoveType::Castling,
             0b0010 => MoveType::Enpassant,
             0b0011 => MoveType::DoublePush,
-            0b0100 => MoveType::Castling,
+            0b0100 => MoveType::Capture,
             0b0101 => MoveType::PromotedToKnight,
             0b0110 => MoveType::PromotedToBishop,
             0b0111 => MoveType::PromotedToRook,
