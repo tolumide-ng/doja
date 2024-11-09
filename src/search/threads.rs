@@ -29,13 +29,14 @@
 //     }
 // }
 
-use super::{heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv_table::PVTable}, stack::Stack};
+use super::{heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv::PVTable}, stack::Stack};
 
 pub(crate) struct Thread {
     ss: Stack,
     
     eval: i32,
     depth: u8,
+    limit: u8,
     nodes: usize,
     ply: usize,
 
@@ -45,9 +46,9 @@ pub(crate) struct Thread {
     counter_mvs: CounterMove,
     /// The Killer Move is a quiet move which caused a beta-cutoff in a sibling Cut-node,
     killer_moves: KillerMoves,
-
     pv_table: PVTable,
 }
 
 impl Thread {
+    pub(crate) fn new(limit: u8) {}
 }

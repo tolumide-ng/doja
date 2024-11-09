@@ -496,11 +496,11 @@ impl<'a> Search<'a> {
 
         let mut depth = depth;
         
-        // Internal Iterative Reduction (IIR)
-        // https://www.chessprogramming.org/Internal_Iterative_Reductions
-        if depth > 5 && tt_entry.is_some_and(|entry| entry.mv.is_none()) {
-            // depth -= 3;
-        }
+        // // Internal Iterative Reduction (IIR)
+        // // https://www.chessprogramming.org/Internal_Iterative_Reductions
+        // if depth > 5 && tt_entry.is_some_and(|entry| entry.mv.is_none()) {
+        //     depth -= 3;
+        // }
 
         
         // When beta - alpha > 1, it indicates that there is a significant gap between the two bounds. This gap suggests that there are possible values for the evaluation score that have not yet been fully explored or are still uncertain.
