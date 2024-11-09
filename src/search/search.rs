@@ -1,4 +1,4 @@
-use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::MovePicker}, move_scope::MoveScope, search::constants::Root, tt::{entry::TTData, flag::HashFlag, tpt::TPT}};
+use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, RAZOR_MARGIN, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::MovePicker}, move_scope::MoveScope, search::constants::Root, tt::{entry::TTData, flag::HashFlag, tpt::TPT}};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 use crate::search::heuristics::pv_table::PVTable;
@@ -30,6 +30,7 @@ use super::{constants::{NodeType, NotPv}, heuristics::{capture_history::CaptureH
 /// 13. [x] PV-Table
 /// 14. [x] Repetitions https://www.chessprogramming.org/Repetitions
 /// 15. [-] Singular extensions
+/// 16. [-] [Need to add implementation for detecting tactical moves](https://www.chessprogramming.org/Tactical_Moves)
 /// This implementation is a fail-soft implementation (meaning we have to keep track of the best score)[XX] 
 /// - fail-hard for now
 pub(crate) struct Search<'a> {
@@ -50,12 +51,6 @@ pub(crate) struct Search<'a> {
     limit: usize,
     eval: i32,
 }
-
-
-/// Defines a margin to decide how "bad" a position must be to be considered for razoring. The margin can depend on the search depth and should be empirically tuned.
-/// For instance, at depth 1, the margin might be a small value (like half a pawn), whereas at depth 2, you might use a larger margin.
-/// Should still be further tuned
-const RAZORING_MARGIN: [i32; 3] = [0, 293, 512];
 
 
 impl<'a> Search<'a> {
@@ -319,7 +314,7 @@ impl<'a> Search<'a> {
         position.set_zobrist(position.hash_key ^ ZOBRIST.side_key); // side about to move
         position.nnue_push();
 
-        let score = -self.negamax::<NotPv>(-beta, -beta+1, depth-1-DEPTH_REDUCTION_FACTOR, &mut position);
+        let score = -self.negamax::<NotPv>(-beta, -beta+1, depth, &mut position);
 
         // reverse all actions, after we're done
         self.ply -= 1;
@@ -366,9 +361,10 @@ impl<'a> Search<'a> {
         }
 
         // Transposition table lookup
+        // Singular extension: If this move was already excluded, aboid pruning on this node
         let excluded = self.ss[self.ply].excluded;
         let tt_entry = self.tt.probe(position.hash_key);
-        let mut tt_move = None;
+        let mut tt_move: Option<Move> = None;
         
         let in_signular_search = excluded.is_some();
         let mut possibly_singular = false;
@@ -380,6 +376,22 @@ impl<'a> Search<'a> {
                 let tt_flag = entry.flag;
                 let tt_value = entry.score;
 
+                // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+                // At non-PV nodes, we check for an early TT cutoff
+                // let fift_mv_rule = position.fifty.iter().sum::<u8>() <= 90;
+                // if !NT::PV && tt_depth >= depth && !fift_mv_rule && 
+                //     (tt_flag == HashFlag::Exact || 
+                //         matches!(tt_flag, HashFlag::LowerBound if tt_value >= beta) || 
+                //         matches!(tt_flag, HashFlag::UpperBound if tt_value <= alpha)) {
+                //             if let Some(mv) = entry.mv {
+                //                 if tt_value >= beta && !mv.is_capture() {
+                //                     self.conthist.update_many(&position, &vec![mv], depth, &Some(mv));
+                //                     let piece = position.piece_at(mv.get_src()).unwrap();
+                //                     self.history_table.update(piece, mv.get_src(), depth);
+                //                 }
+                //                 return tt_value
+                //             }
+                //         }
                 if !pv_node && tt_depth >= depth {
                     match entry.flag {
                         HashFlag::Exact => return tt_value,
@@ -389,16 +401,20 @@ impl<'a> Search<'a> {
                     };
                 }
 
+                // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxx-------------------------------------------------------------------->>");
+                // if !pv_node && tt_depth >= depth && position.fifty.iter().sum() >= 80 && matches!()
+
                 tt_move = entry.mv;
                 possibly_singular = !NT::ROOT && depth >= SE_LOWER_LIMIT
-                && excluded.is_none()
                 && matches!(tt_flag, HashFlag::LowerBound | HashFlag::UpperBound)
                 && tt_value.abs() < LONGEST_TB_MATE
                 && tt_depth >= depth -3;
             }
         }
 
-        // Compute static eval
+        // Probe Tablebase (Skipped for now)
+
+        // Static evaluation of this position
         let eval = if in_signular_search {
             self.ss[self.ply].eval
         } else if !stm_in_check {
@@ -429,7 +445,8 @@ impl<'a> Search<'a> {
         };
 
 
-
+        // Setup the `improving` flag
+        // https://www.chessprogramming.org/Improving
         let improving = if self.ply >= 2 && self.ss[self.ply - 2].eval != -INFINITY {
             self.ss[self.ply].eval > self.ss[self.ply - 2].eval
         } else if self.ply >= 4 && self.ss[self.ply - 4].eval != -INFINITY {
@@ -438,47 +455,53 @@ impl<'a> Search<'a> {
             true
         };
 
-        if !pv_node && !stm_in_check && !in_signular_search {
+        if !NT::PV && !NT::ROOT && !stm_in_check && !in_signular_search {
+            // Razoring: If evaluation + margin isn't better than alpha at the lowest depth, Go straight to quiescence search.
+            // if depth < 3 && eval <= alpha - 494 - 290 * (depth * depth) as i32 {
+            if depth < 3 && eval <= alpha - RAZOR_MARGIN[depth as usize] {
+                let value = self.quiescence(alpha -1, alpha, position);
+                if value < alpha && value.abs() < MATE_IN_MAX_PLY {
+                    return value;
+                }
+                
+                // let r_alpha = alpha - (depth >= 2) as i32 * RAZOR_MARGIN[depth as usize];
+                // let value = self.quiescence(r_alpha, r_alpha + 1, position);
+                // if depth < 2 || value <= r_alpha {
+                //     return value;
+                // }
+            }
+
+            // Reverse futility pruning
+            // https://www.chessprogramming.org/Reverse_Futility_Pruning
             let rfp_margin = 80 * depth as i32 - 55 * (improving as i32);
             if depth <= 8 && eval - rfp_margin >= beta {
                 return beta;
             }
-
-
-            if depth > 3 && self.ply > 0 && eval >= self.ss[self.ply].eval && eval + 70 * (improving as i32) >= beta 
-            // && !self.only_king_pawns_left
-            {
-                // let r = ()
+            
+            
+            // Null move search
+            // let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !stm_in_check && self.ply > 0;
+            let null_move_forward_pruning_conditions = depth > 3 && !stm_in_check && self.ply > 0 && eval + 70 * (improving as i32) >= beta;
+            if null_move_forward_pruning_conditions {
+                // Null move dynamic reduction based on depth
+                let r = (4 + depth/4).min(depth);
+                // let r = if depth > 6 {4} else {3};
+                let r = ((eval - beta)/202).min(6) + (depth as i32)/3 + 5;
+                println!(":the depth is {depth}, and then r is {r}");
+                if let Some(beta) = self.make_null_move(beta, depth-r as u8, position) {
+                    return beta;
+                }
             }
         }
 
-        // if !NT::ROOT && depth > 7 {}
+        let mut depth = depth;
         
-
-        // Pausing razoring for now
-        if !NT::ROOT && !NT::PV && !stm_in_check {
-            // let eval = position.evaluate();
-            // // currently uses 'Stockfishs\'' value, this need to be fine-tuned more later 
-            // if eval < (alpha - 490 - 290 * depth as i32 * depth as i32) {
-            //     let value = self.quiescence(alpha-1, alpha, position);
-            //     // println!("the value here is {value}, and the alpha here is {alpha}");
-            //     if value < alpha {
-            //         return eval;
-            //     }
-
-            // }
-        //     let eval = position.evaluate();
-        //     // currently uses 'Stockfishs\'' value, this need to be fine-tuned more later 
-        //     // if eval < (alpha - 392 - 267 * depth as i32 * depth as i32) {
-                
-        //     // }
-        //     if depth < 3 && eval <= alpha - RAZORING_MARGIN[depth as usize] {
-        //         let r_alpha = alpha - (depth >= 2) as i32 * RAZORING_MARGIN[depth as usize];
-        //         let value = self.quiescence(alpha-1, alpha, position);
-        //         // println!("the value here is {value}, and the alpha here is {alpha}");
-        //         if depth < 2 || value < r_alpha { return eval; }
-        //     }
+        // Internal Iterative Reduction (IIR)
+        // https://www.chessprogramming.org/Internal_Iterative_Reductions
+        if depth > 5 && tt_entry.is_some_and(|entry| entry.mv.is_none()) {
+            // depth -= 3;
         }
+
         
         // When beta - alpha > 1, it indicates that there is a significant gap between the two bounds. This gap suggests that there are possible values for the evaluation score that have not yet been fully explored or are still uncertain.
         // The search can continue to explore more moves because the values returned by the evaluated moves could potentially fall within this range, providing room for a better evaluation.
@@ -490,13 +513,6 @@ impl<'a> Search<'a> {
 
         let mut mvs_searched = 0;
 
-        let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !stm_in_check && self.ply > 0;
-
-        if null_move_forward_pruning_conditions {
-            if let Some(beta) = self.make_null_move(beta, depth, position) {
-                return beta;
-            }
-        }
 
         let mut best_value = -INFINITY;
         let mut best_mv: Option<Move> = None;
@@ -512,6 +528,9 @@ impl<'a> Search<'a> {
         let mut captures: Vec<(Move, HashFlag)> = Vec::with_capacity(16);
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
             // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--{}", mv.to_string());
+            if excluded == Some(mv) {
+                continue;
+            }
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
 

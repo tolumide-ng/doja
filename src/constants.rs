@@ -125,6 +125,10 @@ pub const MATE_IN_MAX_PLY: i32 = MATE_VALUE - 2 * 128;
 pub const MATED_IN_MAX_PLY: i32 = -MATE_VALUE + 2 * 128;
 pub const LONGEST_TB_MATE: i32 = MATE_VALUE - 127;
 pub const NONE: i32 = 32002;
+/// Defines a margin to decide how "bad" a position must be to be considered for razoring. The margin can depend on the search depth and should be empirically tuned.
+/// For instance, at depth 1, the margin might be a small value (like half a pawn), whereas at depth 2, you might use a larger margin.
+/// Should still be further tuned
+pub(crate) const RAZOR_MARGIN: [i32; 3] = [0, 293, 512];
 
 
 pub const SE_LOWER_LIMIT: u8 = 8;
