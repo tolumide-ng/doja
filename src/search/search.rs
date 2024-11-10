@@ -296,6 +296,8 @@ impl<'a> Search<'a> {
     /// https://web.archive.org/web/20040427014629/http://brucemo.com/compchess/programming/nullmove.htm
     /// "If I do nothing here, can the opponent do anything?"
     fn make_null_move(&mut self, beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool) -> i32 {
+        self.ss[self.ply].moved = None;
+        self.ss[self.ply].mv = None;
         self.ply += 1;
         
         let old_hashkey = position.hash_key;
@@ -328,7 +330,7 @@ impl<'a> Search<'a> {
         score
     }
 
-    pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, mut beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool) -> i32 {
+    pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, mut beta: i32, depth: u8, position: &mut Position, pv: &mut PVTable, cutnode: bool) -> i32 {
         let mut depth = depth;
         
         let stm_in_check = Self::in_check(position, position.turn);
@@ -359,6 +361,8 @@ impl<'a> Search<'a> {
             if ply > 0 && (Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&p| p >= 50)) {
                 return 0 // draw
             }
+
+            // if alpha < 0 && self.re/
         }
 
         // Transposition table lookup
@@ -371,6 +375,18 @@ impl<'a> Search<'a> {
         let mut possibly_singular = false;
 
         if let Some(entry) = tt_entry {
+            // if !pv_node && self.ply >= (depth  as usize) && !(position.fifty.iter().sum::<u8>() >= 80) 
+            // && (matches!(entry.flag, HashFlag::Exact) || 
+            //     matches!(entry.flag, HashFlag::LowerBound if entry.score >= beta) ||
+            //     matches!(entry.flag, HashFlag::UpperBound if entry.score <= alpha)) {
+            //         if let Some(mv) = entry.mv {
+            //             if !mv.is_tactical() && entry.score >= beta {
+            //                 self.conthist.update_many(&position, &vec![mv], depth, &Some(mv));
+            //             }
+            //         }
+            //         return entry.score;
+            //     }
+            //     Some(entry)
             // Don't use the tt result at the root of a singular search
             if !in_signular_search {
                 let tt_depth = entry.depth;
@@ -546,7 +562,7 @@ impl<'a> Search<'a> {
                 self.ply += 1;
                 // self.ss[self.ply]. 
 
-                // let is_killer_mv = killer_mvs.iter().any(|km| km.is_some_and(|kmv| kmv == mv));
+                let is_killer_mv = killer_mvs.iter().any(|km| km.is_some_and(|kmv| kmv == mv));
                 let new_depth = depth + extension;
                 let mut value = -INFINITY;
 
@@ -554,24 +570,24 @@ impl<'a> Search<'a> {
                 // https://www.chessprogramming.org/Late_Move_Reductions
                 let full_depth_search = if depth >= 2 && mvs_searched >= (2 + pv_node as usize) {
                     let r = if mv.is_quiet() {
+                        // println!("mv --->>> {}, and depth --->> {}", mv, depth);
                         // let mut r = new_depth as i16 - reduction::<Pv>(improving, depth as usize, mvs_searched);
                         let mut r = reduction::<Pv>(improving, depth as usize, mvs_searched) as i32;
-                        // if tt_move.is_some_and(|m| m.is_capture()) { lmr_depth += 1; } // Reduce when tt_mv is a capture
-                        // if stm_in_check {lmr_depth -=1;} // reduce less if we're in check 
+                        // if tt_move.is_some_and(|m| m.is_capture()) { r += 1; } // Reduce when tt_mv is a capture
+                        // if stm_in_check {r -=1;} // reduce less if we're in check 
                         // // side has changed now since the new move has been applied
-                        // if position.stm_in_check() {lmr_depth-=1;} // reduce depth less, if this would put the opponent in check (gives check)
-                        // if is_killer_mv { lmr_depth -=1; }
-                        // if improving { lmr_depth -=1; }
-                        // println!("-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-");
-                        // if !improving { lmr_depth -=1; }
-                        // lmr_depth.clamp(0, depth as i16 -1)
+                        // if position.stm_in_check() {r-=1;} // reduce depth less, if this would put the opponent in check (gives check)
+                        // if is_killer_mv { r -=1; }
+                        // if improving { r -=1; }
+                        // // println!("-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-");
+                        // if !improving { r -=1; }
+                        // lmr_depth.clamp(0, depth as i16 -1);
 
                         // carp
                         r += !pv_node as i32;
                         r += cutnode as i32;
                         r -= stm_in_check as i32;
                         r -= position.stm_in_check() as i32;
-
                         r.clamp(1, (depth-1) as i32) as usize
                     } else { 1 };
                     
@@ -585,7 +601,7 @@ impl<'a> Search<'a> {
 
                 
                 if full_depth_search {
-                        println!("the values here are >>>>>> alpha---->>>> {alpha}  ** score --> {value} ** beta==>> {beta} bestValue ==>>> {best_value}");
+                        // println!("the values here are >>>>>> alpha---->>>> {alpha}  ** score --> {value} ** beta==>> {beta} bestValue ==>>> {best_value}");
                     value = -self.negamax::<NotPv>((-alpha)-1, -alpha, new_depth -1 , position, opv, !cutnode);
                 }
 
@@ -632,12 +648,13 @@ impl<'a> Search<'a> {
                         // println!("---------------------------------------------------------------- alpha -->> {alpha}, beta -->> {beta}, and value -->> {value}");
                         best_mv = Some(mv);
                         alpha = value;
-                        // println!("before >>>>>>>>>>>>>>||||||||||||| {:?}", opv);
-                        // println!("new pv is now>>>>>>>>>>>>>>>> {:?} \n\n", pv)
                         pv.update(mv, &opv);
                     }
 
                     if value >=beta {
+                        if mv.is_quiet() {
+                            self.killer_moves.store(depth as usize, &mv);
+                        }
                         self.update_logs(&position, &best_mv, &quiet_mvs, &captures);
                         alpha = beta;
                         flag = HashFlag::LowerBound;
@@ -647,11 +664,11 @@ impl<'a> Search<'a> {
 
                 if mv.is_quiet() {
                     quiet_mvs.push(mv);
-                    self.killer_moves.store(depth as usize, &mv);
                     self.history_table.update(moved_piece, mv.get_src(), depth);
                 } else if mv.is_capture() {
                     captures.push((mv, flag));
                 }
+                mvs_searched +=  1;
                 
                 // if value > best_value {
                 //     best_value = value;
@@ -693,13 +710,13 @@ impl<'a> Search<'a> {
         //     self.update_logs(position, &best_mv, &quiet_mvs, &captures);
         // }
 
-        if mvs_searched == 0 {
-            if stm_in_check {
-                return -MATE_VALUE + self.ply as i32;
-            }
-            // king is not in check, but there are no legal moves
-            return 0; // stalemate/draw
-        }
+        // if mvs_searched == 0 {
+        //     if stm_in_check {
+        //         return -MATE_VALUE + self.ply as i32;
+        //     }
+        //     // king is not in check, but there are no legal moves
+        //     return 0; // stalemate/draw
+        // }
 
         // if alpha != original_alpha {
         //     if best_mv.is_some_and(|mv| !mv.get_capture()) {
@@ -714,9 +731,12 @@ impl<'a> Search<'a> {
     }
 
     pub(crate) fn update_logs(&mut self, position: &Position, best_mv: &Option<Move>, quiets: &Vec<Move>, captures: &Vec<(Move, HashFlag)>) {
-        self.conthist.update_many(&position, &quiets, self.ply as u8, best_mv);
         self.caphist.update_many(&position, self.ply as u8, captures);
-        self.counter_mvs.add_many(&position, quiets);
+
+        if best_mv.is_some_and(|m| m.is_quiet()) {
+            self.conthist.update_many(&position, &quiets, self.ply as u8, best_mv);
+            self.counter_mvs.add_many(&position, quiets);
+        }
     }
 
 

@@ -83,6 +83,11 @@ impl Move {
     pub(crate) fn is_quiet(&self) -> bool {
         (**self as u16) & 0b1100 == 0
     }
+
+    pub(crate) fn is_tactical(&self) -> bool {
+        let value = **self as u16;
+        value & 0b1100 != 0 || value == (MoveType::Enpassant as u16)
+    }
     
     pub(crate) fn tgt(&self) -> Square {
         let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
