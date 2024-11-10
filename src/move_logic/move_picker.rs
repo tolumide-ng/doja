@@ -30,7 +30,7 @@ pub(crate) struct MovePicker<const T: u8> {
     moves: MoveStack<ScoredMove>,
     // used only by the iterator (to indicate where we currently are in the loop)
     index: usize,
-    stage: Stage,
+    pub(crate) stage: Stage,
     tt_move: Option<Move>,
     see_threshold: i32,
     killers: [Option<Move>; 2],
@@ -221,7 +221,7 @@ impl<const T: u8> MovePicker<T> {
                 }
                 return next_mv;
             }
-            if move_scope == MoveScope::QuietOnly { return None }
+            if move_scope == MoveScope::QuietOnly { self.stage == Stage::Done; return None }
             self.index = self.total_good_captures;
             self.stage = Stage::BadCapture;
         }
@@ -237,6 +237,8 @@ impl<const T: u8> MovePicker<T> {
                 return next_one;
             }
         }
+
+        self.stage == Stage::Done;
         
         None
     }

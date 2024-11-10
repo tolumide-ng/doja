@@ -198,11 +198,6 @@ impl Position {
         let tgt_sq = Square::from(tgt);
         let turn = self.board.turn;
         let victim = self.board.get_piece_at(tgt, !turn);
-        if mv.get_capture() && victim.is_none() {
-            println!("<<<<<<<<the>>>>>>>> mv is {} enpass?? {}", mv.to_string(), mv.get_enpassant());
-            println!("[[[[[the]]]]] current board is {}", self.board.to_string());
-        }
-        
         let mut rook_mvs = None;
         if mv.get_castling() { 
             rook_mvs = self.board.validate_castling_move(&mv); // rook movements

@@ -38,5 +38,5 @@ impl Deref for LmrTable {
 
 
 pub(crate) fn reduction<NT: NodeType>(improving: bool, depth: usize, moves_searched: usize) -> i16 {
-    REDUCTIONS[NT::PV as usize][improving as usize][depth][moves_searched]
+    REDUCTIONS[NT::PV as usize][improving as usize][depth.min(63)][moves_searched]
 }

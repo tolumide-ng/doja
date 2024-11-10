@@ -501,6 +501,10 @@ impl Board {
         }
     }
 
+    pub(crate) fn possibly_zugzwang(&self) -> bool {
+        self.occupancies[self.turn] ^ (*self.board[Piece::pawn(self.turn)] & *self.board[Piece::king(self.turn)]) == 0
+    }
+
     /// If the king of the side-to-move is in check
     pub(crate) fn stm_in_check(&self) -> bool {
         self.is_square_attacked(self[Piece::king(self.turn)].get_lsb1().unwrap(), !self.turn)

@@ -1,6 +1,6 @@
 use std::{array, ops::{Deref, DerefMut}};
 
-use crate::{constants::MAX_PLY, move_logic::bitmove::Move};
+use crate::{board::piece::Piece, constants::MAX_PLY, move_logic::bitmove::Move};
 
 
 
@@ -9,6 +9,9 @@ pub(crate) struct StackItem {
     pub(crate) eval: i32,
     pub(crate) best_move: Option<Move>,
     pub(crate) excluded: Option<Move>,
+    /// The moved piece (from src)
+    pub(crate) moved: Option<Piece>,
+    pub(crate) mv: Option<Move>,
 }
 
 
