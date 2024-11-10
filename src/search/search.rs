@@ -1,9 +1,8 @@
 use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, RAZOR_MARGIN, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::MovePicker}, move_scope::MoveScope, search::constants::Root, tt::{entry::TTData, flag::HashFlag, tpt::TPT}, utils::lmr::reduction};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
-use crate::search::heuristics::pv_table::PVTable;
 
-use super::{constants::{NodeType, NotPv, Pv}, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves}, stack::Stack};
+use super::{constants::{NodeType, NotPv, Pv}, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv::PVTable}, stack::Stack};
 
 /// The number of nodes you can actually cut depends on:
 /// 1. How well written your alpha-beta program is
@@ -55,7 +54,7 @@ pub(crate) struct Search<'a> {
 
 impl<'a> Search<'a> {
     pub(crate) fn new(tt: TPT<'a>) -> Self {
-        Self { nodes: 0, ply: 0, pv_table: PVTable::new(), killer_moves: KillerMoves::new(),
+        Self { nodes: 0, ply: 0, pv_table: PVTable::default(), killer_moves: KillerMoves::new(),
             history_table: HistoryHeuristic::new(), tt, caphist: CaptureHistory::default(), conthist: ContinuationHistory::new(),
                 counter_mvs: CounterMove::new(), ss: Stack::default(), depth: 0, limit: 0, eval: 0 }
     }
@@ -137,9 +136,10 @@ impl<'a> Search<'a> {
         }
 
 
-        println!("MOVES ARE :::: with length of {}", self.pv_table.len(0));
-        let mvs = self.pv_table.get_pv(0);
-        for i in 0..limit {
+        let length = self.pv_table.length;
+        println!("MOVES ARE :::: with length of {}", length);
+        let mvs = &self.pv_table.mvs()[0..length];
+        for i in 0..length {
             print!("|||-->> {}", Move::from(mvs[i as usize]));
             // println!("in check???? {}", position);
         }
@@ -347,6 +347,9 @@ impl<'a> Search<'a> {
         }
 
         let pv_node = alpha != beta -1;
+        // let mut old_pv = PVTable::default();
+        // let opv = &mut old_pv;
+        
 
         if !NT::ROOT {
             let ply = self.ply as i32;
@@ -376,22 +379,6 @@ impl<'a> Search<'a> {
                 let tt_flag = entry.flag;
                 let tt_value = entry.score;
 
-                // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-                // At non-PV nodes, we check for an early TT cutoff
-                // let fift_mv_rule = position.fifty.iter().sum::<u8>() <= 90;
-                // if !NT::PV && tt_depth >= depth && !fift_mv_rule && 
-                //     (tt_flag == HashFlag::Exact || 
-                //         matches!(tt_flag, HashFlag::LowerBound if tt_value >= beta) || 
-                //         matches!(tt_flag, HashFlag::UpperBound if tt_value <= alpha)) {
-                //             if let Some(mv) = entry.mv {
-                //                 if tt_value >= beta && !mv.is_capture() {
-                //                     self.conthist.update_many(&position, &vec![mv], depth, &Some(mv));
-                //                     let piece = position.piece_at(mv.get_src()).unwrap();
-                //                     self.history_table.update(piece, mv.get_src(), depth);
-                //                 }
-                //                 return tt_value
-                //             }
-                //         }
                 if !pv_node && tt_depth >= depth {
                     match entry.flag {
                         HashFlag::Exact => return tt_value,
@@ -518,7 +505,7 @@ impl<'a> Search<'a> {
         let original_alpha = alpha;
         let killer_mvs = self.killer_moves.get_killers(self.ply).map(|m| if m == 0 {None} else {Some(Move::from(m))});
         // let mvs = self.get_sorted_moves::<{ MoveScope::ALL }>(&position);
-        let mut mvs = MovePicker::<{MoveScope::ALL}>::new(0, tt_entry.and_then(|tt| tt.mv), killer_mvs);
+        let mut mvs = MovePicker::<{MoveScope::ALL}>::new(0, tt_move, killer_mvs);
         // println!("the total moves generated are >>>>>>{}, so that the ones after is now {}", mvs);
         // println!("tt => {:?}, and pv={:?}", tt_mv, self.pv_table.get_pv(self.ply).get(0));
 
@@ -530,24 +517,25 @@ impl<'a> Search<'a> {
             if excluded == Some(mv) {
                 continue;
             }
+            // mvs_searched += 1;
             if position.make_move_nnue(mv, MoveScope::AllMoves) {
                 self.ply += 1;
 
                 let mut extension = 0;
 
-                if in_signular_search  && tt_move.is_some_and(|tt_mv| tt_mv == mv) {
-                    let tt_value = tt_entry.unwrap().score;
-                    let se_beta = (tt_value - 2 * depth as i32).max(-INFINITY); // singular extension beta
-                    let se_depth = (depth-1)/2;
-
-                    self.ss[self.ply].excluded = Some(mv);
-                    let value = self.negamax::<NotPv>(se_beta -1, se_beta, se_depth, position);
-                    self.ss[self.ply].excluded = None;
-
-                    if value < se_beta {
-                        extension = 1;
-                    }
-                }
+                // if in_signular_search  && tt_move.is_some_and(|tt_mv| tt_mv == mv) {
+                //     let tt_value = tt_entry.unwrap().score;
+                //     let se_beta = (tt_value - 2 * depth as i32).max(-INFINITY); // singular extension beta
+                //     let se_depth = (depth-1)/2;
+                
+                //     self.ss[self.ply].excluded = Some(mv);
+                //     let value = self.negamax::<NotPv>(se_beta -1, se_beta, se_depth, position);
+                //     self.ss[self.ply].excluded = None;
+                
+                //     if value < se_beta {
+                //         extension = 1;
+                //     }
+                // }
 
                 let is_killer_mv = killer_mvs.iter().any(|km| km.is_some_and(|kmv| kmv == mv));
                 let new_depth = depth + extension;
@@ -564,6 +552,7 @@ impl<'a> Search<'a> {
                         if position.stm_in_check() {lmr_depth-=1;} // reduce depth less, if this would put the opponent in check (gives check)
                         if is_killer_mv { lmr_depth -=1; }
                         if improving { lmr_depth -=1; }
+                        println!("-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-");
                         // if !improving { lmr_depth -=1; }
                         lmr_depth.clamp(0, depth as i16 -1)
                     } else { 1 };
@@ -575,8 +564,11 @@ impl<'a> Search<'a> {
                 } else {
                     !pv_node && mvs_searched > 1
                 };
+
+                println!("the full depth search is >>>>>>>>>>>>>>>>>> {mvs_searched}");
                 
                 if full_depth_search {
+                        println!("the values here are >>>>>> alpha---->>>> {alpha}  ** score --> {value} ** beta==>> {beta} bestValue ==>>> {best_value}");
                     value = -self.negamax::<NotPv>(-(alpha+1), -alpha, new_depth, position);
                 }
 
@@ -585,6 +577,7 @@ impl<'a> Search<'a> {
                     value = -self.negamax::<Pv>(-beta, -alpha, new_depth, position);
                 }
 
+                
                 // let value = match mvs_searched {
                 //     0 => -self.negamax::<NotPv>(-beta, -alpha, new_depth -1, &mut position),
                 //     _ => {
@@ -597,15 +590,15 @@ impl<'a> Search<'a> {
                 //         } else {
                 //             alpha + 1 // Hack to ensure that full-depth search is done
                 //         };
-
+                        
                 //         if result > alpha {
                 //             result = -self.negamax::<NotPv>(-(alpha - 1), -alpha, depth-1, position);
-
+                            
                 //             if (result > alpha) && result < beta {
                 //                 result = -self.negamax::<NotPv>(-beta, -alpha, depth-1, position);
                 //             }
                 //         }
-
+                        
                 //         result
                 //     }
                 // };
@@ -614,6 +607,7 @@ impl<'a> Search<'a> {
                 position.undo_move(true);
                 self.ply -= 1;
                 let moved_piece = position.piece_at(mv.get_src()).unwrap();
+                // println!("----------------------------------------------------------------");
                 
                 let mut flag = HashFlag::UpperBound;
                 if value > best_value {
@@ -621,9 +615,11 @@ impl<'a> Search<'a> {
                     mvs_searched += 1;
 
                     if value > alpha {
+                        println!("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ >> [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[we are here now>>>>>>>>>>>>>>>]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]");
                         best_mv = Some(mv);
                         alpha = value;
-                        self.pv_table.store_pv(self.ply, &mv);
+                        // self.pv_table.store_pv(self.ply, &mv);
+                        self.pv_table.push(&mv);
                     }
 
 
