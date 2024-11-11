@@ -33,4 +33,8 @@ impl CounterMove {
     pub(crate) fn get(&self, src: Square, tgt: Square) -> Move {
         Move::from(self.0[Self::index(src, tgt)])
     }
+
+    // pub(crate) fn get_counter_mv(&self, pos: &Position) -> Option<Move> {
+    //     // let position. 
+    // }
 }
