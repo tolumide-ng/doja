@@ -161,7 +161,7 @@ pub(crate) const TOTAL_SQUARES: usize = 64;
 /// 4. Player black can castle both king and queen
 /// (for white and black player) = 4 * 4 = 16
 pub(crate) const TOTAL_CASTLING_RIGHTS: usize = 16;
-pub(crate) const MAX_PLY: usize = 64;
+pub(crate) const MAX_PLY: usize = 256; // (max_depth * 2)
 
 
 pub(crate) const RANDOM_STATE_SEED: u32 = 1804289383;

@@ -5,13 +5,13 @@ pub(crate) struct PVTable {
     pub(crate) length: usize,
     /// The moves here are arranged in the opposite order.
     pub(crate) mvs: [u16; MAX_DEPTH],
-    /// used internally only to know where we are when using the iterator
-    at: usize
+    // /// used internally only to know where we are when using the iterator
+    // at: usize
 }
 
 impl Default for PVTable {
     fn default() -> Self {
-        Self { length: 0, mvs: [0; MAX_DEPTH], at: 0 }
+        Self { length: 0, mvs: [0; MAX_DEPTH] }
     }
 }
 

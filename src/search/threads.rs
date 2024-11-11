@@ -29,13 +29,16 @@
 //     }
 // }
 
-use super::{heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv::PVTable}, stack::Stack};
+use crate::{board::position::Position, constants::MAX_PLY, move_logic::bitmove::Move, tt::{flag::HashFlag, tpt::TPT}};
 
-pub(crate) struct Thread {
-    ss: Stack,
+use super::{heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv::PVTable}, stack::{Stack, StackItem}};
+
+pub(crate) struct Thread<'a> {
+    ss: [StackItem; MAX_PLY + 10],
     
     eval: i32,
     depth: u8,
+    // In the case of depth limited search, this is provided by the client
     limit: u8,
     nodes: usize,
     ply: usize,
@@ -46,9 +49,21 @@ pub(crate) struct Thread {
     counter_mvs: CounterMove,
     /// The Killer Move is a quiet move which caused a beta-cutoff in a sibling Cut-node,
     killer_moves: KillerMoves,
+    tt: TPT<'a>,
+    
     pv_table: PVTable,
+    thread_id: usize
 }
 
-impl Thread {
+impl<'a> Thread<'a> {
     pub(crate) fn new(limit: u8) {}
+
+    pub(crate) fn update_stats(&mut self, position: &Position, best_mv: &Option<Move>, quiets: &Vec<Move>, captures: &Vec<(Move, HashFlag)>) {
+        self.caphist.update_many(&position, self.ply as u8, captures);
+
+        if best_mv.is_some_and(|m| m.is_quiet()) {
+            self.conthist.update_many(&position, &quiets, self.ply as u8, best_mv);
+            self.counter_mvs.add_many(&position, quiets);
+        }
+    }
 }

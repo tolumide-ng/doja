@@ -539,7 +539,7 @@ impl<'a> Search<'a> {
 
         let mut mvs_searched = 0;
 
-        // if tt_hit.is_none() && !!stm_in_check && excluded.is_none() {
+        // if tt_entry.is_none() && !!stm_in_check && excluded.is_none() {
         //     self.tt.record(hash_key, depth, -INFINITY, eval, self.ply, HashFlag::UpperBound, 0, None);
         // }
 
