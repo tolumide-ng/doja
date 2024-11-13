@@ -59,7 +59,7 @@ impl<'a> Search<'a> {
                 counter_mvs: CounterMove::new(), ss: Stack::default(), depth: 0, limit: 0, eval: 0 }
     }
 
-    fn aspiration_window(&mut self, position: &mut Position, depth: usize) -> i32 {
+    fn aspiration_window(&mut self, position: &mut Position, depth: usize, t: &mut Thread) -> i32 {
         let mut alpha = -INFINITY;
         let mut beta = INFINITY;
         let mut delta = -INFINITY;
@@ -81,7 +81,7 @@ impl<'a> Search<'a> {
 
         loop {
             // self.ply = 0;
-            let score = self.negamax::<Root>(alpha, beta, depth  as u8, position, &mut pv, false, false);
+            let score = self.negamax::<Root>(alpha, beta, depth  as u8, position, &mut pv, false, false, t);
             // println!("the score is {score}, alpha={alpha}, beta={beta} and nodes {}", self.nodes);
             
             // if depth > self.limit { break; }
@@ -132,7 +132,7 @@ impl<'a> Search<'a> {
         self.limit = limit;
         while self.depth < MAX_DEPTH && self.depth < self.limit {
             // println!("\n\n\n RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {}", self.depth);
-            let eval = self.aspiration_window(position, self.depth);
+            let eval = self.aspiration_window(position, self.depth, t);
             
             self.eval = eval;
             self.depth += 1;
@@ -248,7 +248,7 @@ impl<'a> Search<'a> {
         let killer_mvs = self.killer_moves.get_killers(self.ply).map(|m| if m == 0 {None} else {Some(Move::from(m))});
         let mut mvs = MovePicker::<{MoveScope::CAPTURES}>::new(0, tt_move, killer_mvs);
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
-            if position.make_move_nnue(mv, MoveScope::AllMoves) {
+            if position.make_move(mv, MoveScope::AllMoves) {
                 self.ply += 1;
                 let value = -self.quiescence(-beta, -alpha, position);
                 position.undo_move(true);
@@ -305,7 +305,7 @@ impl<'a> Search<'a> {
     /// nmfp: Null Move forward prunning
     /// https://web.archive.org/web/20040427014629/http://brucemo.com/compchess/programming/nullmove.htm
     /// "If I do nothing here, can the opponent do anything?"
-    fn make_null_move(&mut self, beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool) -> i32 {
+    fn make_null_move(&mut self, beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool, t: &mut Thread) -> i32 {
         self.ss[self.ply].moved = None;
         self.ss[self.ply].mv = None;
         self.ply += 1;
@@ -325,7 +325,7 @@ impl<'a> Search<'a> {
 
         // let score = -self.negamax::<NotPv>(-beta, -beta+1, depth, &mut position, pv, cutnode);
         // let score = -self.negamax::<NotPv>(-(beta-1)-1, -(beta-1), depth, &mut position, pv, cutnode, true);
-        let score = -self.negamax::<NotPv>(-beta, -beta+1, depth, &mut position, pv, cutnode, true);
+        let score = -self.negamax::<NotPv>(-beta, -beta+1, depth, &mut position, pv, cutnode, true, t);
         // let nbeta = -(beta-1);
         // let score = -self.negamax::<NotPv>(nbeta -1, nbeta, depth, &mut position, pv);
 
@@ -341,7 +341,7 @@ impl<'a> Search<'a> {
         score
     }
 
-    pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, mut beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool, last_move_was_null: bool) -> i32 {
+    pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, mut beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool, last_move_was_null: bool, t: &mut Thread) -> i32 {
         let mut depth = depth;
         
         let stm_in_check = Self::in_check(position, position.turn);
@@ -511,7 +511,7 @@ impl<'a> Search<'a> {
                 let r = (4 + depth/4).min(depth);
                 // let r = if depth > 6 {4} else {3};
                 // let r = ((eval - beta)/202).min(6) + (depth as i32)/3 + 5;
-                let value = self.make_null_move(beta, depth-r as u8, position, opv, !cutnode);
+                let value = self.make_null_move(beta, depth-r as u8, position, opv, !cutnode, t);
                 if value >= beta {
                     return beta;
                 }
@@ -572,7 +572,7 @@ impl<'a> Search<'a> {
                 let se_depth = (depth-1)/2;
             
                 self.ss[self.ply].excluded = Some(mv);
-                let value = self.negamax::<NotPv>(se_beta -1, se_beta, se_depth, position, opv, cutnode, false);
+                let value = self.negamax::<NotPv>(se_beta -1, se_beta, se_depth, position, opv, cutnode, false, t);
                 self.ss[self.ply].excluded = None;
             
                 if value < se_beta {
@@ -581,7 +581,7 @@ impl<'a> Search<'a> {
             }
 
             let moved_piece = position.piece_at(mv.get_src()).unwrap();
-            if position.make_move_nnue(mv, MoveScope::AllMoves) {
+            if position.make_move(mv, MoveScope::AllMoves) {
 
                 self.ss[self.ply].moved = Some(moved_piece);
                 self.ss[self.ply].mv = Some(mv);
@@ -639,23 +639,23 @@ impl<'a> Search<'a> {
 
                 
                 let value = match mvs_searched {
-                    0 => -self.negamax::<NotPv>(-beta, -alpha, new_depth -1, &mut position, opv, false, false),
+                    0 => -self.negamax::<NotPv>(-beta, -alpha, new_depth -1, &mut position, opv, false, false, t),
                     _ => {
                         // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
                         // condition for Late Move Reduction
                         let non_tatcital_mv = !stm_in_check && mv.is_quiet();
 
                         let mut result = if (mvs_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
-                            -self.negamax::<NotPv>(-(alpha + 1), -alpha, depth-2, position, opv, false, false)
+                            -self.negamax::<NotPv>(-(alpha + 1), -alpha, depth-2, position, opv, false, false, t)
                         } else {
                             alpha + 1 // Hack to ensure that full-depth search is done
                         };
                         
                         if result > alpha {
-                            result = -self.negamax::<NotPv>(-(alpha - 1), -alpha, depth-1, position, opv, false, false);
+                            result = -self.negamax::<NotPv>(-(alpha - 1), -alpha, depth-1, position, opv, false, false, t);
                             
                             if (result > alpha) && result < beta {
-                                result = -self.negamax::<NotPv>(-beta, -alpha, depth-1, position, opv, false, false);
+                                result = -self.negamax::<NotPv>(-beta, -alpha, depth-1, position, opv, false, false, t);
                             }
                         }
                         

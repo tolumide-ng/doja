@@ -73,32 +73,6 @@ impl Position {
         Self { board, nnue_state, history: Vec::new() }
     }
 
-    pub(crate) fn make_move(&mut self, mv: Move, scope: MoveScope) -> bool {
-        let Some(piece) = self.piece_at(mv.get_src()) else {return false};
-        // println!("from ppp -->> 11from ppp -->> 11 {}", mv);
-        if let Some(new_board) = self.board.make_move(mv, scope) {
-            let mut captured = None;
-            let tgt = mv.get_target() as u64;
-            
-            if mv.get_enpassant() {
-                let enpass_tgt = Square::from(match !self.board.turn {Black => tgt + 8, _ => tgt -  8});
-                captured = self.board.get_piece_at(enpass_tgt, !self.board.turn);
-            }
-
-            if mv.get_capture() && !mv.get_enpassant() {
-                captured = match mv.get_capture() {true => { self.board.get_piece_at(mv.get_target(), !self.board.turn) }, false => None};
-            }
-            
-            // let mv_history = History::new(mv, self.board.hash_key, captured, piece);
-            let old_board = std::mem::replace(&mut self.board, new_board);
-            self.history.push(Some(History::new(old_board, mv)));
-            
-            return true;
-        }
-        
-        false
-    }
-
     pub(crate) fn set_enpassant(&mut self, enpass: Option<Square>) {
         self.board.set_enpassant(enpass);
     }
@@ -192,8 +166,7 @@ impl Position {
     }
 
 
-    
-    pub(crate) fn make_move_nnue(&mut self, mv: Move, scope: MoveScope) -> bool {
+    pub(crate) fn make_move(&mut self, mv: Move, scope: MoveScope) -> bool {
         let (src, tgt) = (mv.get_src(), mv.get_target());
         let tgt_sq = Square::from(tgt);
         let turn = self.board.turn;
@@ -207,10 +180,10 @@ impl Position {
             return false
         };
 
-        // println!("the mv is still>>>> {}", mv);
-        
-        if self.make_move(mv, scope) {
-            // self.nnue_state.push();
+        if let Some(new_board) = self.board.make_move(mv, scope) {
+            let old_board = std::mem::replace(&mut self.board, new_board);
+            self.history.push(Some(History::new(old_board, mv)));
+
             let mut remove = vec![]; let mut add = vec![];
             
             if mv.get_enpassant() {
@@ -219,20 +192,11 @@ impl Position {
                 // self.nnue_state.manual_update::<OFF>(Piece::pawn(!turn), enpass_tgt);
                 remove.push((Piece::pawn(!turn), enpass_tgt));
             } else if mv.get_capture() {
-                if victim.is_none() {
-                    println!("the mv is {} >> cap=>{} promo==>>{}, encap==>>{}, doubles==>>{}", mv.to_string(), mv.get_capture(), mv.get_promotion().is_some(), mv.get_enpassant(), mv.get_double_push());
-                    println!("the current board is {}", self.board.to_string());
-                }
-                // println!("src {:#?}--- tgt {:#?}", src, tgt);
                 // self.nnue_state.manual_update::<OFF>(victim.unwrap(), tgt_sq);
                 remove.push((victim.unwrap(), tgt_sq));
             } else if mv.get_castling() {
-                // println!("{}", self.board.to_string());
-                // println!("the mv src --->>> {:#?}, target ====>>>> {}", mv.get_src(), mv.get_target());
                 let (rook_src, rook_tgt) = rook_mvs.unwrap();
                 let rook = Piece::rook(turn);
-                
-                // println!("the return here is {:#?}", rook_mvs);
                 // self.nnue_state.move_update(Piece::rook(turn), rook_src, rook_tgt);
                 remove.push((rook, rook_src));
                 add.push((rook, rook_tgt));
@@ -251,8 +215,10 @@ impl Position {
             
             return true;
         }
+        
         false
     }
+
 
     pub(crate) fn undo_move(&mut self, with_nnue: bool) {
         let last = self.history.pop();
