@@ -4,7 +4,7 @@ use crate::{board::piece::Piece, constants::MAX_PLY, move_logic::bitmove::Move};
 
 
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct StackItem {
     pub(crate) eval: i32,
     pub(crate) best_move: Option<Move>,

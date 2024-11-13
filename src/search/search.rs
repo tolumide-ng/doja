@@ -2,7 +2,7 @@ use crate::{board::{piece::Piece, position::Position}, color::Color, constants::
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 
-use super::{constants::{NodeType, NotPv, Pv}, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv::PVTable}, stack::Stack};
+use super::{constants::{NodeType, NotPv, Pv}, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv::PVTable}, stack::Stack, threads::Thread};
 
 /// The number of nodes you can actually cut depends on:
 /// 1. How well written your alpha-beta program is
@@ -128,7 +128,7 @@ impl<'a> Search<'a> {
         // println!("\n");
     }
 
-    pub(crate) fn iterative_deepening(&mut self, limit: usize, position: &mut Position) {
+    pub(crate) fn iterative_deepening(&mut self, limit: usize, position: &mut Position, t: &mut Thread) {
         self.limit = limit;
         while self.depth < MAX_DEPTH && self.depth < self.limit {
             // println!("\n\n\n RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {}", self.depth);
@@ -561,7 +561,7 @@ impl<'a> Search<'a> {
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
             // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--{}", mv.to_string());
             if excluded == Some(mv) {
-                mvs_searched += 1;
+                // mvs_searched += 1;
                 continue;
             }
             let mut extension = 0;
