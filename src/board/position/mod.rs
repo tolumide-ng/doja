@@ -219,6 +219,8 @@ impl Position {
         false
     }
 
+    // pub(crate) fn make_null_move(&mut self, beta: i32, depth: u8, pv)
+
 
     pub(crate) fn undo_move(&mut self, with_nnue: bool) {
         let last = self.history.pop();
@@ -228,100 +230,7 @@ impl Position {
                 self.nnue_state.pop();
             }
         }
-
     }
-
-    // pub(crate) fn undo_move(&mut self, with_nnue: bool) {
-    //     if self.history.len() == 0 { return }
-    //     if *self.history.last().unwrap().unwrap().mv == 0 { return }; // this means that the last move was a null-move (used during search)
-
-    //     let History { mv, hash, victim, piece } = self.history.pop().unwrap().unwrap();
-    //     let src = mv.get_src() as u64;
-    //     let tgt = mv.get_target() as u64;
-    //     let color = piece.color(); // the side that moved
-
-    //     {
-    //         // remove the acting(src) piece from wherever it moved to (target)
-    //         let new_piece = match mv.get_promotion() {Some(p) => Piece::from((p, color)), None => piece};
-    //         *self.board[new_piece] ^= 1 << tgt;
-    //         self.board.occupancies[color] ^= 1 << tgt;
-    //         self.board.occupancies[Both] ^= 1 << tgt;
-    //     }
-
-    //     {
-    //         // return the acting(src) piece to the point where it started (src);
-    //         *self.board[piece] |= 1 << src;
-    //         self.board.occupancies[color] |= 1 << src;
-    //         self.board.occupancies[Both] |= 1 << src;
-    //     }
-
-    //     if mv.move_type() == MoveType::DoublePush {
-    //         println!("XXXXXXXXXXx called <<<<<<< undoing >>><<<<<><><>{}", mv.to_string());
-    //         self.board.set_enpassant(None);
-    //     }
-
-
-    //     if mv.get_enpassant() { // victim is a pawn of the opposite color
-    //         let sq = match piece.color() {White => tgt - 8, _ => tgt + 8 }; // victim
-            
-    //         *self.board[Piece::pawn(!color)] |= 1 << sq;
-    //         self.board.occupancies[!color] |= 1 << sq;
-    //         self.board.occupancies[Both] |= 1 << sq;
-    //         self.board.set_enpassant(Some(Square::from(tgt)));
-    //     };
-
-    //     if mv.get_castling() {
-    //         let rook = Piece::rook(color);
-
-    //         let (moved_to, moved_from)= match color {
-    //             White => {
-    //                 if tgt == Square::G1 as u64 {
-    //                     self.board.set_castling(Castling::from(self.board.castling_rights.bits() | WHITE_KING_CASTLING_MASK));
-    //                     ((1u64 << F1 as u64), (1u64 << H1 as u64))
-    //                 } else { // C1 queen side 
-    //                     self.board.set_castling(Castling::from(self.board.castling_rights.bits() | WHITE_QUEEN_CASTLING_MASK));
-    //                     ((1u64 << D1 as u64),  (1u64 << A1 as u64))
-    //                 }
-    //             }
-    //             _ => {
-    //                 if tgt == Square::G8 as u64 {
-    //                     self.board.set_castling(Castling::from(self.board.castling_rights.bits() | BLACK_KING_CASTLING_MASK));
-    //                     ((1u64 << F8 as u64) as u64, 1u64 << H8 as u64)
-    //                 } else { // if tgt == Square::C8 as u64 {}
-    //                     self.board.set_castling(Castling::from(self.board.castling_rights.bits() | BLACK_QUEEN_CASTLING_MASK));
-    //                     (1u64 << D8 as u64, 1u64 << A8 as u64)
-    //                 }
-                    
-    //             }
-    //         };
-            
-    //         // remove
-    //         *self.board[rook] ^= moved_to;
-    //         self.board.occupancies[color] ^= moved_to;
-    //         self.board.occupancies[Both] ^= moved_to;
-            
-    //         // return to former sq
-    //         *self.board[rook] |= moved_from;
-    //         self.board.occupancies[color] |= moved_from;
-    //         self.board.occupancies[Both] |= moved_from;
-    //     }
-
-    //     if !mv.get_enpassant() && mv.get_capture() {
-    //         //  get the captured piece back
-    //         if let Some(captured_piece) = victim {
-    //             *self.board.board[captured_piece] |= 1 << tgt;
-    //             self.board.occupancies[!color] |= 1 << tgt;
-    //             self.board.occupancies[Both] |= 1 << tgt; 
-    //         };
-    //     }
-    //     self.board.hash_key = hash;
-
-    //     self.board.turn = color;
-
-    //     if with_nnue {
-    //         self.nnue_state.pop();
-    //     }        
-    // }
 
     pub(crate) fn evaluate(&self) -> i32 {
         let eval = self.nnue_state.evaluate(self.board.turn);
@@ -343,7 +252,6 @@ impl Deref for Position {
         &self.board
     }
 }
-
 
 
 impl From<Board> for Position {

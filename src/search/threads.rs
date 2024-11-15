@@ -34,16 +34,16 @@ use crate::{board::position::Position, constants::MAX_PLY, move_logic::bitmove::
 use super::{heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv::PVTable}, stack::{Stack, StackItem}};
 
 pub(crate) struct Thread<'a> {
-    ss: [StackItem; MAX_PLY + 10],
+    pub(crate) ss: [StackItem; MAX_PLY + 10],
     
-    eval: i32,
-    depth: u8,
+    pub(crate) eval: i32,
+    pub(crate) depth: usize,
     // In the case of depth limited search, this is provided by the client
     limit: u8,
     nodes: usize,
-    ply: usize,
+    // ply: usize, // already on the board
 
-    history_table: HistoryHeuristic,
+    pub(crate) history_table: HistoryHeuristic,
     caphist: CaptureHistory,
     conthist: ContinuationHistory,
     counter_mvs: CounterMove,
@@ -58,17 +58,17 @@ pub(crate) struct Thread<'a> {
 impl<'a> Thread<'a> {
     pub(crate) fn new(limit: u8, tt: TPT<'a>, thread_id: usize) -> Self {
         Self { ss: [StackItem::default(); MAX_PLY + 10], 
-            eval: 0, depth: 0, limit, nodes: 0, ply: 0, 
+            eval: 0, depth: 0, limit, nodes: 0,
             history_table: HistoryHeuristic::new(), caphist: CaptureHistory::default(), 
             conthist: ContinuationHistory::new(), counter_mvs: CounterMove::new(), 
             killer_moves: KillerMoves::new(), tt, pv_table: PVTable::default(), thread_id }
     }
 
-    pub(crate) fn update_stats(&mut self, position: &Position, best_mv: &Option<Move>, quiets: &Vec<Move>, captures: &Vec<(Move, HashFlag)>) {
-        self.caphist.update_many(&position, self.ply as u8, captures);
+    pub(crate) fn update_stats(&mut self, position: &Position, best_mv: &Option<Move>, quiets: &Vec<Move>, captures: &Vec<(Move, HashFlag)>, depth: u8) {
+        self.caphist.update_many(&position, depth, captures);
 
         if best_mv.is_some_and(|m| m.is_quiet()) {
-            self.conthist.update_many(&position, &quiets, self.ply as u8, best_mv);
+            self.conthist.update_many(&position, &quiets, depth, best_mv);
             self.counter_mvs.add_many(&position, quiets);
         }
     }

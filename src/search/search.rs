@@ -1,8 +1,8 @@
-use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, RAZOR_MARGIN, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::{MovePicker, Stage}}, move_scope::MoveScope, search::constants::Root, tt::{entry::TTData, flag::HashFlag, tpt::TPT}, utils::lmr::reduction};
+use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, MAX_PLY, RAZOR_MARGIN, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::{MovePicker, Stage}}, move_scope::MoveScope, search::constants::Root, tt::{entry::TTData, flag::HashFlag, tpt::TPT}, utils::lmr::reduction};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 
-use super::{constants::{NodeType, NotPv, Pv}, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv::PVTable}, stack::Stack, threads::Thread};
+use super::{constants::{NodeType, NotPv, Pv}, heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv::PVTable}, stack::{Stack, StackItem}, threads::Thread};
 
 /// The number of nodes you can actually cut depends on:
 /// 1. How well written your alpha-beta program is
@@ -45,25 +45,26 @@ pub(crate) struct Search<'a> {
     counter_mvs: CounterMove,
     // continuation_hist
     tt: TPT<'a>,
-    ss: Stack,
+    ss: [StackItem; MAX_PLY + 10],
     depth: usize,
     limit: usize,
     eval: i32,
+    last_move_was_null: bool,
 }
 
 
 impl<'a> Search<'a> {
     pub(crate) fn new(tt: TPT<'a>) -> Self {
-        Self { nodes: 0, ply: 0, pv_table: PVTable::default(), killer_moves: KillerMoves::new(),
+        Self { nodes: 0, ply: 0, pv_table: PVTable::default(), killer_moves: KillerMoves::new(), last_move_was_null: false,
             history_table: HistoryHeuristic::new(), tt, caphist: CaptureHistory::default(), conthist: ContinuationHistory::new(),
-                counter_mvs: CounterMove::new(), ss: Stack::default(), depth: 0, limit: 0, eval: 0 }
+                counter_mvs: CounterMove::new(), ss: [StackItem::default(); MAX_PLY + 10], depth: 0, limit: 0, eval: 0 }
     }
 
-    fn aspiration_window(&mut self, position: &mut Position, depth: usize, t: &mut Thread) -> i32 {
+    fn aspiration_window(&mut self, position: &mut Position, t: &mut Thread) -> i32 {
         let mut alpha = -INFINITY;
         let mut beta = INFINITY;
         let mut delta = -INFINITY;
-        let mut depth = depth + 1;
+        let mut depth = t.depth + 1;
         let mut pv = PVTable::default();
 
         const BIG_DELTA: usize = 975;
@@ -81,12 +82,7 @@ impl<'a> Search<'a> {
 
         loop {
             // self.ply = 0;
-            let score = self.negamax::<Root>(alpha, beta, depth  as u8, position, &mut pv, false, false, t);
-            // println!("the score is {score}, alpha={alpha}, beta={beta} and nodes {}", self.nodes);
-            
-            // if depth > self.limit { break; }
-            // self.depth = depth;
-            // println!("{}", position.to_string());
+            let score = self.negamax::<Root>(alpha, beta, depth  as u8, position, &mut pv, false, t);
             depth += 1;
 
             if score <= alpha {
@@ -109,33 +105,20 @@ impl<'a> Search<'a> {
             }
             delta += delta/2;
             if delta >= BIG_DELTA as i32 { alpha = -INFINITY; beta = INFINITY } 
-
-            // let mvs = self.pv_table.get_pv(0);
-            // println!("dddd is {depth}");
-            // for i in 0..mvs.len() {
-            //     print!("-->> {}", Move::from(mvs[i as usize]));
-            // }
-            // println!("\n\n");
-
         }
-
-        // println!("MOVES ARE :::: with length of {}", self.pv_table.len(0));
-        // let mvs = self.pv_table.get_pv(0);
-        // for i in 0..self.limit {
-        //     print!("-->> {}", Move::from(mvs[i as usize]));
-        //     // println!("in check???? {}", position);
-        // }
-        // println!("\n");
     }
 
     pub(crate) fn iterative_deepening(&mut self, limit: usize, position: &mut Position, t: &mut Thread) {
         self.limit = limit;
         while self.depth < MAX_DEPTH && self.depth < self.limit {
             // println!("\n\n\n RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {}", self.depth);
-            let eval = self.aspiration_window(position, self.depth, t);
+            let eval = self.aspiration_window(position, t);
             
             self.eval = eval;
+            t.eval = eval;
             self.depth += 1;
+            t.depth += 1;
+
         }
 
 
@@ -150,13 +133,6 @@ impl<'a> Search<'a> {
             // println!("in check???? {}", position);
         }
         println!("\n\n");
-        // for i in 0..length {
-        //     print!("|||-->> {}", Move::from(mvs[i as usize]));
-        //     position.make_move_nnue(Move::from(mvs[i as usize]), MoveScope::AllMoves);
-        //     println!("in check???? {}", position.to_string());
-        //     println!("\n\n");
-        // }
-        println!("\n");
     }
 
     fn is_repetition(position: &Position, key: u64) -> bool {
@@ -305,7 +281,7 @@ impl<'a> Search<'a> {
     /// nmfp: Null Move forward prunning
     /// https://web.archive.org/web/20040427014629/http://brucemo.com/compchess/programming/nullmove.htm
     /// "If I do nothing here, can the opponent do anything?"
-    fn make_null_move(&mut self, beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool, t: &mut Thread) -> i32 {
+    fn make_null_move(&mut self, beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool, t: &mut Thread,) -> i32 {
         self.ss[self.ply].moved = None;
         self.ss[self.ply].mv = None;
         self.ply += 1;
@@ -318,17 +294,14 @@ impl<'a> Search<'a> {
             position.set_zobrist(position.hash_key ^ ZOBRIST.enpassant_keys[enpass_sq]);
         }
 
+        position.set_enpassant(None);  // because whatever move they made (enpassant or not) would have resulted in them losing the enpassant anyway
         position.set_turn(!position.turn);
-        position.set_enpassant(None);
         position.set_zobrist(position.hash_key ^ ZOBRIST.side_key); // side about to move
         position.nnue_push();
 
-        // let score = -self.negamax::<NotPv>(-beta, -beta+1, depth, &mut position, pv, cutnode);
-        // let score = -self.negamax::<NotPv>(-(beta-1)-1, -(beta-1), depth, &mut position, pv, cutnode, true);
-        let score = -self.negamax::<NotPv>(-beta, -beta+1, depth, &mut position, pv, cutnode, true, t);
-        // let nbeta = -(beta-1);
-        // let score = -self.negamax::<NotPv>(nbeta -1, nbeta, depth, &mut position, pv);
-
+        self.last_move_was_null = true;
+        let score = -self.negamax::<NotPv>(-beta, -beta+1, depth, &mut position, pv, cutnode, t);
+   
         // reverse all actions, after we're done
         self.ply -= 1;
         position.nnue_pop();
@@ -337,11 +310,12 @@ impl<'a> Search<'a> {
         position.set_turn(!position.turn);
         position.set_enpassant(old_enpassant);
         position.set_zobrist(old_hashkey);
+        self.last_move_was_null = false;
 
         score
     }
 
-    pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, mut beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool, last_move_was_null: bool, t: &mut Thread) -> i32 {
+    pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, mut beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool, t: &mut Thread) -> i32 {
         let mut depth = depth;
         
         let stm_in_check = Self::in_check(position, position.turn);
@@ -505,7 +479,7 @@ impl<'a> Search<'a> {
             
             // Null move search
             // let null_move_forward_pruning_conditions = depth >= (DEPTH_REDUCTION_FACTOR + 1) && !stm_in_check && self.ply > 0;
-            let null_move_forward_pruning_conditions = depth > 3 && self.ply > 0 && ((eval + 70 * (improving as i32)) >= beta) && !position.possibly_zugzwang() && !last_move_was_null;
+            let null_move_forward_pruning_conditions = depth > 3 && self.ply > 0 && ((eval + 70 * (improving as i32)) >= beta) && !position.possibly_zugzwang() && !self.last_move_was_null;
             if null_move_forward_pruning_conditions {
                 // Null move dynamic reduction based on depth
                 let r = (4 + depth/4).min(depth);
@@ -572,7 +546,7 @@ impl<'a> Search<'a> {
                 let se_depth = (depth-1)/2;
             
                 self.ss[self.ply].excluded = Some(mv);
-                let value = self.negamax::<NotPv>(se_beta -1, se_beta, se_depth, position, opv, cutnode, false, t);
+                let value = self.negamax::<NotPv>(se_beta -1, se_beta, se_depth, position, opv, cutnode, t);
                 self.ss[self.ply].excluded = None;
             
                 if value < se_beta {
@@ -639,23 +613,23 @@ impl<'a> Search<'a> {
 
                 
                 let value = match mvs_searched {
-                    0 => -self.negamax::<NotPv>(-beta, -alpha, new_depth -1, &mut position, opv, false, false, t),
+                    0 => -self.negamax::<NotPv>(-beta, -alpha, new_depth -1, &mut position, opv, false, t),
                     _ => {
                         // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
                         // condition for Late Move Reduction
                         let non_tatcital_mv = !stm_in_check && mv.is_quiet();
 
                         let mut result = if (mvs_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
-                            -self.negamax::<NotPv>(-(alpha + 1), -alpha, depth-2, position, opv, false, false, t)
+                            -self.negamax::<NotPv>(-(alpha + 1), -alpha, depth-2, position, opv, false, t)
                         } else {
                             alpha + 1 // Hack to ensure that full-depth search is done
                         };
                         
                         if result > alpha {
-                            result = -self.negamax::<NotPv>(-(alpha - 1), -alpha, depth-1, position, opv, false, false, t);
+                            result = -self.negamax::<NotPv>(-(alpha - 1), -alpha, depth-1, position, opv, false, t);
                             
                             if (result > alpha) && result < beta {
-                                result = -self.negamax::<NotPv>(-beta, -alpha, depth-1, position, opv, false, false, t);
+                                result = -self.negamax::<NotPv>(-beta, -alpha, depth-1, position, opv, false, t);
                             }
                         }
                         
@@ -682,7 +656,8 @@ impl<'a> Search<'a> {
                         if mv.is_quiet() {
                             self.killer_moves.store(depth as usize, &mv);
                         }
-                        self.update_logs(&position, &best_mv, &quiet_mvs, &captures);
+                        self.update_logs(&position, &best_mv, &quiet_mvs, &captures, depth);
+                        t.update_stats(&position, &best_mv, &quiet_mvs, &captures, depth);
                         alpha = beta;
                         flag = HashFlag::LowerBound;
                         break;
@@ -692,64 +667,13 @@ impl<'a> Search<'a> {
                 if mv.is_quiet() {
                     quiet_mvs.push(mv);
                     self.history_table.update(moved_piece, mv.get_src(), depth);
+                    t.history_table.update(moved_piece, mv.get_src(), depth);
                 } else if mv.is_capture() {
                     captures.push((mv, flag));
                 }
                 mvs_searched +=  1;
-                
-                // if value > best_value {
-                //     best_value = value;
-                //     mvs_searched += 1;
-
-                //     if value > alpha {
-                //         best_mv = Some(mv);
-                //         alpha = value;
-                //         // self.pv_table.store_pv(self.ply, &mv);
-                //         self.pv_table.push(&mv);
-                //     }
-
-
-
-                //     if value >= beta {
-                //         self.update_logs(&position, &best_mv, &quiet_mvs, &captures);
-                //         // self.tt.record(position.hash_key, depth, best_value, self.ss[self.ply].eval, self.ply, HashFlag::LowerBound, 0, best_mv);
-                //         if !mv.get_capture() {
-                //         }
-                //         alpha = beta;
-                //         flag = HashFlag::LowerBound;
-
-                //         break;
-                //     }
-                // }
-                
-                // if mv.get_capture() {
-                //     captures.push((mv, flag));
-                // } else {
-                //     self.killer_moves.store(depth as usize, &mv);
-                //     self.history_table.update(moved_piece, mv.get_src(), depth);
-                //     quiet_mvs.push(mv);
-                // }
-
             }
         }
-
-        // if best_value >= beta {
-        //     self.update_logs(position, &best_mv, &quiet_mvs, &captures);
-        // }
-
-        // if mvs_searched == 0 {
-        //     if stm_in_check {
-        //         return -MATE_VALUE + self.ply as i32;
-        //     }
-        //     // king is not in check, but there are no legal moves
-        //     return 0; // stalemate/draw
-        // }
-
-        // if alpha != original_alpha {
-        //     if best_mv.is_some_and(|mv| !mv.get_capture()) {
-        //         self.conthist.update_many(&position, quiet_mvs, depth, best_mv.unwrap());
-        //     }
-        // }
         
         let tt_flag = if best_value >= beta { HashFlag::LowerBound } else if best_value > original_alpha { HashFlag::Exact } else { HashFlag::UpperBound };
         self.tt.record(hash_key, depth, best_value, self.ss[self.ply].eval, self.ply, tt_flag, 0, best_mv);
@@ -757,11 +681,11 @@ impl<'a> Search<'a> {
         alpha
     }
 
-    pub(crate) fn update_logs(&mut self, position: &Position, best_mv: &Option<Move>, quiets: &Vec<Move>, captures: &Vec<(Move, HashFlag)>) {
-        self.caphist.update_many(&position, self.ply as u8, captures);
+    pub(crate) fn update_logs(&mut self, position: &Position, best_mv: &Option<Move>, quiets: &Vec<Move>, captures: &Vec<(Move, HashFlag)>, depth: u8) {
+        self.caphist.update_many(&position, depth,captures);
 
         if best_mv.is_some_and(|m| m.is_quiet()) {
-            self.conthist.update_many(&position, &quiets, self.ply as u8, best_mv);
+            self.conthist.update_many(&position, &quiets, depth, best_mv);
             self.counter_mvs.add_many(&position, quiets);
         }
     }
