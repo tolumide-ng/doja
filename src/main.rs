@@ -30,7 +30,7 @@ use std::{num::NonZero, sync::{Arc, Mutex}};
 // use move_logic::bitmove::{Move, MoveType};
 use board::{position::Position, state::board::Board};
 use color::Color;
-use constants::TRICKY_POSITION;
+use constants::{CMK_POSITION, TRICKY_POSITION};
 use nnue::halfka_idx;
 use search::{control::Control, search::Search, threads::Thread};
 use squares::Square;
@@ -139,8 +139,8 @@ fn main() {
 
 
     // let mut board = Position::from(Board::try_from("r2Rk2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2p2Q1p/PPPBBPPP/R3K21 b KQkq - 0 1 ").unwrap());
-    let mut board = Position::from(Board::try_from(TRICKY_POSITION).unwrap());
-    let mut thread = Thread::new(10, table.get(), 0);
+    let mut board = Position::from(Board::try_from(CMK_POSITION).unwrap());
+    let mut thread = Thread::new(30, table.get(), 0);
     println!("{}", board.to_string());
     let mut search = Search::new(table.get());
     search.iterative_deepening(10, &mut board, &mut thread);

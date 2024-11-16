@@ -13,7 +13,8 @@ pub(crate) struct TPT<'a> {
 
 
 impl<'a> TPT<'a> {
-    pub(crate) fn record(&self, zobrist_key: u64, depth: u8, score: i32, eval: i32, ply: usize, flag: HashFlag, age: u8, mv: Option<Move>) {
+    pub(crate) fn record(&self, zobrist_key: u64, depth: u8, score: i32, eval: i32, ply: usize, flag: HashFlag, mv: Option<Move>, pv: bool) {
+        let age = 0;
         // let index = zobrist_key & (TOTAL_SIZE as u64 -1);
        let index = zobrist_key as usize % TOTAL_SIZE;
        let ply = ply as u8;

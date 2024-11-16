@@ -317,8 +317,8 @@ impl<'a> Search<'a> {
 
     pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, mut beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool, t: &mut Thread) -> i32 {
         let mut depth = depth;
-        
         let stm_in_check = Self::in_check(position, position.turn);
+
         // Check extension
         // https://www.chessprogramming.org/Check_Extensions
         if stm_in_check && depth < MAX_DEPTH as u8 { depth +=1; };
@@ -347,8 +347,6 @@ impl<'a> Search<'a> {
             if ply > 0 && (Self::is_repetition(&position, hash_key) || position.fifty.iter().any(|&p| p >= 50)) {
                 return 0 // draw
             }
-
-            // if alpha < 0 && self.re/
         }
 
         // Transposition table lookup
@@ -360,21 +358,7 @@ impl<'a> Search<'a> {
         let in_signular_search = excluded.is_some();
         let mut possibly_singular = false;
 
-        // if let Some(entry) = tt_entry {
         if let Some(entry) = tt_entry {
-            // if !pv_node && self.ply >= (depth  as usize) && !(position.fifty.iter().sum::<u8>() >= 80) 
-            // && (matches!(entry.flag, HashFlag::Exact) || 
-            //     matches!(entry.flag, HashFlag::LowerBound if entry.score >= beta) ||
-            //     matches!(entry.flag, HashFlag::UpperBound if entry.score <= alpha)) {
-            //         if let Some(mv) = entry.mv {
-            //             if !mv.is_tactical() && entry.score >= beta {
-            //                 self.conthist.update_many(&position, &vec![mv], depth, &Some(mv));
-            //             }
-            //         }
-            //         // tt_move = entry.mv;
-            //         return entry.score;
-            //     }
-                // Some(entry)
             // Don't use the tt result at the root of a singular search
             if !in_signular_search {
                 let tt_depth = entry.depth;
@@ -392,7 +376,6 @@ impl<'a> Search<'a> {
                 }
 
                 // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxx-------------------------------------------------------------------->>");
-                // if !pv_node && tt_depth >= depth && position.fifty.iter().sum() >= 80 && matches!()
 
                 possibly_singular = !NT::ROOT && depth >= SE_LOWER_LIMIT
                 && matches!(tt_flag, HashFlag::LowerBound | HashFlag::UpperBound)
@@ -400,6 +383,10 @@ impl<'a> Search<'a> {
                 && tt_depth >= depth -3;
             }
         };
+
+        if !NT::ROOT && !in_signular_search {
+            // if let Some()
+        }
 
         // Probe Tablebase (Skipped for now)
 
@@ -450,10 +437,10 @@ impl<'a> Search<'a> {
         // if !pv_node && !NT::ROOT && !stm_in_check && !in_signular_search {
             if !pv_node && !NT::ROOT && !stm_in_check && !in_signular_search {
             // Razoring: If evaluation + margin isn't better than alpha at the lowest depth, Go straight to quiescence search.
-            // if eval < alpha - 392 - 297 * (depth * depth) as i32 {
-            //     let value = self.quiescence(alpha -1, alpha, position);
-            //     if value < alpha { return value; }
-            // }
+            if eval < alpha - 392 - 297 * (depth * depth) as i32 {
+                let value = self.quiescence(alpha -1, alpha, position);
+                if value < alpha { return value; }
+            }
             // if depth < 3 && eval <= alpha - 494 - 290 * (depth * depth) as i32 {
             // // if depth < 3 && eval <= alpha - RAZOR_MARGIN[depth as usize] {
             //     let value = self.quiescence(alpha -1, alpha, position);
@@ -508,6 +495,10 @@ impl<'a> Search<'a> {
         // let explore_more_moves = (beta - alpha) > 1;
         // if self.ply > 0 && tt_value.is_some() && !explore_more_moves { return tt_value.unwrap() }
         // if self.ply > MAX_PLY - 1 { return position.evaluate() }
+
+        if !stm_in_check && tt_entry.is_none() && excluded.is_none() {
+            self.tt.record(position.hash_key, 0, INFINITY + 1, eval, self.ply, HashFlag::NoBound, age, mv);
+        }
 
         self.nodes += 1;
 
