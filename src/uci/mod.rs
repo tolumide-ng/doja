@@ -40,6 +40,8 @@ impl UCI {
     pub(crate) fn process_input<W: Write>(&mut self, input: String, mut writer: W) -> std::io::Result<bool> {
         let mut input = input.trim().split_whitespace();
         let tb = TableBase::default();
+        let mut table = TTable::default();
+
         
         match input.next() {
             Some("position") => {
@@ -66,9 +68,7 @@ impl UCI {
                         println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
                         let controller = Arc::clone(&self.controller);
 
-                        
-                        
-                        let table = TTable::default();
+                        table.increase_age();
                         let mut board = self.position.clone().unwrap();
                         
                         // thread::scope(|s| {

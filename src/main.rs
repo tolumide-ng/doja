@@ -140,6 +140,7 @@ fn main() {
 
     // let mut board = Position::from(Board::try_from("r2Rk2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2p2Q1p/PPPBBPPP/R3K21 b KQkq - 0 1 ").unwrap());
     let mut board = Position::from(Board::try_from(CMK_POSITION).unwrap());
+    // let mut board = Position::from(Board::try_from(TRICKY_POSITION).unwrap());
     let mut thread = Thread::new(30, table.get(), 0);
     println!("{}", board.to_string());
     let mut search = Search::new(table.get());

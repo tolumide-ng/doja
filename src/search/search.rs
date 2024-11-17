@@ -1,4 +1,4 @@
-use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, MAX_PLY, RAZOR_MARGIN, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::{MovePicker, Stage}}, move_scope::MoveScope, search::constants::Root, tt::{entry::TTData, flag::HashFlag, tpt::TPT}, utils::lmr::reduction};
+use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, MAX_PLY, RAZOR_MARGIN, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::{MovePicker, Stage}}, move_scope::MoveScope, search::constants::Root, tt::{entry::{from_tt, TTData}, flag::HashFlag, tpt::TPT}, utils::lmr::reduction};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 
@@ -180,7 +180,7 @@ impl<'a> Search<'a> {
         let mut tt_move: Option<Move> = None;
 
         if let Some(entry) = self.tt.probe(position.hash_key) {
-            let tt_value = entry.score;
+            let tt_value = from_tt(entry.score, self.ply);
             match entry.flag {
                 HashFlag::Exact => return tt_value,
                 HashFlag::LowerBound if tt_value >= beta => return beta,
@@ -194,7 +194,7 @@ impl<'a> Search<'a> {
             self.ss[self.ply].eval
         } else {
             if let Some(entry) = self.tt.probe(position.hash_key) {
-                let tt_eval = entry.eval as i32; let tt_value = entry.score;
+                let tt_eval = entry.eval as i32; let tt_value = from_tt(entry.score, self.ply);
 
                 self.ss[self.ply].eval = if tt_eval == -INFINITY {
                     position.evaluate() } else { tt_eval };
@@ -252,7 +252,7 @@ impl<'a> Search<'a> {
         }
 
         let tt_flag = if best_value >= beta { HashFlag::LowerBound } else if best_value > old_alpha { HashFlag::Exact } else { HashFlag::UpperBound };
-        self.tt.record(position.hash_key, 0, alpha, self.ss[self.ply].eval, self.ply, tt_flag, 0, best_move);
+        self.tt.record(position.hash_key, 0, alpha, self.ss[self.ply].eval, self.ply, tt_flag, best_move, false);
 
         
         alpha
@@ -262,21 +262,6 @@ impl<'a> Search<'a> {
         let king_square = u64::from(position[Piece::king(color)].trailing_zeros());
         position.is_square_attacked(king_square, !color)
     }
-
-    // fn probe_tt(&self, key: u64, depth: Option<u8>, alpha: i32, beta: i32) -> Option<TTData> {
-    //     if let Some(entry) = self.tt.probe(key) {
-    //         if depth.is_some_and(|d| entry.depth < d) { return None };
-    //         let entry_score = entry.score;
-    //         let value = match entry.flag {
-    //             HashFlag::Exact => Some(entry),
-    //             HashFlag::LowerBound if entry_score >= beta => Some(entry),
-    //             HashFlag::UpperBound if entry_score <= alpha => Some(entry),
-    //             _ => None
-    //         };
-    //         return value;
-    //     }
-    //     None
-    // }
 
     /// nmfp: Null Move forward prunning
     /// https://web.archive.org/web/20040427014629/http://brucemo.com/compchess/programming/nullmove.htm
@@ -363,7 +348,7 @@ impl<'a> Search<'a> {
             if !in_signular_search {
                 let tt_depth = entry.depth;
                 let tt_flag = entry.flag;
-                let tt_value = entry.score;
+                let tt_value = from_tt(entry.score, self.ply);
 
                 if !pv_node && tt_depth >= depth {
                     tt_move = entry.mv;
@@ -397,7 +382,7 @@ impl<'a> Search<'a> {
             self.ss[self.ply].eval
         } else if !stm_in_check {
             if let Some(entry) = tt_entry {
-                let tt_value = entry.score;
+                let tt_value = from_tt(entry.score, self.ply);
                 let tt_eval = entry.eval as i32;
                 
 
@@ -497,16 +482,16 @@ impl<'a> Search<'a> {
         // if self.ply > MAX_PLY - 1 { return position.evaluate() }
 
         if !stm_in_check && tt_entry.is_none() && excluded.is_none() {
-            self.tt.record(position.hash_key, 0, INFINITY + 1, eval, self.ply, HashFlag::NoBound, age, mv);
+            self.tt.record(position.hash_key, 0, INFINITY + 1, eval, self.ply, HashFlag::NoBound, None, pv_node);
         }
 
         self.nodes += 1;
 
         let mut mvs_searched = 0;
 
-        // if tt_entry.is_none() && !!stm_in_check && excluded.is_none() {
-        //     self.tt.record(hash_key, depth, -INFINITY, eval, self.ply, HashFlag::UpperBound, 0, None);
-        // }
+        if tt_entry.is_none() && !!stm_in_check && excluded.is_none() {
+            self.tt.record(hash_key, depth, -INFINITY, eval, self.ply, HashFlag::UpperBound, None, false);
+        }
 
 
         let mut best_value = -INFINITY;
@@ -532,7 +517,7 @@ impl<'a> Search<'a> {
             let mut extension = 0;
             // if possibly_singular  && tt_move.is_some_and(|tt_mv| tt_mv == mv) {
             if possibly_singular && tt_move.is_some_and(|tt_mv| tt_mv == mv) {
-                let tt_value = tt_entry.unwrap().score;
+                let tt_value = from_tt(tt_entry.unwrap().score, self.ply);
                 let se_beta = (tt_value - 2 * depth as i32).max(-INFINITY); // singular extension beta
                 let se_depth = (depth-1)/2;
             
@@ -651,6 +636,7 @@ impl<'a> Search<'a> {
                         t.update_stats(&position, &best_mv, &quiet_mvs, &captures, depth);
                         alpha = beta;
                         flag = HashFlag::LowerBound;
+                        
                         break;
                     }
                 }
@@ -667,7 +653,7 @@ impl<'a> Search<'a> {
         }
         
         let tt_flag = if best_value >= beta { HashFlag::LowerBound } else if best_value > original_alpha { HashFlag::Exact } else { HashFlag::UpperBound };
-        self.tt.record(hash_key, depth, best_value, self.ss[self.ply].eval, self.ply, tt_flag, 0, best_mv);
+        self.tt.record(hash_key, depth, best_value, self.ss[self.ply].eval, self.ply, tt_flag, best_mv, pv_node);
         self.ss[self.ply].best_move = best_mv;
         alpha
     }
