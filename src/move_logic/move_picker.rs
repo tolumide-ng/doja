@@ -26,7 +26,7 @@ pub(crate) enum Stage {
 /// At any point in time, there can always only be 16 captures
 /// T denotes the MoveScope (Capture, Quiet, or All moves)
 #[derive(Debug)]
-pub(crate) struct MovePicker<const T: u8> {
+pub(crate) struct MovePicker {
     moves: MoveStack<ScoredMove>,
     // used only by the iterator (to indicate where we currently are in the loop)
     index: usize,
@@ -37,9 +37,10 @@ pub(crate) struct MovePicker<const T: u8> {
     // the index where bad captures start and end (start, end)
     total_captures: usize,
     total_good_captures: usize,
+    skip_quiets: bool,
 }
 
-impl<const T: u8> MovePicker<T> {
+impl MovePicker {
     pub(crate) fn new(see_threshold: i32, tt_move: Option<Move>, killers: [Option<Move>; 2]) -> Self {
         Self {
             moves: MoveStack::new(),
@@ -50,6 +51,7 @@ impl<const T: u8> MovePicker<T> {
             killers,
             total_captures: 0,
             total_good_captures: 0,
+            skip_quiets: false
         }
     }
 
@@ -60,6 +62,10 @@ impl<const T: u8> MovePicker<T> {
     const BAD_CAPTURE: i32 = 1_000;
     const KILLER_MV: i32 = 6_000;
     const COUNTER_MV: i32 = 5_000;
+
+    pub(crate) fn skip_quiets(&mut self) {
+        self.skip_quiets = true;
+    }
 
     fn score_captures(&mut self, position: &Position, caphist: &CaptureHistory) {
         self.total_captures = self.moves.count();
@@ -150,7 +156,8 @@ impl<const T: u8> MovePicker<T> {
     }
 
     pub(crate) fn next(&mut self, position: &Position, history_table: &HistoryHeuristic, caphist: &CaptureHistory, conthist: &ContinuationHistory, counter_mvs: &CounterMove) -> Option<Move> {
-        let move_scope = MoveScope::from(T);
+        let scope = if self.skip_quiets {MoveScope::CAPTURES} else {MoveScope::ALL};
+        let move_scope = MoveScope::from(scope);
         if self.stage == Stage::Done {
             return None;
         }
@@ -209,13 +216,13 @@ impl<const T: u8> MovePicker<T> {
 
         if self.stage == Stage::Quiets {
             if self.index < self.moves.count_mvs() {
-                let next_mv = self.partial_insertion_sort::<true>(self.index);
+                let next_mv = self.partial_insertion_sort::<false>(self.index);
                 if let Some(mv) = next_mv {
                     if self.tt_move.is_some_and(|tt_mv| tt_mv == mv) { return self.next(position, history_table, caphist, conthist, counter_mvs); }
                 }
                 return next_mv;
             }
-            if move_scope == MoveScope::QuietOnly { self.stage == Stage::Done; return None }
+            if move_scope == MoveScope::QuietOnly {  return None } // done
             self.index = self.total_good_captures;
             self.stage = Stage::BadCapture;
         }
@@ -231,8 +238,6 @@ impl<const T: u8> MovePicker<T> {
                 return next_one;
             }
         }
-
-        self.stage == Stage::Done;
         
         None
     }

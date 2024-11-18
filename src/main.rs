@@ -144,7 +144,7 @@ fn main() {
     let mut thread = Thread::new(30, table.get(), 0);
     println!("{}", board.to_string());
     let mut search = Search::new(table.get());
-    search.iterative_deepening(4, &mut board, &mut thread);
+    search.iterative_deepening(6, &mut board, &mut thread);
 
     // let status = board.stm_in_check();
     // println!("the status is {status}");
