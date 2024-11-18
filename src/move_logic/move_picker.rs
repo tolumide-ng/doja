@@ -80,16 +80,10 @@ impl<const T: u8> MovePicker<T> {
                 _ if mv.get_promotion().is_some() => Self::OTHER_PROMOTIONS, // undepromotion (promotion to any type that isn't a queen)
                 // _ => Piece::MVV_LVA[victim] - Piece::MVV_LVA[attacker],
                 _ => {
-                    let scc = caphist.get(attacker, mv.get_target(), PieceType::from(victim));
+                    // let scc = caphist.get(attacker, mv.get_target(), PieceType::from(victim));
                     // println!("the scc here is already  {scc}, the max is {}", i16::MAX);
                     (Piece::MVV[victim as usize % 6] as i32 + caphist.get(attacker, mv.get_target(), PieceType::from(victim)) as i32) as i32},
             };
-
-            // if ["d2c3x", "e2a6x"].contains(&(mv.to_string()).as_str()) {
-            //     let xx = caphist.get(attacker, mv.get_target(), PieceType::from(victim));
-            //     println!("{} the score here is {} ----->>>>>>> {xx}", mv.to_string(), pre_score);
-            //     // println!(":::: ---- {}", Piece::MVV[victim as usize % 6])
-            // }
 
             let good_capture = position.see(&mv, self.see_threshold);
             let score = if good_capture {

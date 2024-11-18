@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{default, ops::Deref};
 
 use crate::{constants::REDUCTIONS, search::constants::NodeType};
 
@@ -6,8 +6,23 @@ use crate::{constants::REDUCTIONS, search::constants::NodeType};
 #[derive(Debug)]
 pub(crate) struct LmrTable([[[[i16; 64]; 64]; 2]; 2]); // [pv][improving][depth][moveNumber]
 
-impl Default for LmrTable {
-    fn default() -> Self {
+#[derive(Debug, Default)]
+pub(crate) struct FutilityMoveCounts([[i32; 16]; 2]);
+
+impl FutilityMoveCounts {
+    pub(crate) fn init() -> Self {
+        let mut value = [[0; 16]; 2];
+        for depth in 0..16 {
+            value[0][depth] = (2.4 + 0.74 * (depth as f64).powf(1.78)) as i32;
+            value[1][depth] = (5.0 + 1.0 * (depth as f64).powf(2.0)) as i32;
+        }
+
+        Self(value)
+    }
+}
+
+impl LmrTable {
+    pub(crate) fn init() -> Self {
         let mut reductions = [[[[0; 64]; 64]; 2]; 2];
         for impr in 0..2 {
             for depth in 1..64 {
@@ -39,4 +54,12 @@ impl Deref for LmrTable {
 
 pub(crate) fn reduction<NT: NodeType>(improving: bool, depth: usize, moves_searched: usize) -> i16 {
     REDUCTIONS[NT::PV as usize][improving as usize][depth.min(63)][moves_searched]
+}
+
+
+impl Deref for FutilityMoveCounts {
+    type Target = [[i32; 16]; 2];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }

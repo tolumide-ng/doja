@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use params::MAX_DEPTH;
 
-use crate::{masks::EvaluationMasks, piece_attacks::PieceAttacks, shift::ShiftData, squares::Square, utils::lmr::LmrTable, zobrist::Zobrist};
+use crate::{masks::EvaluationMasks, piece_attacks::PieceAttacks, shift::ShiftData, squares::Square, utils::lmr::{FutilityMoveCounts, LmrTable}, zobrist::Zobrist};
 
 ///  ----NOT_A_FILE----
 /// 8   0  1  1  1  1  1  1  1 \
@@ -236,7 +236,9 @@ lazy_static! {
     pub static ref EVAL_MASKS: EvaluationMasks = EvaluationMasks::init();
 
     /// Late Move Reductions Table
-    pub(crate) static ref REDUCTIONS: LmrTable = LmrTable::default();
+    pub(crate) static ref REDUCTIONS: LmrTable = LmrTable::init();
+    /// Futility move counts
+    pub(crate) static ref FUTILITY_MOVE_COUNTS: FutilityMoveCounts = FutilityMoveCounts::init();
 }
 
 

@@ -1,4 +1,4 @@
-use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, MAX_PLY, RAZOR_MARGIN, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::{MovePicker, Stage}}, move_scope::MoveScope, search::constants::Root, tt::{entry::{from_tt, TTData}, flag::HashFlag, tpt::TPT}, utils::lmr::reduction};
+use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, FUTILITY_MOVE_COUNTS, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, MAX_PLY, RAZOR_MARGIN, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::{MovePicker, Stage}}, move_scope::MoveScope, search::constants::Root, tt::{entry::{from_tt, TTData}, flag::HashFlag, tpt::TPT}, utils::lmr::reduction};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 
@@ -222,7 +222,7 @@ impl<'a> Search<'a> {
         let mut best_value = eval;
 
         let killer_mvs = self.killer_moves.get_killers(self.ply).map(|m| if m == 0 {None} else {Some(Move::from(m))});
-        let mut mvs = MovePicker::<{MoveScope::CAPTURES}>::new(0, tt_move, killer_mvs);
+        let mut mvs: MovePicker<1> = MovePicker::<{MoveScope::CAPTURES}>::new(0, tt_move, killer_mvs);
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
             if position.make_move(mv, MoveScope::AllMoves) {
                 self.ply += 1;
@@ -302,6 +302,8 @@ impl<'a> Search<'a> {
 
     pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, mut beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool, t: &mut Thread) -> i32 {
         let mut depth = depth;
+        let mut futilty_base = -INFINITY;
+
         let stm_in_check = Self::in_check(position, position.turn);
 
         // Check extension
@@ -363,9 +365,10 @@ impl<'a> Search<'a> {
                 // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxx-------------------------------------------------------------------->>");
 
                 possibly_singular = !NT::ROOT && depth >= SE_LOWER_LIMIT
-                && matches!(tt_flag, HashFlag::LowerBound | HashFlag::UpperBound)
-                && tt_value.abs() < LONGEST_TB_MATE
-                && tt_depth >= depth -3;
+                    && tt_move.is_some()
+                    && matches!(tt_flag, HashFlag::LowerBound | HashFlag::UpperBound)
+                    && tt_value.abs() < LONGEST_TB_MATE
+                    && tt_depth >= depth -3;
             }
         };
 
@@ -494,6 +497,7 @@ impl<'a> Search<'a> {
         }
 
 
+        // let mut best_value = -INFINITY;
         let mut best_value = -INFINITY;
         let mut best_mv: Option<Move> = None;
         let original_alpha = alpha;
@@ -505,9 +509,18 @@ impl<'a> Search<'a> {
             else { return 0 }
         }
 
+        // let possibly_singular = !NT::ROOT && depth >= SE_LOWER_LIMIT
+        // && tt_move.is_some() 
+        // && tt_entry.is_some()
+        // // && tt_entry.is_some_and(|e| e.score)
+        // && matches!(tt_entry.unwrap().flag, HashFlag::LowerBound | HashFlag::UpperBound)
+        // && from_tt(tt_entry.unwrap().score, self.ply).abs() < LONGEST_TB_MATE
+        // && tt_entry.unwrap().depth >= depth -3 && excluded.is_none();
+
         // 30 is a practical maximum number of quiet moves that can be generated in a chess position (MidGame)
         let mut quiet_mvs: Vec<Move> = Vec::with_capacity(20);
         let mut captures: Vec<(Move, HashFlag)> = Vec::with_capacity(16);
+        let mut extension = 0;
         while let Some(mv) = mvs.next(&position, &self.history_table, &self.caphist, &self.conthist, &self.counter_mvs) {
             // println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--{}", mv.to_string());
             if excluded == Some(mv) {
@@ -519,7 +532,8 @@ impl<'a> Search<'a> {
             if possibly_singular && tt_move.is_some_and(|tt_mv| tt_mv == mv) {
                 let tt_value = from_tt(tt_entry.unwrap().score, self.ply);
                 let se_beta = (tt_value - 2 * depth as i32).max(-INFINITY); // singular extension beta
-                let se_depth = (depth-1)/2;
+                // let se_depth = (depth-1)/2;
+                let se_depth = (depth)/2;
             
                 self.ss[self.ply].excluded = Some(mv);
                 let value = self.negamax::<NotPv>(se_beta -1, se_beta, se_depth, position, opv, cutnode, t);
@@ -529,8 +543,12 @@ impl<'a> Search<'a> {
                     extension = 1;
                 }
             }
-
+            
+            let move_count_pruning = depth < 16 && mvs_searched as i32 > FUTILITY_MOVE_COUNTS[improving as usize][depth as usize];
+            
+            let stat_score = self.conthist.get_conth_at(&position, &mv, 0) + self.conthist.get_conth_at(&position, &mv, 1);
             let moved_piece = position.piece_at(mv.get_src()).unwrap();
+            // Needs to be done before making the move, to get the accurate history
             if position.make_move(mv, MoveScope::AllMoves) {
 
                 self.ss[self.ply].moved = Some(moved_piece);
@@ -542,50 +560,37 @@ impl<'a> Search<'a> {
                 let new_depth = depth + extension;
                 let mut value = -INFINITY;
 
-                // // Determines whether or not we should perform a full-depth search
-                // // https://www.chessprogramming.org/Late_Move_Reductions
-                // let full_depth_search = if depth >= 2 && mvs_searched >= (2 + pv_node as usize) && !NT::ROOT {
-                //     let r = if mv.is_quiet() {
-                //         // println!("mv --->>> {}, and depth --->> {}", mv, depth);
-                //         // let mut r = new_depth as i16 - reduction::<Pv>(improving, depth as usize, mvs_searched);
-                //         let mut r = reduction::<Pv>(improving, depth as usize, mvs_searched) as i32;
-                //         // if tt_move.is_some_and(|m| m.is_capture()) { r += 1; } // Reduce when tt_mv is a capture
-                //         // if stm_in_check {r -=1;} // reduce less if we're in check 
-                //         // // side has changed now since the new move has been applied
-                //         // if position.stm_in_check() {r-=1;} // reduce depth less, if this would put the opponent in check (gives check)
-                //         // if is_killer_mv { r -=1; }
-                //         // if improving { r -=1; }
-                //         // // println!("-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-");
-                //         // if !improving { r -=1; }
-                //         // lmr_depth.clamp(0, depth as i16 -1);
+                let mut value = -INFINITY;
 
-                //         // carp
-                //         r += !pv_node as i32;
-                //         r += cutnode as i32;
-                //         r -= stm_in_check as i32;
-                //         r -= position.stm_in_check() as i32;
-                //         // r.clamp(1, (depth-1) as i32) as usize
-                //         0.max((depth as i32) - r)
-                //     } else { 1 };
-                    
-                //     value = -self.negamax::<NotPv>((-alpha)-1, -alpha, new_depth - (r as u8), position, opv, !cutnode, false);
-                //     // let reduced_depth = new_depth - r as u8;
-                //     // If value is greater than alpha (potentially better), search deeper
-                //     value > alpha && r > 1
+                // let full_depth_search = if mvs_searched > 1 && depth >= 3 && (!mv.is_quiet() || move_count_pruning) {
+                //     let mut r = reduction::<Pv>(improving, depth as usize, mvs_searched) as i32;
+                //     if mv.is_tactical() {
+                //         r = (r-1).max(0);
+                //     } else {
+                //         if pv_node { r -=1; }
+                //         if tt_move.is_some_and(|t| t.is_capture()) { r +=1; }
+
+                //         r -= i32::clamp(stat_score/8192, -1i32, 1i32);
+                //         // r = (r - stat_score/20_000).max(0);
+                //     }
+
+                //     let d = (new_depth as i32 - r).max(1) as u8;
+                //     value = -self.negamax::<NotPv>(-(alpha + 1), -alpha, d, position, opv, true, t);
+                //     value > alpha && d != new_depth
                 // } else {
-                //     !pv_node || mvs_searched > 0
+                //     !pv_node || mvs_searched > 1
                 // };
 
-                
                 // if full_depth_search {
-                //         // println!("the values here are >>>>>> alpha---->>>> {alpha}  ** score --> {value} ** beta==>> {beta} bestValue ==>>> {best_value}");
-                //     value = -self.negamax::<NotPv>((-alpha)-1, -alpha, new_depth -1 , position, opv, !cutnode, false);
+                //     value = -self.negamax::<NotPv>(-(alpha + 1), -alpha, new_depth, position, opv, !cutnode, t);
                 // }
 
-                // // if pv_node && (mvs_searched == 1 || (value > alpha && (NT::ROOT || value < beta)) ) {
-                // if pv_node && (mvs_searched == 0 || value > alpha) {
-                //     value = -self.negamax::<NotPv>(-beta, -alpha, new_depth-1, position, opv, false, false);
+                // // If we're on a PV node, and the node might be a continuation, search full depth with a PV value
+                // if pv_node && (mvs_searched == 1 || (value > alpha && (NT::ROOT || value < beta))) {
+                //     value = -self.negamax::<Pv>(-beta, -alpha, new_depth, position, opv, false, t);
                 // }
+
+           
 
                 
                 let value = match mvs_searched {
@@ -593,16 +598,29 @@ impl<'a> Search<'a> {
                     _ => {
                         // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
                         // condition for Late Move Reduction
-                        let non_tatcital_mv = !stm_in_check && mv.is_quiet();
+                        let mut r = reduction::<Pv>(improving, depth as usize, mvs_searched); // reduce by
+                        r += i16::from(!improving); 
+                        // r += i16::from(tt_move.is_some_and(|m| m.is_capture()));
+                        r += i16::from(cutnode);
+                        // r -= i16::from(is_killer_mv);
+                        r -= i16::from(pv_node);
+                        r -= i16::from(stm_in_check);
+                        r -= i16::from(position.stm_in_check());
 
-                        let mut result = if (mvs_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && non_tatcital_mv {
-                            -self.negamax::<NotPv>(-(alpha + 1), -alpha, depth-2, position, opv, false, t)
+                        if r < 1 { r = 1; } else if r > depth as i16{ r = depth as i16};
+
+                        let ok_to_reduce = !stm_in_check && mv.is_quiet();
+                        //  && !pv_node && !position.stm_in_check() && !is_killer_mv && !improving;
+
+                        let mut result = if (mvs_searched as u8 >= FULL_DEPTH_MOVE) && (depth >= REDUCTION_LIMIT) && ok_to_reduce {
+                            -self.negamax::<NotPv>(-(alpha + 1), -alpha, depth-r as u8, position, opv, false, t) // we're reducing by a depth of 2 here
                         } else {
                             alpha + 1 // Hack to ensure that full-depth search is done
                         };
                         
                         if result > alpha {
                             result = -self.negamax::<NotPv>(-(alpha - 1), -alpha, depth-1, position, opv, false, t);
+                            // result = -self.negamax::<NotPv>(-(alpha + 1), -alpha, depth-1, position, opv, false, t);
                             
                             if (result > alpha) && result < beta {
                                 result = -self.negamax::<NotPv>(-beta, -alpha, depth-1, position, opv, false, t);

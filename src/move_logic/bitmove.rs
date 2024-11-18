@@ -41,6 +41,7 @@ pub(crate) enum MoveType {
     Quiet = 0b0000,
     Castling = 0b0001,
     DoublePush = 0b0010,
+    
     PromotedToKnight = 0b0100,
     PromotedToBishop = 0b0101,
     PromotedToRook = 0b0110,

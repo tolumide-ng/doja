@@ -46,6 +46,7 @@ impl Position {
     }
 
     pub(crate) fn history_at(&self, index: usize) -> Option<&History>  {
+        let xx = self.history.get(index);
         self.history.get(index).unwrap().as_ref()
     }
 
@@ -224,7 +225,7 @@ impl Position {
 
     pub(crate) fn undo_move(&mut self, with_nnue: bool) {
         let last = self.history.pop();
-        if let Some(History { board, mv }) = last.unwrap() { // because we know this function would never be called by a null move
+        if let Some(History { board, .. }) = last.unwrap() { // because we know this function would never be called by a null move
             let _ = std::mem::replace(&mut self.board, board);
             if with_nnue {
                 self.nnue_state.pop();

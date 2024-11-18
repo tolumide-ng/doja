@@ -1,4 +1,4 @@
-use crate::{board::{piece::Piece, position::Position}, move_logic::bitmove::Move, squares::Square};
+use crate::{board::{piece::Piece, position::{self, Position}}, move_logic::bitmove::Move, squares::Square};
 
 use super::{history_bonus, malus, taper_bonus};
 
@@ -14,6 +14,7 @@ const MAX_HISTORY: i32 = i32::MAX/2;
 
 impl ContinuationHistory {
     pub(crate) fn new() -> Self {
+        // saves only the last 2-ply moves
         Self(vec![0; LENGTH])
     }
 
@@ -46,15 +47,8 @@ impl ContinuationHistory {
             if let Some(idx) = history_len.checked_sub(i+1) {
                 let Some(pos_history) = pos.history_at(idx) else {continue};
                 let prev_tgt = pos_history.mv().tgt();
-                // println!()
-                // if pos_history.board().piece_at(prev_tgt).is_none() {
-                //     println!("the board {}", pos_history.board().to_string());
-                //     println!("the mv is {}", pos_history.mv());
-                //     println!("is the mv castling --->>> {}", pos_history.mv().get_castling());
-                // }
                 let prev_piece = pos_history.board().piece_at(pos_history.mv().src()).unwrap();
-                // let prev_piece = pos_history.mvd_piece(); let prev_mv = pos_history.mv().get_tgt();
-                
+
                 for mv in quiets {
                     let curr_piece = pos.piece_at(mv.get_src()).unwrap();
                     let curr_mv = mv.get_tgt();
@@ -71,5 +65,26 @@ impl ContinuationHistory {
     pub(crate) fn get(&self, prev_piece: Piece, prev_tgt: Square, curr_piece: Piece, curr_tgt: Square) -> i16 {
         let idx = Self::to_1_d_index(prev_piece, prev_tgt, curr_piece, curr_tgt);
         *unsafe{ self.0.get_unchecked(idx) }
+    }
+
+    pub(crate) fn get_conth_at(&self, pos: &Position, mv: &Move, index: usize) -> i32 {
+        let parent_exists = pos.history_len().checked_sub(index + 1);
+        let Some(idx) = parent_exists else {return 0};
+        // println!("the surfing index is >>>>> {idx}");
+        if pos.history_at(idx).is_none() {
+            // this only happens in the case of a null move
+            return 0;
+        }
+        let prev = pos.history_at(idx).map(|history| {
+            {
+                let prev_mv = history.mv();
+                let piece = history.board().piece_at(prev_mv.src()).unwrap();
+
+                
+                (prev_mv, piece)
+            }
+        }).unwrap();
+        
+        self.get(prev.1, prev.0.tgt(), pos.piece_at(mv.src()).unwrap(), mv.tgt()) as i32
     }
 }
