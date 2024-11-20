@@ -19,11 +19,11 @@ pub enum UciError {
 }
 
 #[derive(Debug)]
-pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>>, tt: TTable }
+pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>>, tt: TTable, options: Vec<(String, String)> }
 
 impl Default for UCI {
     fn default() -> Self {
-        Self { position: None, controller: Arc::new(Mutex::new(Control::default())), tt: TTable::default() }
+        Self { position: None, controller: Arc::new(Mutex::new(Control::default())), tt: TTable::default(), options: vec![] }
     }
 }
 
@@ -39,7 +39,7 @@ impl UCI {
 
     pub(crate) fn process_input<W: Write>(&mut self, input: String, mut writer: W) -> std::io::Result<bool> {
         let mut input = input.trim().split_whitespace();
-        let tb = TableBase::default();
+        // let tb = TableBase::default();
         let mut table = TTable::default();
 
         
@@ -47,6 +47,7 @@ impl UCI {
             Some("position") => {
                 match self.parse_position(input) {
                     Ok(Some(board)) => {
+                            self.tt = TTable::default(); // we need to reset the Transposition table when we're handling a different position's data
                             writeln!(writer, "{}", board.to_string())?;
                             self.update_board_to(board);
                     }
@@ -58,6 +59,8 @@ impl UCI {
             }
             Some("ucinewgame") => {
                 self.update_board_to(Position::with(Board::try_from(START_POSITION).unwrap()));
+                self.tt = TTable::default();
+                self.options = vec![];
                 write!(writer, "{}", self.position.as_ref().unwrap().to_string())?;
             }
             Some("go") => {
@@ -111,6 +114,40 @@ impl UCI {
             // Some("stop") => {
             //     return Ok(false);
             // },
+            Some("setoption") => {
+                if input.next() == Some("name") {
+                    let mut option_name = String::new();
+                    let mut option_value = String::new();
+
+                    let mut error_found = false;
+                    let mut found_value_str = false;
+
+                    while let Some(value) = input.next() {
+                        if (value == "value" && found_value_str) || (value == "name") {
+                            error_found = true;
+                            break;
+                        }
+                        if value == "value" { found_value_str = true; continue; }
+
+                        if !found_value_str {
+                            option_name = format!("{} {}", option_name, value);
+                            let _ = option_name.trim();
+                        }
+
+                        if found_value_str {
+                            option_value = format!("{} {}", option_value, value);
+                            let _ = option_value.trim();
+
+                        }
+                    }
+
+                    if !error_found {
+                        self.options.push((option_name, option_value));
+                    }
+                    
+                    writeln!(writer, "error found! Please ensure that the provided 'name' and 'value' match the UCI name/value recommendations")?;
+                }
+            }
             _ => {}
         };
 
