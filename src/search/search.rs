@@ -132,7 +132,8 @@ impl<'a> Search<'a> {
         let mvs = &self.pv_table.mvs()[0..length];
         for i in 0..length {
             print!("|||-->> {}", Move::from(mvs[i as usize]));
-            // println!("in check???? {}", position);
+            // position.make_move(mvs[i].into(), MoveScope::AllMoves);
+            // println!("in check???? {} \n\n", position.to_string());
         }
         println!("\n\n");
     }
@@ -217,9 +218,6 @@ impl<'a> Search<'a> {
         // standing pat
         if eval >= beta { return beta }
     
-        // let captures_only = !in_check;
-        // let moves = self.get_sorted_moves::<{MoveScope::CAPTURES}>(&position);
-        // let mut best_score = -INFINITY;
         let mut best_move: Option<Move> = None;
         let mut best_value = eval;
 
@@ -415,16 +413,7 @@ impl<'a> Search<'a> {
         };
 
 
-        // Setup the `improving` flag (from carp)
         // https://www.chessprogramming.org/Improving
-        // let improving = if self.ply >= 2 && self.ss[self.ply - 2].eval != -INFINITY {
-        //     self.ss[self.ply].eval > self.ss[self.ply - 2].eval
-        // } else if self.ply >= 4 && self.ss[self.ply - 4].eval != -INFINITY {
-        //     self.ss[self.ply].eval > self.ss[self.ply - 4].eval
-        // } else {
-        //     true
-        // };
-        // let improving = !stm_in_check && ((self.ply >= 4 && eval >= self.ss[self.ply -4].eval) || (self.ply >= 2 && eval >= self.ss[self.ply -2].eval));
         let improving = !stm_in_check && self.ply >= 2 && eval >= self.ss[self.ply -2].eval;
 
         // if !pv_node && !NT::ROOT && !stm_in_check && !in_signular_search {
@@ -434,20 +423,6 @@ impl<'a> Search<'a> {
                 let value = self.quiescence(alpha -1, alpha, position);
                 if value < alpha { return value; }
             }
-            // if depth < 3 && eval <= alpha - 494 - 290 * (depth * depth) as i32 {
-            // // if depth < 3 && eval <= alpha - RAZOR_MARGIN[depth as usize] {
-            //     let value = self.quiescence(alpha -1, alpha, position);
-            //     if value < alpha && value.abs() < MATE_IN_MAX_PLY {
-            //         return value;
-            //     }
-                    
-            //         // let r_alpha = alpha - (depth >= 2) as i32 * RAZOR_MARGIN[depth as usize];
-            //         // let value = self.quiescence(r_alpha, r_alpha + 1, position);
-            //         // if depth < 2 || value <= r_alpha {
-            //             //     return value;
-            //             // }
-            // }
-            
 
             // Reverse futility pruning
             // https://www.chessprogramming.org/Reverse_Futility_Pruning
@@ -463,12 +438,7 @@ impl<'a> Search<'a> {
             if null_move_forward_pruning_conditions {
                 // Null move dynamic reduction based on depth
                 let r = (4 + depth/4).min(depth);
-                // let r = min((eval - beta)/202, 6) + depth as i32 / 3 + 5;
-
-                // println!("the R in this case is (((((((((((((((((((((((((((((((((>>>>>>>>>>>>>>>>>>>>>>>>>>))))))))))))))))))))))))))))))))) {}", r);
-                // let r = if depth > 6 {4} else {3};
-                // let r = ((eval - beta)/202).min(6) + (depth as i32)/3 + 5;
-                // let value = self.make_null_move(beta, depth-r as u8, position, opv, !cutnode, t);
+                
                 let value = self.make_null_move(beta, depth-r as u8, position, opv, !cutnode, t);
                 if value >= beta {
                     return beta;
@@ -479,8 +449,6 @@ impl<'a> Search<'a> {
 
             if depth < 7 && (eval - futility_margin) >= beta && eval < 10_000 { return eval }
         }
-
-        let mut depth = depth;
         
         // Internal Iterative Reduction (IIR)
         // https://www.chessprogramming.org/Internal_Iterative_Reductions
@@ -496,10 +464,6 @@ impl<'a> Search<'a> {
         // let explore_more_moves = (beta - alpha) > 1;
         // if self.ply > 0 && tt_value.is_some() && !explore_more_moves { return tt_value.unwrap() }
         // if self.ply > MAX_PLY - 1 { return position.evaluate() }
-
-        if !stm_in_check && tt_entry.is_none() && excluded.is_none() {
-            self.tt.record(position.hash_key, 0, INFINITY + 1, eval, self.ply, HashFlag::NoBound, None, pv_node);
-        }
 
         self.nodes += 1;
 
@@ -521,14 +485,6 @@ impl<'a> Search<'a> {
             if stm_in_check { return  -INFINITY + self.ply as i32 }
             else { return 0 }
         }
-
-        // let possibly_singular = !NT::ROOT && depth >= SE_LOWER_LIMIT
-        // && tt_move.is_some() 
-        // && tt_entry.is_some()
-        // // && tt_entry.is_some_and(|e| e.score)
-        // && matches!(tt_entry.unwrap().flag, HashFlag::LowerBound | HashFlag::UpperBound)
-        // && from_tt(tt_entry.unwrap().score, self.ply).abs() < LONGEST_TB_MATE
-        // && tt_entry.unwrap().depth >= depth -3 && excluded.is_none();
 
         // 30 is a practical maximum number of quiet moves that can be generated in a chess position (MidGame)
         let mut quiet_mvs: Vec<Move> = Vec::with_capacity(20);
