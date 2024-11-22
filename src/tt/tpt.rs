@@ -6,7 +6,7 @@ use super::{entry::{to_tt, TTData, TTEntry}, flag::HashFlag, table::TOTAL_SIZE};
 
 /// TPT => Transposition Table (derived)
 /// This is the exposed derivation of the original Transposition Table (TT)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct TPT<'a> {
     pub(crate) table : &'a [TTEntry],
     pub(crate) age: u8

@@ -7,7 +7,7 @@ const LENGTH: usize = Piece::TOTAL * Square::TOTAL * Piece::TOTAL * Square::TOTA
 /// The table is in the form of [prev_piece][prev_target][current_piece][current_target] = score;
 /// Basically a 4D vector
 /// We would turn this 4D vector into just 1D in this case.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct ContinuationHistory(Vec<i16>);
 const MAX_HISTORY: i32 = i32::MAX/2;
 

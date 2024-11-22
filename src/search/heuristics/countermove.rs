@@ -6,6 +6,7 @@ use crate::{board::position::Position, move_logic::bitmove::Move, squares::Squar
 
 /// CounterMove Heuristic
 /// https://www.chessprogramming.org/Countermove_Heuristic
+#[derive(Debug, Clone)]
 pub(crate) struct CounterMove([u16; Square::TOTAL * Square::TOTAL]);
 
 impl CounterMove {

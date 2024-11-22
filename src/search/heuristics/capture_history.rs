@@ -10,7 +10,7 @@ const MAX_HISTORY: i32 = i32::MAX/2;
 /// The history values is used as a replacement for LVA in MVV-LVA.
 /// https://www.chessprogramming.org/History_Heuristic
 // pub(crate) struct CaptureHistory([CaptureHistoryTable; Piece::COUNT * 2]);
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct CaptureHistory(Vec<i16>);
 
 impl Default for CaptureHistory {

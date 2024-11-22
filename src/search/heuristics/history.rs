@@ -3,7 +3,7 @@ use crate::{board::piece::Piece, constants::{TOTAL_PIECES, TOTAL_SQUARES}, squar
 
 // [i16; TOTAL_SQUARES]; TOTAL_PIECES]
 /// History Heuristics
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct HistoryHeuristic([i16; TOTAL_SQUARES * TOTAL_PIECES]);
 
 

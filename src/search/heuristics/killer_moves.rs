@@ -3,7 +3,7 @@ use crate::{constants::params::MAX_DEPTH, move_logic::bitmove::Move};
 
 const NUM_KILLER_MOVES: usize = 2;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct KillerMoves([[u16; NUM_KILLER_MOVES]; MAX_DEPTH]); // should be changed back to total_squares(64) after pruning is implemented todo!!
 
 impl KillerMoves {

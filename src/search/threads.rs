@@ -33,6 +33,7 @@ use crate::{board::position::Position, constants::MAX_PLY, move_logic::bitmove::
 
 use super::{heuristics::{capture_history::CaptureHistory, continuation_history::ContinuationHistory, countermove::CounterMove, history::HistoryHeuristic, killer_moves::KillerMoves, pv::PVTable}, stack::{Stack, StackItem}};
 
+#[derive(Debug, Clone)]
 pub(crate) struct Thread<'a> {
     pub(crate) ss: [StackItem; MAX_PLY + 10],
     
