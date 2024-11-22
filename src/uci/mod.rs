@@ -2,6 +2,8 @@ use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread}
 
 use thiserror::Error;
 
+pub(crate) mod clock;
+
 use crate::{board::{position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_logic::{bitmove::Move, move_stack::MoveStack}, move_scope::MoveScope, search::control::Control, syzygy::probe::TableBase, tt::table::TTable};
 
 #[cfg(test)]
