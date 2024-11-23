@@ -17,8 +17,8 @@ pub(crate) enum Counter {
     Dynamic {
         wtime: u64,
         btime: u64,
-        winc: Option<u64>,
-        binc: Option<u64>,
+        winc: u64,
+        binc: u64,
         movestogo: Option<u64>
     }
     // Search
@@ -35,7 +35,7 @@ impl Counter {
                 f((&mut mgr, value));
                 mgr
             },
-            Err(e) if e == UciError::EmptyArgument => { (Self::Dynamic { wtime: 0, btime: 0, winc: None, binc: None, movestogo: None }) },
+            Err(e) if e == UciError::EmptyArgument => { Self::Dynamic { wtime: 0, btime: 0, winc: 0, binc: 0, movestogo: None } },
             Err(e) => return Err(e),
             _ => return Err(UciError::NoValue(""))
         };
@@ -73,10 +73,10 @@ impl<'a> TryFrom<SplitWhitespace<'a>> for Counter {
                 return Ok(Counter::Mate(ply))
             }
             Some("binc") => {
-                Self::parse_dynamic(input, "binc", |mut arg: ( &mut Counter, u64)| { if let Counter::Dynamic {binc, .. } = &mut arg.0 { *binc = Some(arg.1) }})
+                Self::parse_dynamic(input, "binc", |mut arg: ( &mut Counter, u64)| { if let Counter::Dynamic {binc, .. } = &mut arg.0 { *binc = arg.1 }})
             }
             Some("winc") => {
-                Self::parse_dynamic(input, "winc", |mut arg: ( &mut Counter, u64)| { if let Counter::Dynamic {winc, .. } = &mut arg.0 { *winc = Some(arg.1) }})
+                Self::parse_dynamic(input, "winc", |mut arg: ( &mut Counter, u64)| { if let Counter::Dynamic {winc, .. } = &mut arg.0 { *winc = arg.1 }})
             }
             Some("btime") => {
                 Self::parse_dynamic(input, "btime", |mut arg: ( &mut Counter, u64)| { if let Counter::Dynamic {btime, .. } = &mut arg.0 { *btime = arg.1 }})

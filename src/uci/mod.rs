@@ -1,4 +1,4 @@
-use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}};
+use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, thread};
 
 use clock::Clock;
 use counter::Counter;
@@ -6,7 +6,7 @@ use thiserror::Error;
 
 pub(crate) mod clock;
 
-use crate::{board::{position::Position, state::board::Board}, constants::START_POSITION, move_logic::{bitmove::Move, move_stack::MoveStack}, move_scope::MoveScope, search::control::Control, tt::table::TTable};
+use crate::{board::{position::Position, state::board::Board}, constants::START_POSITION, move_logic::{bitmove::Move, move_stack::MoveStack}, move_scope::MoveScope, search::{control::Control, search::Search, threads::Thread}, tt::table::TTable};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -28,11 +28,15 @@ pub enum UciError {
 }
 
 #[derive(Debug)]
-pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>>, tt: TTable, options: Vec<(String, String)>, clock: Clock }
+pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>>, tt: TTable, options: Vec<(String, String)>, clock: Clock, stop: AtomicBool }
 
 impl Default for UCI {
     fn default() -> Self {
-        Self { position: None, controller: Arc::new(Mutex::new(Control::default())), tt: TTable::default(), options: vec![], clock: Clock::default() }
+        let stop = AtomicBool::new(false);
+        let stop_ptr: *const AtomicBool = &stop;
+
+        let clock = Clock::new(stop_ptr);
+        Self { position: None, controller: Arc::new(Mutex::new(Control::default())), tt: TTable::default(), options: vec![], clock, stop }
     }
 }
 
@@ -75,10 +79,23 @@ impl UCI {
             Some("go") => {
                 match Counter::try_from(input) {
                     Ok(counter) if self.position.is_some() => {
-                        self.clock.set_limit(counter);
+                        let board = self.position.clone().unwrap(); // this would be fixed later
+                        self.clock.set_limit(counter, board.turn);
                         self.tt.increase_age();
                         self.clock.start();
-                        let mut board = self.position.clone(); // this would be fixed later
+                        let thread = Thread::new(30, table.get(), 0); // SHOULD BE REMOVED LATER (THIS SERVES NO SERIOUS PURPOSE YET -0->> MORE LIKE A DUPLICATION)
+
+                        let mut negamax = (0..2).map(|_i| Search::new(self.tt.get(), self.clock.clone())).collect::<Vec<_>>();
+                        thread::scope(|s| {
+
+                            for negamax in negamax.iter_mut() {
+                                let mut bb = board.clone();
+                                let mut th = thread.clone();
+                                s.spawn(move || {
+                                    negamax.iterative_deepening(10, &mut bb, &mut th);
+                                });
+                            }
+                        });
                     }
                     Err(e) => {write!(writer, "{}", e)?;}
                     _ => {}
@@ -118,7 +135,10 @@ impl UCI {
                 //     _ => {}
                 // }
             }
-            Some("quit") => { return  Ok(false); }
+            Some("quit") => { 
+                self.stop.store(true, Ordering::SeqCst);
+                return Ok(false);
+             }
             Some("isready") => {writeln!(writer, "readyok")?;}
             Some("uci") => {
             for data in Self::identify() {
@@ -127,13 +147,9 @@ impl UCI {
             }
             Some("d") => {writeln!(writer, "{}", self.position.as_ref().unwrap().to_string())?;},
             Some("stop") => {
-                // self.quit(); println!("told to quit")
-                self.controller.lock().as_mut().unwrap().stop();
+                self.stop.store(true, Ordering::SeqCst);
                 return Ok(false);
             },
-            // Some("stop") => {
-            //     return Ok(false);
-            // },
             Some("setoption") => {
                 if input.next() == Some("name") {
                     let mut option_name = String::new();

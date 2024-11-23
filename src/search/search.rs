@@ -161,6 +161,7 @@ impl<'a> Search<'a> {
     /// or beta(fail-hard) as a lower bound. Otherwise, the search continues
     /// https://www.chessprogramming.org/Quiescence_Search
     fn quiescence(&mut self, mut alpha: i32, beta: i32, position: &mut Position) -> i32 {
+        if self.clock.stop(self.nodes as u64, 0) { return 0 } // depth would not be increasing here, hence it won't be the grund(reason) for a cutoff
         self.nodes+=1;
         
         let stand_pat = position.evaluate();
@@ -303,8 +304,9 @@ impl<'a> Search<'a> {
     }
 
     pub(crate) fn negamax<NT: NodeType>(&mut self, mut alpha: i32, mut beta: i32, depth: u8, mut position: &mut Position, pv: &mut PVTable, cutnode: bool, t: &mut Thread) -> i32 {
+        if self.clock.stop(self.nodes as u64, depth) { return 0 }
+        
         let mut depth = depth;
-        let mut futilty_base = -INFINITY;
 
         let stm_in_check = Self::in_check(position, position.turn);
 
