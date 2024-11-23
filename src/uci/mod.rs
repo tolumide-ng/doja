@@ -1,11 +1,12 @@
-use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread};
+use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}};
 
 use clock::Clock;
+use counter::Counter;
 use thiserror::Error;
 
 pub(crate) mod clock;
 
-use crate::{board::{position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_logic::{bitmove::Move, move_stack::MoveStack}, move_scope::MoveScope, search::control::Control, syzygy::probe::TableBase, tt::table::TTable};
+use crate::{board::{position::Position, state::board::Board}, constants::START_POSITION, move_logic::{bitmove::Move, move_stack::MoveStack}, move_scope::MoveScope, search::control::Control, tt::table::TTable};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
@@ -72,39 +73,50 @@ impl UCI {
                 write!(writer, "{}", self.position.as_ref().unwrap().to_string())?;
             }
             Some("go") => {
-                match self.parse_go(input) {
-                    Ok(control) if self.position.is_some() => {
-                        println!("the received contro  ller is -------- {}", control.depth());
-                        self.update_controller(control);
-                        println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
-                        let controller = Arc::clone(&self.controller);
-
-                        table.increase_age();
-                        let mut board = self.position.clone().unwrap();
-                        
-                        // thread::scope(|s| {
-                            //     let mut bb = board.clone();
-                            //     s.spawn(move || {
-                                //         negamax[0].iterative_deepening(7, &mut bb);
-                                //     });
-                                // });
-                                
-                                let result = thread::spawn(move || {
-                            // let mut negamax = (0..1).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
-                            // let depth = controller.lock().unwrap().depth();
-                            // negamax[0].iterative_deepening(depth, &mut board, &tb);
-                            // println!("done done >>>>");
-                            // write!(writer, "{}", board.to_string()).unwrap();
-                            board
-                        }).join().unwrap();
-
-                        write!(writer, "{}", result.to_string()).unwrap();
-
-
-                     }
+                match Counter::try_from(input) {
+                    Ok(counter) if self.position.is_some() => {
+                        self.clock.set_limit(counter);
+                        self.tt.increase_age();
+                        self.clock.start();
+                        let mut board = self.position.clone(); // this would be fixed later
+                    }
                     Err(e) => {write!(writer, "{}", e)?;}
                     _ => {}
-                }
+                };
+                
+                // match self.parse_go(input) {
+                //     Ok(control) if self.position.is_some() => {
+                //         // println!("the received contro  ller is -------- {}", control.depth());
+                //         // self.update_controller(control);
+                //         // println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
+                //         // let controller = Arc::clone(&self.controller);
+
+                //         table.increase_age();
+                //         let mut board = self.position.clone().unwrap();
+                        
+                //         // thread::scope(|s| {
+                //             //     let mut bb = board.clone();
+                //             //     s.spawn(move || {
+                //                 //         negamax[0].iterative_deepening(7, &mut bb);
+                //                 //     });
+                //                 // });
+                                
+                //                 let result = thread::spawn(move || {
+                //             // let mut negamax = (0..1).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
+                //             // let depth = controller.lock().unwrap().depth();
+                //             // negamax[0].iterative_deepening(depth, &mut board, &tb);
+                //             // println!("done done >>>>");
+                //             // write!(writer, "{}", board.to_string()).unwrap();
+                //             board
+                //         }).join().unwrap();
+
+                //         write!(writer, "{}", result.to_string()).unwrap();
+
+
+                //     }
+                //     Err(e) => {write!(writer, "{}", e)?;}
+                //     _ => {}
+                // }
             }
             Some("quit") => { return  Ok(false); }
             Some("isready") => {writeln!(writer, "readyok")?;}
@@ -252,65 +264,4 @@ impl UCI {
 
         Ok(None)
     }
-
-
-    fn parse_go(&self, mut input: SplitWhitespace) -> Result<Clock, UciError> {
-        let mut controller = Control::default();
-        let b = self.position.as_ref().unwrap();
-
-        // let cct = Counter::try_from(input).unwrap();
-
-        match input.next() {
-            // search until the "stop" command. Do not exit the search without being told so in this mode!
-            Some("infinite") => {
-                // Counter::Infinite
-            },
-            Some("searchmoves") => {},
-            // black increment per move in mseconds if x > 0
-            Some("binc") if b.turn == Color::Black => {
-                controller.set_inc(input.next().and_then(|x| u32::from_str_radix(x, 10).ok()).unwrap_or(controller.inc()));
-            },
-            // white increment per move in mseconds if x > 0
-            Some("winc") if b.turn == Color::White => {
-                controller.set_inc(input.next().and_then(|x| u32::from_str_radix(x, 10).ok()).unwrap_or(controller.inc()));
-            },
-            // white has x msec left on the clock
-            Some("wtime") if b.turn == Color::White => {
-                controller.set_time(input.next().and_then(|x| u128::from_str_radix(x, 10).ok()).unwrap_or(controller.time()));
-            },
-            Some("btime") if b.turn == Color::White => {
-                controller.set_time(input.next().and_then(|x| u128::from_str_radix(x, 10).ok()).unwrap_or(controller.time()));
-            },
-            Some("movestogo") => {
-                controller.set_movestogo(input.next().and_then(|x| u32::from_str_radix(x, 10).ok()).unwrap_or(controller.movestogo()));
-            },
-            Some("movetime") => {
-                // amount of time allowed to spend making a move
-                controller.set_movetime(input.next().and_then(|x| u128::from_str_radix(x, 10).ok()).unwrap_or(controller.movetime()));
-            },
-            Some("depth") => {
-                controller.set_depth(input.next().and_then(|x| u8::from_str_radix(x, 10).ok()).unwrap_or(controller.depth()));
-            },
-            _ => {}
-        }
-
-
-
-        if controller.movetime() > 0 {
-            controller.set_time(controller.movetime());
-            controller.set_movestogo(1);
-        }
-
-        
-        // let mut timeset = false;
-        // almost impossible to complete...
-        if controller.depth() == 0 {
-            // controller.set_depth(64);
-        }
-
-        controller.setup_timerange();
-
-        Ok(controller)
-    }
-
 }

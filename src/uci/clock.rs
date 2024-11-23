@@ -40,4 +40,11 @@ impl Clock {
     pub(crate) fn limit(&self) -> &Counter {
         &self.limit
     }
+
+    pub(crate) fn stop(&self) -> bool {
+        match self.limit {
+            // Counter::Depth(d) => 
+            _ => false
+        }
+    }
 }
