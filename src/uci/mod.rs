@@ -1,6 +1,6 @@
 use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread};
 
-use clock::{Clock, Counter};
+use clock::Clock;
 use thiserror::Error;
 
 pub(crate) mod clock;
@@ -10,6 +10,7 @@ use crate::{board::{position::Position, state::board::Board}, color::Color, cons
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
 mod uci_tests;
+mod counter;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum UciError {
