@@ -36,6 +36,7 @@ use search::{control::Control, search::Search, threads::Thread};
 use squares::Square;
 use syzygy::probe::TableBase;
 use tt::table::TTable;
+use uci::clock::Clock;
 // use zobrist::Zobrist;
 
 // use crate::search::alpha_beta::NegaMax;
@@ -140,7 +141,8 @@ fn main() {
 
     // let mut board = Position::from(Board::try_from("r2Rk2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2p2Q1p/PPPBBPPP/R3K21 b KQkq - 0 1 ").unwrap());
     let mut board = Position::from(Board::try_from(CMK_POSITION).unwrap());
-    let mut negamax_thread = (0..threads).map(|i| Search::new(table.get())).collect::<Vec<_>>();
+    let clock = Clock::default();
+    let mut negamax_thread = (0..threads).map(|i| Search::new(table.get(), clock.clone())).collect::<Vec<_>>();
     
     // let mut board = Position::from(Board::try_from(TRICKY_POSITION).unwrap());
     let thread = Thread::new(30, table.get(), 0);

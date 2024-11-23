@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, FUTILITY_MOVE_COUNTS, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, MAX_PLY, RAZOR_MARGIN, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::{MovePicker, Stage}}, move_scope::MoveScope, search::constants::Root, tt::{entry::{from_tt, TTData}, flag::HashFlag, tpt::TPT}, utils::lmr::reduction};
+use crate::{board::{piece::Piece, position::Position}, color::Color, constants::{params::MAX_DEPTH, DEPTH_REDUCTION_FACTOR, FULL_DEPTH_MOVE, FUTILITY_MOVE_COUNTS, INFINITY, LONGEST_TB_MATE, MATE_IN_MAX_PLY, MATE_VALUE, MAX_PLY, RAZOR_MARGIN, REDUCTION_LIMIT, SE_LOWER_LIMIT, ZOBRIST}, move_logic::{bitmove::Move, move_picker::{MovePicker, Stage}}, move_scope::MoveScope, search::constants::Root, tt::{entry::{from_tt, TTData}, flag::HashFlag, tpt::TPT}, uci::clock::Clock, utils::lmr::reduction};
 use crate::board::piece::Piece::*;
 use crate::color::Color::*;
 
@@ -52,14 +52,15 @@ pub(crate) struct Search<'a> {
     limit: usize,
     eval: i32,
     last_move_was_null: bool,
+    clock: Clock
 }
 
 
 impl<'a> Search<'a> {
-    pub(crate) fn new(tt: TPT<'a>) -> Self {
+    pub(crate) fn new(tt: TPT<'a>, clock: Clock) -> Self {
         Self { nodes: 0, ply: 0, pv_table: PVTable::default(), killer_moves: KillerMoves::new(), last_move_was_null: false,
             history_table: HistoryHeuristic::new(), tt, caphist: CaptureHistory::default(), conthist: ContinuationHistory::new(),
-                counter_mvs: CounterMove::new(), ss: [StackItem::default(); MAX_PLY + 10], depth: 0, limit: 0, eval: 0 }
+                counter_mvs: CounterMove::new(), ss: [StackItem::default(); MAX_PLY + 10], depth: 0, limit: 0, eval: 0, clock }
     }
 
     fn aspiration_window(&mut self, position: &mut Position, t: &mut Thread) -> i32 {

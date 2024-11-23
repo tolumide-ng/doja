@@ -1,5 +1,6 @@
 use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread};
 
+use clock::{Clock, Counter};
 use thiserror::Error;
 
 pub(crate) mod clock;
@@ -10,22 +11,26 @@ use crate::{board::{position::Position, state::board::Board}, color::Color, cons
 #[path = "./uci.tests.rs"]
 mod uci_tests;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum UciError {
     #[error("FenError: {0} is invalid")]
     FenError(String),
     #[error("MoveError: {0}")]
     InvalidMoveError(String),
     #[error("Expected integer but got: {0}")]
-    InvalidIntegerArgument(String)
+    InvalidIntegerArgument(String),
+    #[error("No value received for key {0}")]
+    NoValue(&'static str),
+    #[error("Empty Argument")]
+    EmptyArgument,
 }
 
 #[derive(Debug)]
-pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>>, tt: TTable, options: Vec<(String, String)> }
+pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>>, tt: TTable, options: Vec<(String, String)>, clock: Clock }
 
 impl Default for UCI {
     fn default() -> Self {
-        Self { position: None, controller: Arc::new(Mutex::new(Control::default())), tt: TTable::default(), options: vec![] }
+        Self { position: None, controller: Arc::new(Mutex::new(Control::default())), tt: TTable::default(), options: vec![], clock: Clock::default() }
     }
 }
 
@@ -248,14 +253,16 @@ impl UCI {
     }
 
 
-    fn parse_go(&self, mut input: SplitWhitespace) -> Result<Control, UciError> {
+    fn parse_go(&self, mut input: SplitWhitespace) -> Result<Clock, UciError> {
         let mut controller = Control::default();
         let b = self.position.as_ref().unwrap();
+
+        // let cct = Counter::try_from(input).unwrap();
 
         match input.next() {
             // search until the "stop" command. Do not exit the search without being told so in this mode!
             Some("infinite") => {
-                println!("infinite >>>>>>>>>>.");
+                // Counter::Infinite
             },
             Some("searchmoves") => {},
             // black increment per move in mseconds if x > 0
