@@ -28,7 +28,7 @@ pub enum UciError {
 }
 
 #[derive(Debug)]
-pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>>, tt: TTable, options: Vec<(String, String)>, clock: Clock, stop: AtomicBool }
+pub(crate) struct UCI { position: Option<Position>, tt: TTable, options: Vec<(String, String)>, clock: Clock, stop: AtomicBool }
 
 impl Default for UCI {
     fn default() -> Self {
@@ -36,18 +36,13 @@ impl Default for UCI {
         let stop_ptr: *const AtomicBool = &stop;
 
         let clock = Clock::new(stop_ptr);
-        Self { position: None, controller: Arc::new(Mutex::new(Control::default())), tt: TTable::default(), options: vec![], clock, stop }
+        Self { position: None, tt: TTable::default(), options: vec![], clock, stop }
     }
 }
 
 impl UCI {
     pub(crate) fn update_board_to(&mut self, board: Position) {
         self.position = Some(board);
-        self.controller = Arc::new(Mutex::new(Control::default()));
-    }
-
-    pub(crate) fn update_controller(&mut self, control: Control) {
-        self.controller = Arc::new(Mutex::new(control));
     }
 
     pub(crate) fn process_input<W: Write>(&mut self, input: String, mut writer: W) -> std::io::Result<bool> {
