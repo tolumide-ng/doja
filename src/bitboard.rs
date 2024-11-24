@@ -7,8 +7,10 @@ use crate::constants::{NOT_A_FILE, NOT_H_FILE};
 pub struct Bitboard(pub u64);
 
 impl Bitboard {
+    pub(crate) const BLACK_SQUARES: u64 =0xaa55_aa55_aa55_aa55;
+    pub(crate) const WHITE_SQUARES: u64 = 0x55aa_55aa_55aa_55aa;
     /// to get the square of a set bit, simply use Rust's (*.trailing_zeros()) function
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self(0)
     }
 

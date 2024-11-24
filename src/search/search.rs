@@ -52,7 +52,8 @@ pub(crate) struct Search<'a> {
     limit: usize,
     eval: i32,
     last_move_was_null: bool,
-    clock: Clock
+    clock: Clock,
+    sdepth: usize,
 }
 
 
@@ -60,23 +61,24 @@ impl<'a> Search<'a> {
     pub(crate) fn new(tt: TPT<'a>, clock: Clock) -> Self {
         Self { nodes: 0, ply: 0, pv_table: PVTable::default(), killer_moves: KillerMoves::new(), last_move_was_null: false,
             history_table: HistoryHeuristic::new(), tt, caphist: CaptureHistory::default(), conthist: ContinuationHistory::new(),
-                counter_mvs: CounterMove::new(), ss: [StackItem::default(); MAX_PLY + 10], depth: 0, limit: 0, eval: 0, clock }
+                counter_mvs: CounterMove::new(), ss: [StackItem::default(); MAX_PLY + 10], depth: 0, limit: 0, eval: 0, clock, sdepth: 0 }
     }
 
     fn aspiration_window(&mut self, position: &mut Position, t: &mut Thread) -> i32 {
         let mut alpha = -INFINITY;
         let mut beta = INFINITY;
-        let mut delta = -INFINITY;
-        let mut depth = t.depth + 1;
+        // let mut delta = -INFINITY;
+        let mut new_depth = self.depth + 1;
         let mut pv = PVTable::default();
+        let mut delta = 25;
 
         const BIG_DELTA: usize = 975;
 
-        println!("||||||||||||||||||||||||||||||||||||||||||||||||| alpha-> {alpha}, and beta-->> {beta} ---------------- ((((({}))))))", depth);
+        println!("||||||||||||||||||||||||||||||||||||||||||||||||| alpha-> {alpha}, and beta-->> {beta} ---------------- ((((({}))))))", new_depth);
         println!("XXXXXXXXXXXXXXX eval => {}, delta==> {}, for al-->> {}, and for beta-->> {}", self.eval, delta, self.eval - delta, self.eval + delta);
 
-        if depth >= 5 {
-            delta = 20;
+        if new_depth >= 5 {
+            // delta = 20;
             alpha = (-INFINITY).max(self.eval - delta);
             beta = (INFINITY).min(self.eval + delta);
         }
@@ -84,28 +86,31 @@ impl<'a> Search<'a> {
         println!("proceeding with alpha-> {alpha}, and beta-->> {beta}");
 
         loop {
-            // self.ply = 0;
-            let score = self.negamax::<Root>(alpha, beta, depth  as u8, position, &mut pv, false, t);
-            depth += 1;
+            let score = self.negamax::<Root>(alpha, beta, new_depth  as u8, position, &mut pv, false, t);
+            if self.clock.stop(self.nodes as u64, new_depth as u8) { return -INFINITY}
 
             if score <= alpha {
+                // Fail-Low
                 beta = (alpha + beta) / 2;
-                alpha = (-INFINITY).max(alpha - beta);
-                depth = self.depth + 1;
+                alpha = (-INFINITY).max(alpha - delta);
+                new_depth = self.depth + 1;
                 println!("00000");
             } else if score >= beta {
-                println!("currently alpha={alpha}, beta={beta}, and score==>>{score}");
-                beta = (INFINITY).min(beta + delta);
+                // Fail-High
                 println!("1111-1111 {}", beta);
+                beta = (INFINITY).min(beta + delta);
                 self.pv_table = pv.clone();
-                // if score.abs() < LONGEST_TB_MATE && depth > 1 {
-                //     depth -= 1;
-                // }
+                // println!("currently alpha={alpha}, beta={beta}, and score==>>{score}");
+                if score.abs() < LONGEST_TB_MATE && new_depth > 1 {
+                    new_depth -= 1;
+                }
             } else {
-                self.pv_table = pv.clone();
                 println!("4444---->>>4444");
+                self.pv_table = pv;
                 return score;
             }
+
+            // Widen window
             delta += delta/2;
             if delta >= BIG_DELTA as i32 { alpha = -INFINITY; beta = INFINITY } 
         }
@@ -116,11 +121,12 @@ impl<'a> Search<'a> {
         while self.depth < MAX_DEPTH && self.depth < self.limit {
             // println!("\n\n\n RUNNING ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::<<>>::::::::::: {}", self.depth);
             let eval = self.aspiration_window(position, t);
+
+            if self.clock.stop(self.nodes as u64, self.depth as u8) { break; }
             
             self.eval = eval;
             t.eval = eval;
             self.depth += 1;
-            t.depth += 1;
 
         }
 
@@ -139,22 +145,6 @@ impl<'a> Search<'a> {
         println!("\n\n");
     }
 
-    fn is_repetition(position: &Position, key: u64) -> bool {
-        let len = position.history_len();
-        if len == 0 { return false }
-
-        // subtracting 1 from len because we don't care about the opponent's (the person who played last's) game
-        // stepping by 2 because we don't care about the opponent's key positional history in this case
-        for index in (0..len-1).rev().step_by(2) {
-            if let Some(history) = position.history_at(index) { 
-                if history.board().hash_key == key { return true }
-             } else { continue }
-        } 
-
-        false
-    }
-
-
     // In addition, we a score to return in case there are no captures available to be played. -->> static evaluation
     /// At the beginning of quiescence, the position's evaluation is used to establish a lower-bound on the score.
     /// If the lower bound from the stand pat(static evaluation) is always greater than or equal to beta, we can return the stand-pat(fail-soft)
@@ -167,9 +157,7 @@ impl<'a> Search<'a> {
         let stand_pat = position.evaluate();
         if self.ply >= MAX_DEPTH { return stand_pat }
         // check if it's a draw
-        if self.ply > 0 && (Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&p| p >= 50)) {
-            return 0 // draw
-        }
+        if position.is_draw() { return 0; }
 
         
         // Probe the Transposition Table here
@@ -307,47 +295,47 @@ impl<'a> Search<'a> {
         if self.clock.stop(self.nodes as u64, depth) { return 0 }
         
         let mut depth = depth;
+        let pv_node = alpha != beta -1;
 
         let stm_in_check = Self::in_check(position, position.turn);
 
         // Check extension
         // https://www.chessprogramming.org/Check_Extensions
         if stm_in_check && depth < MAX_DEPTH as u8 { depth +=1; };
+
+        if NT::ROOT { self.sdepth = 0} else { self.sdepth = self.sdepth.max(self.ply) };
         
         if depth == 0 || self.ply >= MAX_DEPTH {
             return self.quiescence(alpha, beta, position);
         }
         
-        if Self::is_repetition(&position, position.hash_key) || position.fifty.iter().any(|&s| s >= 50) {
-            return 0; // draw
-        }
-        let pv_node = alpha != beta -1;
+        if position.is_draw() { return 0; }
+
         let mut old_pv = PVTable::default();
         let opv = &mut old_pv;
         let hash_key = position.hash_key;
         pv.length = 0;
         
 
+        // Mate distance pruning
         if !NT::ROOT {
             let ply = self.ply as i32;
-            // Mate distance pruning
             alpha = alpha.max(-MATE_VALUE + ply);
             beta = beta.min(MATE_VALUE - ply - 1);
             if alpha >= beta { return alpha }
 
-            if ply > 0 && (Self::is_repetition(&position, hash_key) || position.fifty.iter().any(|&p| p >= 50)) {
-                return 0 // draw
-            }
+            if position.is_draw() { return 0 };
         }
 
         // Transposition table lookup
         // Singular extension: If this move was already excluded, aboid pruning on this node
         let excluded = self.ss[self.ply].excluded;
-        let tt_entry = self.tt.probe(hash_key);
+        let tt_entry = self.tt.probe(position.hash_key);
         let mut tt_move: Option<Move> = None;
         
         let in_signular_search = excluded.is_some();
         let mut possibly_singular = false;
+
 
         if let Some(entry) = tt_entry {
             // Don't use the tt result at the root of a singular search
@@ -364,13 +352,13 @@ impl<'a> Search<'a> {
                         HashFlag::UpperBound if tt_value <= alpha => return alpha,
                         _ => ()
                     };
-                }
 
-                // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxx-------------------------------------------------------------------->>");
+                    // update quiet history
+                }
 
                 possibly_singular = !NT::ROOT && depth >= SE_LOWER_LIMIT
                     && tt_move.is_some()
-                    && matches!(tt_flag, HashFlag::LowerBound | HashFlag::UpperBound)
+                    && matches!(tt_flag, HashFlag::LowerBound | HashFlag::Exact)
                     && tt_value.abs() < LONGEST_TB_MATE
                     && tt_depth >= depth -3;
             }
@@ -589,7 +577,7 @@ impl<'a> Search<'a> {
                         if mv.is_quiet() {
                             self.killer_moves.store(depth as usize, &mv);
                         }
-                        self.update_logs(&position, &best_mv, &quiet_mvs, &captures, depth);
+                        self.update_stats(&position, &best_mv, &quiet_mvs, &captures, depth);
                         t.update_stats(&position, &best_mv, &quiet_mvs, &captures, depth);
                         alpha = beta;
                         flag = HashFlag::LowerBound;
@@ -615,7 +603,7 @@ impl<'a> Search<'a> {
         alpha
     }
 
-    pub(crate) fn update_logs(&mut self, position: &Position, best_mv: &Option<Move>, quiets: &Vec<Move>, captures: &Vec<(Move, HashFlag)>, depth: u8) {
+    pub(crate) fn update_stats(&mut self, position: &Position, best_mv: &Option<Move>, quiets: &Vec<Move>, captures: &Vec<(Move, HashFlag)>, depth: u8) {
         self.caphist.update_many(&position, depth,captures);
 
         if best_mv.is_some_and(|m| m.is_quiet()) {

@@ -2,6 +2,7 @@ use std::ops::Deref;
 
 use history::History;
 
+use crate::bitboard::Bitboard;
 use crate::move_logic::bitmove::MoveType;
 use crate::constants::PIECE_ATTACKS;
 use crate::nnue::accumulator::Feature;
@@ -164,6 +165,61 @@ impl Position {
         }
         // We win the exchange if we are not the one who should recapture
         see_board.turn != stm
+    }
+
+    
+    /// StaleMate
+    pub(crate) fn insufficient_material(&self) -> bool {
+        let all = self.occupancies[Color::Black] | self.occupancies[Color::White];
+        if all.count_ones() == 2 { return true }
+
+        let knights = *self.board[Piece::WK] | *self.board[Piece::BK];
+        let bishops = *self.board[Piece::WB] | *self.board[Piece::BB];
+
+        let white_sqs = Bitboard::WHITE_SQUARES.count_ones();
+        let black_sqs = Bitboard::BLACK_SQUARES.count_ones();
+        let bishop_len = bishops.count_ones();
+
+        match all.count_ones() {
+            2 => true,
+            3 => knights != 0, // the third piece on the board is a knight (KNK)
+            _ => {
+                // king and bishop vs king and bishop with the bishops on the same color
+                // KBK, KBKB, KBBKB, ... (any number of bishops from any player, as long as they all are on squares of the same color)
+                // To know if the bishops are all on the same sq, the number reduced from the board (after XOR) must be equal to the number of available bishops on both sides
+                if all ^ (bishops | *self.board[Piece::WK] | *self.board[Piece::BK]) != 0 {
+                    return false; // there are other pieces on the board that aren't bishops and kings
+                }
+                if bishop_len > 0 {
+                    let all_on_white_sqs = (white_sqs - (bishops ^ Bitboard::WHITE_SQUARES).count_ones()) == bishop_len;
+                    let all_on_black_sqs = (black_sqs - (bishops ^ Bitboard::BLACK_SQUARES).count_ones()) == bishop_len;
+                    return all_on_white_sqs || all_on_black_sqs
+                }
+                false
+            }
+        }
+    }
+
+    pub(crate) fn is_repetition(&self, key: u64) -> bool {
+        let len = self.history_len();
+        if len == 0 { return false }
+
+        // subtracting 1 from len because we don't care about the opponent's (the person who played last's) game
+        // stepping by 2 because we don't care about the opponent's key positional history in this case
+        for index in (0..len-1).rev().step_by(2) {
+            if let Some(history) = self.history_at(index) { 
+                if history.board().hash_key == key { return true }
+             } else { continue }
+        } 
+
+        false
+    }
+
+    pub(crate) fn is_draw(&self) -> bool {
+        self.ply > 0 && 
+            (self.is_repetition(self.hash_key) ||
+                self.fifty.iter().any(|&p| p>= 50) ||
+                    self.insufficient_material())
     }
 
 
