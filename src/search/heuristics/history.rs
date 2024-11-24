@@ -3,7 +3,7 @@ use crate::{board::piece::Piece, constants::{TOTAL_PIECES, TOTAL_SQUARES}, squar
 
 // [i16; TOTAL_SQUARES]; TOTAL_PIECES]
 /// History Heuristics
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct HistoryHeuristic([i16; TOTAL_SQUARES * TOTAL_PIECES]);
 
 
@@ -14,6 +14,7 @@ impl HistoryHeuristic {
         Self ([0; TOTAL_SQUARES * TOTAL_PIECES])
     }
 
+    /// https://www.chessprogramming.org/History_Heuristic
     const fn bonus(depth: u8) -> i16 {
         300i16.saturating_mul(depth as i16) - 250
     }

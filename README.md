@@ -16,17 +16,25 @@
 - [x] Late Move Reduction (LMR)
 - [x] MVV_LVA (Most Viable Victim -- Least Viable Attacker)
 - [ ] Move Ordering
+    - [ ] MovePicker
+    - [x] Capture History(CapHist)
+    - [x] Killer Moves
+    - [x] History Moves
+    - [x] [CounterMove History](https://www.chessprogramming.org/Countermove_Heuristic)
+    - [ ] Follow-Up History (FUH) tables
+    - [ ] [Refutation Table](https://www.chessprogramming.org/Refutation_Table)
+    - [x] Continuation History
 - [x] Transposition Table
 - [x] Null Move forward Pruning
 - [x] Principal Variation Node
-- [x] Killer Moves
-- [x] History Moves
 - [x] Aspiration Window
 - [x] Iterative Deepening
 - [x] PV-Table (Principal Variation Table)
-- [x] Repetitions https://www.chessprogramming.org/Repetitions
-- [-] Singular extensions
-- [-] Full WASM support
+- [ ] Futility Pruning
+- [x] [Repetitions](https://www.chessprogramming.org/Repetitions)
+- [ ] Extensions
+    - [ ] Singular extensions
+- [ ] Full WASM support
 
 
 

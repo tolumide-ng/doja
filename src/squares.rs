@@ -2,7 +2,7 @@ use std::{fmt::Display, ops::{Index, Sub}};
 
 
 // TODO! square should have u8 values not u64
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Square {
     NoSquare=64,
     A8=56, B8=57, C8=58, D8=59, E8=60, F8=61, G8=62, H8=63,
@@ -141,6 +141,7 @@ pub(crate) const BIT_TABLE: [u64; 64] = [
 
 
 impl Square {
+    pub(crate) const TOTAL: usize = 64;
     pub fn name(index: u64) -> String {
         String::from(SQUARE_NAMES[index as usize])
     }

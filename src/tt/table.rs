@@ -1,3 +1,5 @@
+use std::borrow::BorrowMut;
+
 use super::{entry::TTEntry, tpt::TPT};
 
 
@@ -23,6 +25,7 @@ pub(crate) const TOTAL_SIZE: usize = 0x10000; // 1MB
 #[derive(Debug)]
 pub(crate) struct TTable {
     table: Vec<TTEntry>,
+    age: u8,
 }
 
 
@@ -31,18 +34,19 @@ pub(crate) struct TTable {
 // const TT_ENTRY: Option<TTEntry> = None;
 impl Default for TTable {
    fn default() -> Self {
-        // let table: Box<[TTEntry; TOTAL_SIZE]> = Box::new(core::array::from_fn(|_| TTEntry::default()));
-        // let max = TOTAL_SIZE / std::mem::size_of::<TTEntry>();
         let max = TOTAL_SIZE;
-        // println!("SIZE OF IS {}", std::mem::size_of::<TTEntry>());
         let table = (0..max).map(|_| TTEntry::default()).collect::<Vec<_>>();
-        Self { table, }
+        Self { table, age: 0}
    }
 }
 
 
 impl TTable {
    pub(crate) fn get(&self) -> TPT {
-        TPT { table: &self.table }
+        TPT { table: &self.table, age: 0 }
+   }
+
+   pub(crate) fn increase_age(&mut self) {
+      self.age = (self.age + 1) & 0b01111111;
    }
 }

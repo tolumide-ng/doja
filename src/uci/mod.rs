@@ -1,50 +1,61 @@
-use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{Arc, Mutex}, thread};
+use std::{io::{stdout, Write}, str::SplitWhitespace, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, thread};
 
+use clock::Clock;
+use counter::Counter;
 use thiserror::Error;
 
-use crate::{board::{position::Position, state::board::Board}, color::Color, constants::START_POSITION, move_logic::{bitmove::Move, move_list::Moves}, move_scope::MoveScope, search::control::Control, syzygy::probe::TableBase, tt::table::TTable};
+pub(crate) mod clock;
+
+use crate::{board::{position::Position, state::board::Board}, constants::START_POSITION, move_logic::{bitmove::Move, move_stack::MoveStack}, move_scope::MoveScope, search::{control::Control, search::Search, threads::Thread}, tt::table::TTable};
 
 #[cfg(test)]
 #[path = "./uci.tests.rs"]
 mod uci_tests;
+mod counter;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum UciError {
     #[error("FenError: {0} is invalid")]
     FenError(String),
     #[error("MoveError: {0}")]
     InvalidMoveError(String),
     #[error("Expected integer but got: {0}")]
-    InvalidIntegerArgument(String)
+    InvalidIntegerArgument(String),
+    #[error("No value received for key {0}")]
+    NoValue(&'static str),
+    #[error("Empty Argument")]
+    EmptyArgument,
 }
 
 #[derive(Debug)]
-pub(crate) struct UCI { position: Option<Position>, controller: Arc<Mutex<Control>>, tt: TTable }
+pub(crate) struct UCI { position: Option<Position>, tt: TTable, options: Vec<(String, String)>, clock: Clock, stop: AtomicBool }
 
 impl Default for UCI {
     fn default() -> Self {
-        Self { position: None, controller: Arc::new(Mutex::new(Control::default())), tt: TTable::default() }
+        let stop = AtomicBool::new(false);
+        let stop_ptr: *const AtomicBool = &stop;
+
+        let clock = Clock::new(stop_ptr);
+        Self { position: None, tt: TTable::default(), options: vec![], clock, stop }
     }
 }
 
 impl UCI {
     pub(crate) fn update_board_to(&mut self, board: Position) {
         self.position = Some(board);
-        self.controller = Arc::new(Mutex::new(Control::default()));
-    }
-
-    pub(crate) fn update_controller(&mut self, control: Control) {
-        self.controller = Arc::new(Mutex::new(control));
     }
 
     pub(crate) fn process_input<W: Write>(&mut self, input: String, mut writer: W) -> std::io::Result<bool> {
         let mut input = input.trim().split_whitespace();
-        let tb = TableBase::default();
+        // let tb = TableBase::default();
+        let mut table = TTable::default();
+
         
         match input.next() {
             Some("position") => {
                 match self.parse_position(input) {
                     Ok(Some(board)) => {
+                            self.tt = TTable::default(); // we need to reset the Transposition table when we're handling a different position's data
                             writeln!(writer, "{}", board.to_string())?;
                             self.update_board_to(board);
                     }
@@ -56,46 +67,73 @@ impl UCI {
             }
             Some("ucinewgame") => {
                 self.update_board_to(Position::with(Board::try_from(START_POSITION).unwrap()));
+                self.tt = TTable::default();
+                self.options = vec![];
                 write!(writer, "{}", self.position.as_ref().unwrap().to_string())?;
             }
             Some("go") => {
-                match self.parse_go(input) {
-                    Ok(control) if self.position.is_some() => {
-                        println!("the received contro  ller is -------- {}", control.depth());
-                        self.update_controller(control);
-                        println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
-                        let controller = Arc::clone(&self.controller);
+                match Counter::try_from(input) {
+                    Ok(counter) if self.position.is_some() => {
+                        let board = self.position.clone().unwrap(); // this would be fixed later
+                        self.clock.set_limit(counter, board.turn);
+                        self.tt.increase_age();
+                        self.clock.start();
+                        let thread = Thread::new(30, table.get(), 0); // SHOULD BE REMOVED LATER (THIS SERVES NO SERIOUS PURPOSE YET -0->> MORE LIKE A DUPLICATION)
 
-                        
-                        
-                        let table = TTable::default();
-                        let mut board = self.position.clone().unwrap();
-                        
-                        // thread::scope(|s| {
-                            //     let mut bb = board.clone();
-                            //     s.spawn(move || {
-                                //         negamax[0].iterative_deepening(7, &mut bb);
-                                //     });
-                                // });
-                                
-                                let result = thread::spawn(move || {
-                            // let mut negamax = (0..1).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
-                            // let depth = controller.lock().unwrap().depth();
-                            // negamax[0].iterative_deepening(depth, &mut board, &tb);
-                            // println!("done done >>>>");
-                            // write!(writer, "{}", board.to_string()).unwrap();
-                            board
-                        }).join().unwrap();
+                        let mut negamax = (0..2).map(|_i| Search::new(self.tt.get(), self.clock.clone())).collect::<Vec<_>>();
+                        thread::scope(|s| {
 
-                        write!(writer, "{}", result.to_string()).unwrap();
-
-
-                     }
+                            for negamax in negamax.iter_mut() {
+                                let mut bb = board.clone();
+                                let mut th = thread.clone();
+                                s.spawn(move || {
+                                    negamax.iterative_deepening(10, &mut bb, &mut th);
+                                });
+                            }
+                        });
+                    }
                     Err(e) => {write!(writer, "{}", e)?;}
                     _ => {}
-                }
+                };
+                
+                // match self.parse_go(input) {
+                //     Ok(control) if self.position.is_some() => {
+                //         // println!("the received contro  ller is -------- {}", control.depth());
+                //         // self.update_controller(control);
+                //         // println!("the newly saved controller has a depth of {}", self.controller.lock().unwrap().depth());
+                //         // let controller = Arc::clone(&self.controller);
+
+                //         table.increase_age();
+                //         let mut board = self.position.clone().unwrap();
+                        
+                //         // thread::scope(|s| {
+                //             //     let mut bb = board.clone();
+                //             //     s.spawn(move || {
+                //                 //         negamax[0].iterative_deepening(7, &mut bb);
+                //                 //     });
+                //                 // });
+                                
+                //                 let result = thread::spawn(move || {
+                //             // let mut negamax = (0..1).map(|i| NegaMax::new(controller.clone(), table.get(), i)).collect::<Vec<_>>();
+                //             // let depth = controller.lock().unwrap().depth();
+                //             // negamax[0].iterative_deepening(depth, &mut board, &tb);
+                //             // println!("done done >>>>");
+                //             // write!(writer, "{}", board.to_string()).unwrap();
+                //             board
+                //         }).join().unwrap();
+
+                //         write!(writer, "{}", result.to_string()).unwrap();
+
+
+                //     }
+                //     Err(e) => {write!(writer, "{}", e)?;}
+                //     _ => {}
+                // }
             }
-            Some("quit") => { return  Ok(false); }
+            Some("quit") => { 
+                self.stop.store(true, Ordering::SeqCst);
+                return Ok(false);
+             }
             Some("isready") => {writeln!(writer, "readyok")?;}
             Some("uci") => {
             for data in Self::identify() {
@@ -104,13 +142,43 @@ impl UCI {
             }
             Some("d") => {writeln!(writer, "{}", self.position.as_ref().unwrap().to_string())?;},
             Some("stop") => {
-                // self.quit(); println!("told to quit")
-                self.controller.lock().as_mut().unwrap().stop();
+                self.stop.store(true, Ordering::SeqCst);
                 return Ok(false);
             },
-            // Some("stop") => {
-            //     return Ok(false);
-            // },
+            Some("setoption") => {
+                if input.next() == Some("name") {
+                    let mut option_name = String::new();
+                    let mut option_value = String::new();
+
+                    let mut error_found = false;
+                    let mut found_value_str = false;
+
+                    while let Some(value) = input.next() {
+                        if (value == "value" && found_value_str) || (value == "name") {
+                            error_found = true;
+                            break;
+                        }
+                        if value == "value" { found_value_str = true; continue; }
+
+                        if !found_value_str {
+                            option_name = format!("{} {}", option_name, value);
+                            let _ = option_name.trim();
+                        }
+
+                        if found_value_str {
+                            option_value = format!("{} {}", option_value, value);
+                            let _ = option_value.trim();
+
+                        }
+                    }
+
+                    if !error_found {
+                        self.options.push((option_name, option_value));
+                    }
+                    
+                    writeln!(writer, "error found! Please ensure that the provided 'name' and 'value' match the UCI name/value recommendations")?;
+                }
+            }
             _ => {}
         };
 
@@ -153,8 +221,8 @@ impl UCI {
     }
 
     fn parse_move(board: &Position, mv: &str) -> Option<Move> {
-        let mut board_moves = Moves::new();
-        board.gen_movement::<{ MoveScope::ALL }>(&mut board_moves);
+        let mut board_moves = MoveStack::<Move>::new();
+        board.gen_movement::<{ MoveScope::ALL }, Move>(&mut board_moves);
 
         for bmove in board_moves {
             if bmove.to_string().trim() == mv.trim() {
@@ -207,63 +275,4 @@ impl UCI {
 
         Ok(None)
     }
-
-
-    fn parse_go(&self, mut input: SplitWhitespace) -> Result<Control, UciError> {
-        let mut controller = Control::default();
-        let b = self.position.as_ref().unwrap();
-
-        match input.next() {
-            // search until the "stop" command. Do not exit the search without being told so in this mode!
-            Some("infinite") => {
-                println!("infinite >>>>>>>>>>.");
-            },
-            Some("searchmoves") => {},
-            // black increment per move in mseconds if x > 0
-            Some("binc") if b.turn == Color::Black => {
-                controller.set_inc(input.next().and_then(|x| u32::from_str_radix(x, 10).ok()).unwrap_or(controller.inc()));
-            },
-            // white increment per move in mseconds if x > 0
-            Some("winc") if b.turn == Color::White => {
-                controller.set_inc(input.next().and_then(|x| u32::from_str_radix(x, 10).ok()).unwrap_or(controller.inc()));
-            },
-            // white has x msec left on the clock
-            Some("wtime") if b.turn == Color::White => {
-                controller.set_time(input.next().and_then(|x| u128::from_str_radix(x, 10).ok()).unwrap_or(controller.time()));
-            },
-            Some("btime") if b.turn == Color::White => {
-                controller.set_time(input.next().and_then(|x| u128::from_str_radix(x, 10).ok()).unwrap_or(controller.time()));
-            },
-            Some("movestogo") => {
-                controller.set_movestogo(input.next().and_then(|x| u32::from_str_radix(x, 10).ok()).unwrap_or(controller.movestogo()));
-            },
-            Some("movetime") => {
-                // amount of time allowed to spend making a move
-                controller.set_movetime(input.next().and_then(|x| u128::from_str_radix(x, 10).ok()).unwrap_or(controller.movetime()));
-            },
-            Some("depth") => {
-                controller.set_depth(input.next().and_then(|x| u8::from_str_radix(x, 10).ok()).unwrap_or(controller.depth()));
-            },
-            _ => {}
-        }
-
-
-
-        if controller.movetime() > 0 {
-            controller.set_time(controller.movetime());
-            controller.set_movestogo(1);
-        }
-
-        
-        // let mut timeset = false;
-        // almost impossible to complete...
-        if controller.depth() == 0 {
-            // controller.set_depth(64);
-        }
-
-        controller.setup_timerange();
-
-        Ok(controller)
-    }
-
 }

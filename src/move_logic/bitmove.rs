@@ -2,6 +2,8 @@ use std::{fmt::Display, ops::Deref};
 
 use crate::{board::piece::PieceType, squares::Square};
 
+use crate::move_logic::move_action::MoveAction;
+
 
 const SOURCE_SQUARE: u16 = 0b0000_0000_0011_1111;
 const TARGET_SQUARE: u16 = 0b0000_1111_1100_0000;
@@ -11,19 +13,22 @@ const MOVE_TYPE: u16 = 0b1111_0000_0000_0000;
  * binary representation
  * 0000 0000 0011 1111      source square 0x3f
  * 0000 1111 11xx xxxx      target square 0xfc0
- * 0001 xxxx xxxx xxxx      quiet  move
- * 0001 xxxx xxxx xxxx      capture
- * 0010 xxxx xxxx xxxx      enpassant
- * 0011 xxxx xxxx xxxx      double push
- * 0100 xxxx xxxx xxxx      castling
- * 0101 xxxx xxxx xxxx      Promotion to Knight
- * 0110 xxxx xxxx xxxx      Promotion to Bishop
- * 0111 xxxx xxxx xxxx      Promotion to Rook
- * 1000 xxxx xxxx xxxx      Promotion to Queen
- * 1001 xxxx xxxx xxxx      Captures and Promotes to Knight
- * 1010 xxxx xxxx xxxx      Captures and Promotes to Bishop
- * 1011 xxxx xxxx xxxx      Captures and Promotes to Rook
- * 1100 xxxx xxxx xxxx      Captures and Promotes to Queen
+ * 0000 xxxx xxxx xxxx      quiet  move
+ * 0001 xxxx xxxx xxxx      castling
+ * 0010 xxxx xxxx xxxx      double push
+ * ---- TACTICAL MOVES ----
+ * 0100 xxxx xxxx xxxx      Promotion to Knight
+ * 0101 xxxx xxxx xxxx      Promotion to Bishop
+ * 0110 xxxx xxxx xxxx      Promotion to Rook
+ * 0111 xxxx xxxx xxxx      Promotion to Queen
+ * 
+ * 1000 xxxx xxxx xxxx      capture
+ * 1001 xxxx xxxx xxxx      enpassant
+ * 
+ * 1100 xxxx xxxx xxxx      Captures and Promotes to Knight
+ * 1101 xxxx xxxx xxxx      Captures and Promotes to Bishop
+ * 1110 xxxx xxxx xxxx      Captures and Promotes to Rook
+ * 1111 xxxx xxxx xxxx      Captures and Promotes to Queen
  */
 
 
@@ -34,18 +39,20 @@ const MOVE_TYPE: u16 = 0b1111_0000_0000_0000;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum MoveType {
     Quiet = 0b0000,
-    Capture = 0b0001,
-    Enpassant = 0b0010,
-    DoublePush = 0b0011,
-    Castling = 0b0100,
-    PromotedToKnight = 0b0101,
-    PromotedToBishop = 0b0110,
-    PromotedToRook = 0b0111,
-    PromotedToQueen = 0b1000,
-    CaptureAndPromoteToKnight = 0b1001,
-    CaptureAndPromoteToBishop = 0b1010,
-    CaptureAndPromoteToRook = 0b1011,
-    CaptureAndPromoteToQueen = 0b1100,
+    Castling = 0b0001,
+    DoublePush = 0b0010,
+    
+    PromotedToKnight = 0b0100,
+    PromotedToBishop = 0b0101,
+    PromotedToRook = 0b0110,
+    PromotedToQueen = 0b0111,
+
+    Capture = 0b1000,
+    Enpassant = 0b1001,
+    CaptureAndPromoteToKnight = 0b1100,
+    CaptureAndPromoteToBishop = 0b1101,
+    CaptureAndPromoteToRook = 0b1110,
+    CaptureAndPromoteToQueen = 0b1111, // rename to `CapturesAndPromoteToQueen` (Capture(s)...) properly comunicates the action
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -62,7 +69,33 @@ impl Move {
         Square::from(sq)
     }
 
+    pub(crate) fn src(&self) -> Square {
+        let sq = (**self & SOURCE_SQUARE) as u64;
+        Square::from(sq)
+    }
+
+    /// DEPRECIATIOIN PLANS
     pub(crate) fn get_target(&self) -> Square {
+        let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
+        Square::from(sq)
+    }
+
+    pub(crate) fn get_tgt(&self) -> Square {
+        let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
+        Square::from(sq)
+    }
+
+    pub(crate) fn is_quiet(&self) -> bool {
+        let value = ((**self & MOVE_TYPE) >> 12) as u8;
+        value & 0b1100 == 0
+    }
+
+    pub(crate) fn is_tactical(&self) -> bool {
+        let value = ((**self & MOVE_TYPE) >> 12) as u8;
+        value & 0b1100 != 0
+    }
+    
+    pub(crate) fn tgt(&self) -> Square {
         let sq = ((**self & TARGET_SQUARE) >> 6) as u64;
         Square::from(sq)
     }
@@ -71,23 +104,31 @@ impl Move {
         let value = ((**self & MOVE_TYPE) >> 12) as u8;
 
         match value {
-            0b0101 | 0b1001 => Some(PieceType::N),
-            0b0110 | 0b1010 => Some(PieceType::B),
-            0b0111 | 0b1011 => Some(PieceType::R),
-            0b1000 | 0b1100 => Some(PieceType::Q),
+            0b0100 | 0b1100 => Some(PieceType::N),
+            0b0101 | 0b1101 => Some(PieceType::B),
+            0b0110 | 0b1110 => Some(PieceType::R),
+            0b0111 | 0b1111 => Some(PieceType::Q),
             _ => None
         }
     }
 
     pub(crate) fn get_capture(&self) -> bool {
-        [MoveType::Capture, MoveType::CaptureAndPromoteToBishop, MoveType::CaptureAndPromoteToKnight, MoveType::CaptureAndPromoteToQueen, MoveType::CaptureAndPromoteToRook, 
-            MoveType::Enpassant, // only updated recently (confirm tests) 12/10/24
-        ].contains(&self.move_type())
+        // [MoveType::Capture, MoveType::CaptureAndPromoteToBishop, MoveType::CaptureAndPromoteToKnight, MoveType::CaptureAndPromoteToQueen, MoveType::CaptureAndPromoteToRook, 
+        //     MoveType::Enpassant, // only updated recently (confirm tests) 12/10/24
+        // ].contains(&self.move_type())
+        let value = u8::try_from((**self & MOVE_TYPE) >> 12).unwrap();
+        (value & 0b1000) != 0
+    }
+
+    pub(crate) fn is_capture(&self) -> bool {
+        let value = u8::try_from((**self & MOVE_TYPE) >> 12).unwrap();
+        (value & 0b1000) != 0
     }
 
     pub(crate) fn get_double_push(&self) -> bool {
-        let value = (**self >> SQUARE_OFFSET) & (MoveType::DoublePush as u16);
-        value == MoveType::DoublePush as u16
+        // let value = (**self >> SQUARE_OFFSET) & (MoveType::DoublePush as u16);
+        // value == MoveType::DoublePush as u16
+        self.move_type() == MoveType::DoublePush
     }
 
     pub(crate) fn get_enpassant(&self) -> bool {
@@ -98,7 +139,7 @@ impl Move {
 
     pub(crate) fn is_underpromotion(&self) -> bool {
         let mv_ty = self.move_type() as u64;
-        mv_ty == MoveType::CaptureAndPromoteToQueen as u64 || mv_ty == MoveType::PromotedToQueen as u64
+        !(mv_ty == MoveType::CaptureAndPromoteToQueen as u64 || mv_ty == MoveType::PromotedToQueen as u64)
     }
 
     pub(crate) fn get_castling(&self) -> bool {
@@ -109,27 +150,37 @@ impl Move {
 
     pub(crate) fn move_type(&self) -> MoveType {
         let value = (**self & MOVE_TYPE_MASK) >> SQUARE_OFFSET;
-
         match value {
             0b0000 => MoveType::Quiet,
-            0b0001 => MoveType::Capture,
-            0b0010 => MoveType::Enpassant,
-            0b0011 => MoveType::DoublePush,
-            0b0100 => MoveType::Castling,
-            0b0101 => MoveType::PromotedToKnight,
-            0b0110 => MoveType::PromotedToBishop,
-            0b0111 => MoveType::PromotedToRook,
-            0b1000 => MoveType::PromotedToQueen,
-            0b1001 => MoveType::CaptureAndPromoteToKnight,
-            0b1010 => MoveType::CaptureAndPromoteToBishop,
-            0b1011 => MoveType::CaptureAndPromoteToRook,
-            0b1100 => MoveType::CaptureAndPromoteToQueen,
+            0b0001 => MoveType::Castling,
+            0b0010 => MoveType::DoublePush,
+
+            0b0100 => MoveType::PromotedToKnight,
+            0b0101 => MoveType::PromotedToBishop,
+            0b0110 => MoveType::PromotedToRook,
+            0b0111 => MoveType::PromotedToQueen,
+            
+            0b1000 => MoveType::Capture,
+            0b1001 => MoveType::Enpassant,
+            
+            0b1100 => MoveType::CaptureAndPromoteToKnight,
+            0b1101 => MoveType::CaptureAndPromoteToBishop,
+            0b1110 => MoveType::CaptureAndPromoteToRook,
+            0b1111 => MoveType::CaptureAndPromoteToQueen,
             _ => panic!("Unrecognized MoveType {value}")
         }
     }
  }
 
 
+
+ impl MoveAction for Move {
+    // type Input = Move;
+
+    fn create(input: Move) -> Self {
+        input
+    }
+ }
 
 /// for UCI purpose 
  impl Display for Move {
@@ -174,6 +225,12 @@ impl Move {
     }
  }
 
+//  impl From<(Move, i32)> for Move {
+//     fn from(value: (Move, i32)) -> Self {
+//         value.0
+//     }
+//  }
+
 
  #[cfg(test)]
  mod move_tests {
@@ -185,13 +242,13 @@ impl Move {
     #[test]
     fn should_return_a_valid_u32_after_creaton() {
         let bmove = Move::new(0, 9, Capture);
-        assert_eq!(0x1240, *bmove);
+        assert_eq!(0x8240, *bmove);
     }
 
     #[test]
     fn should_return_data_stored_in_the_move_for_a_queen_capture() {
         let queen_capture =  Move::new(12, 28, Capture);
-        assert_eq!(*queen_capture, 0x170C);
+        assert_eq!(*queen_capture, 0x870C);
 
         assert_eq!(queen_capture.get_capture(), true);
         assert_eq!(queen_capture.get_castling(), false);

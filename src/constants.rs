@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
+use params::MAX_DEPTH;
 
-use crate::{masks::EvaluationMasks, piece_attacks::PieceAttacks, shift::ShiftData, squares::Square, zobrist::Zobrist};
+use crate::{masks::EvaluationMasks, piece_attacks::PieceAttacks, shift::ShiftData, squares::Square, utils::lmr::{FutilityMoveCounts, LmrTable}, zobrist::Zobrist};
 
 ///  ----NOT_A_FILE----
 /// 8   0  1  1  1  1  1  1  1 \
@@ -113,18 +114,35 @@ pub const REPETITIONS: &str = "2r3k1/R7/8/1R6/8/8/P4KPP/8 w - - 0 40 ";
 /// [-infinity, -mate_value...-mate_score, ... score ... mate_score ... mate_value, infinity]
 /// -- "MATE" is in this case a constant with a large positive value, larger than any score created by summing material and positional factors could be.
 /// https://web.archive.org/web/20071031100110/http://www.brucemo.com/compchess/programming/matescore.htm
-pub(crate) const MATE_VALUE: i32 = 47_999;
-pub(crate) const MATE_SCORE: i32 = 48_000; // i.e. MATE_VALUE - 1000
-pub(crate) const INFINITY: i32 = 50_000;
+pub(crate) const INFINITY: i32 = 32001;
+// pub(crate) const MATE_VALUE: i32 = 31000;
+pub(crate) const MATE_VALUE: i32 = 32000;
+// pub(crate) const MATE_VALUE: i32 = 47_999;
+// pub(crate) const MATE_SCORE: i32 = 48_000; // i.e. MATE_VALUE - 1000
+// pub(crate) const INFINITY: i32 = 50_000;
+// pub(crate) const MATE_SCORE: i32 = 48_000; // i.e. MATE_VALUE - 1000
+pub const MATE_IN_MAX_PLY: i32 = MATE_VALUE - 2 * 128;
+pub const MATED_IN_MAX_PLY: i32 = -MATE_VALUE + 2 * 128;
+pub const LONGEST_TB_MATE: i32 = MATE_VALUE - 127;
+pub const NONE: i32 = 32002;
+/// Defines a margin to decide how "bad" a position must be to be considered for razoring. The margin can depend on the search depth and should be empirically tuned.
+/// For instance, at depth 1, the margin might be a small value (like half a pawn), whereas at depth 2, you might use a larger margin.
+/// Should still be further tuned
+pub(crate) const RAZOR_MARGIN: [i32; 3] = [0, 293, 512];
 
-pub(crate) const NO_HASH_ENTRY: i32 = 100000;
+
+pub const SE_LOWER_LIMIT: u8 = 8;
+// pub(crate) const TB_MATE: i32 = 30_000;
+// pub const LONGEST_TB_MATE: i32 = TB_MATE - MAX_DEPTH as i32;
+
+// pub(crate) const NO_HASH_ENTRY: i32 = 100000;
 
 pub(crate) const ALPHA: i32 = -INFINITY;
 pub(crate) const BETA: i32 = INFINITY;
 pub(crate) const FULL_DEPTH_MOVE: u8 = 4;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
 pub(crate) const REDUCTION_LIMIT: u8 = 3;   // // https://web.archive.org/web/20150212051846/http://www.glaurungchess.com/lmr.html
 pub(crate) const DEPTH_REDUCTION_FACTOR: u8 = 2; // (suggested deduction factor) https://web.archive.org/web/20071031095933/http://www.brucemo.com/compchess/programming/nullmove.htm
-pub(crate) const VAL_WINDOW: i32 = 50; // https://web.archive.org/web/20071031095918/http://www.brucemo.com/compchess/programming/aspiration.htm
+pub(crate) const VAL_WINDOW: i32 = 25; // https://web.archive.org/web/20071031095918/http://www.brucemo.com/compchess/programming/aspiration.htm
 pub(crate) const NODES_2047: u64 = 2047;
 
 
@@ -143,7 +161,7 @@ pub(crate) const TOTAL_SQUARES: usize = 64;
 /// 4. Player black can castle both king and queen
 /// (for white and black player) = 4 * 4 = 16
 pub(crate) const TOTAL_CASTLING_RIGHTS: usize = 16;
-pub(crate) const MAX_PLY: usize = 64;
+pub(crate) const MAX_PLY: usize = 256; // (max_depth * 2)
 
 
 pub(crate) const RANDOM_STATE_SEED: u32 = 1804289383;
@@ -216,6 +234,11 @@ lazy_static! {
     pub static ref ZOBRIST: Zobrist = Zobrist::init_zobrist();
     // evaluation masks
     pub static ref EVAL_MASKS: EvaluationMasks = EvaluationMasks::init();
+
+    /// Late Move Reductions Table
+    pub(crate) static ref REDUCTIONS: LmrTable = LmrTable::init();
+    /// Futility move counts
+    pub(crate) static ref FUTILITY_MOVE_COUNTS: FutilityMoveCounts = FutilityMoveCounts::init();
 }
 
 

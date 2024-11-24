@@ -40,6 +40,8 @@ impl From<(PieceType, Color)> for Piece {
     }
 }
 
+impl PieceType { pub(crate) const COUNT: usize = 6; }
+
 #[derive(Debug, Clone, Copy, derive_more::Display, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Piece {
@@ -227,15 +229,15 @@ impl Piece {
         return Piece::WK;
     }
 
-    const MVV_LVA: [i32; 6] = [0, 2400, 2400, 4800, 9600, 0];
+    pub(crate) const COUNT: usize = 6;
+    pub(crate) const TOTAL: usize = 12;
 
-    pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> i32 {
+    pub(crate) const MVV: [i16; 6] = [0, 2400, 2400, 4800, 9600, 0];
+
+    pub(crate) fn get_mvv_lva(&self, victim: &Piece) -> i16 {
         let attacker = *self as usize;
         let victim = *victim as usize;
-
-        // let index = ((attacker % PLAYER_PIECES) * PLAYER_PIECES) + (victim % PLAYER_PIECES);
-        // return MVV_LVA[index];
-        return Self::MVV_LVA[victim] - Self::MVV_LVA[attacker]
+        return Self::MVV[victim] - Self::MVV[attacker]
     }
 
     pub(crate) const PIECE_VALUES: [i32; 6] = [161, 446, 464, 705, 1322, 0];

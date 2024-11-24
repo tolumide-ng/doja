@@ -15,9 +15,20 @@ impl MoveScope {
 impl From<MoveScope> for u8 {
     fn from(value: MoveScope) -> Self {
         match value {
-            MoveScope::AllMoves => 0,
+            MoveScope::QuietOnly => 0,
             MoveScope::CapturesOnly => 1,
-            MoveScope::QuietOnly => 2,
+            MoveScope::AllMoves => 2,
+        }
+    }
+}
+
+impl From<u8> for MoveScope {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => MoveScope::QuietOnly,
+            1 => MoveScope::CapturesOnly,
+            2 => MoveScope::AllMoves,
+            _ => unimplemented!("Unrecognized value of move-scope={value}")
         }
     }
 }
