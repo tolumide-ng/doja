@@ -364,16 +364,14 @@ impl<'a> Search<'a> {
             }
         };
 
-        if !NT::ROOT && !in_signular_search {
-            // if let Some()
-        }
+        // if !NT::ROOT && !in_signular_search {
+        //     // if let Some()
+        // }
 
         // Probe Tablebase (Skipped for now)
 
         // Static evaluation of this position
-        let eval = if stm_in_check {
-            -INFINITY
-        } else if in_signular_search {
+        let eval = if in_signular_search {
             self.ss[self.ply].eval
         } else if !stm_in_check {
             if let Some(entry) = tt_entry {
