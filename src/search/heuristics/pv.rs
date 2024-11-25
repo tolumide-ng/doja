@@ -22,27 +22,18 @@ impl PVTable {
         self.mvs[1..=old.length].copy_from_slice(&old.mvs[..old.length]);
     }
 
-    // pub(crate) fn push(&mut self, mv: &Move) {
-    //     self.mvs[self.length] = **mv;
-    //     self.length += 1;
-    // }
-
     pub(crate) fn mvs(&self) -> &[u16; MAX_DEPTH] {
         &self.mvs
     }
 }
 
+impl std::fmt::Display for PVTable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut pv = String::from("");
 
-// impl Iterator for PVTable {
-//     type Item = Move;
-
-//     /// We're looping backwards in this implementation ("The user's don't need to know that")
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.at < (self.length-1) {
-//             let index = self.length - self.at - 1;
-//             self.at += 1;
-//             return Some(Move::from(self.mvs[index]));
-//         }
-//         None
-//     }
-// }
+        for m in &self.mvs[0..self.length] {
+            pv = format!("{} {}", pv, Move::from(*m));
+        }
+        write!(f, "{}", pv)
+    }
+}

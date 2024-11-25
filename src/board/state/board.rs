@@ -503,8 +503,9 @@ impl Board {
         }
     }
 
+    /// Only king and pawn pieces of the Side to move are on the board
     pub(crate) fn possibly_zugzwang(&self) -> bool {
-        self.occupancies[self.turn] ^ (*self.board[Piece::pawn(self.turn)] & *self.board[Piece::king(self.turn)]) == 0
+        (self.occupancies[self.turn] ^ (*self.board[Piece::pawn(self.turn)] | *self.board[Piece::king(self.turn)]) )== 0
     }
 
     /// If the king of the side-to-move is in check
