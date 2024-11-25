@@ -54,7 +54,7 @@ fn main() {
     // let mut board = Position::with(Board::fromunwrap());
     // let threads = std::thread::available_parallelism().unwrap_or(NonZero::<usize>::new(1).unwrap()).get();
     let threads = 1;
-    let depth = 6;
+    let depth = 4;
     // let mut bb = board.clone();
     let table = TTable::default();
 
